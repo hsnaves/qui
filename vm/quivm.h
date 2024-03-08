@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 /* Constants. */
-/* Contants for instructions */
+/* Constants for instructions */
 #define INSN_LIT_BASE                 0x80
 #define INSN_REG_BASE                 0xC0
 #define INSN_RET                      0xC0
@@ -27,7 +27,7 @@
 #define INSN_WRT                      0xD1
 #define INSN_RDB                      0xD2
 #define INSN_WRTB                     0xD3
-#define INSN_SGE                      0xD4
+#define INSN_SGE8                     0xD4
 #define INSN_SHL                      0xD5
 #define INSN_SHR                      0xD6
 #define INSN_SAR                      0xD7
