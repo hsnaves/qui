@@ -52,7 +52,7 @@ uint32_t devio_read_callback(const struct quivm *qvm, uint32_t address)
     const struct devio *io;
     io = (const struct devio *) qvm->arg;
 
-    if ((address >= IO_CONSOLE_BASE) && (address < IO_CONSOLE_MAX)) {
+    if ((address >= IO_CONSOLE_BASE) && (address < IO_CONSOLE_END)) {
         return console_read_callback(io->cns, qvm, address);
     }
 
@@ -64,7 +64,7 @@ void devio_write_callback(struct quivm *qvm, uint32_t address, uint32_t v)
     struct devio *io;
     io = (struct devio *) qvm->arg;
 
-    if ((address >= IO_CONSOLE_BASE) && (address < IO_CONSOLE_MAX)) {
+    if ((address >= IO_CONSOLE_BASE) && (address < IO_CONSOLE_END)) {
         console_write_callback(io->cns, qvm, address, v);
         return;
     }

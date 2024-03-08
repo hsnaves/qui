@@ -9,6 +9,20 @@
 #define DEFAULT_STACKSIZE      0x00000400
 #define DEFAULT_MEMSIZE        0x00100000
 
+/* Macros */
+#define BSWAP(n) ((uint32_t) ((((n) & 0xFFU) << 24) |  \
+			      (((n) & 0xFF00U) << 8) | \
+			      (((n) >> 8) & 0xFF00U) | \
+			      (((n) >> 24) & 0xFFU)))
+
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#    define CONVERT_LE(n) (n)
+#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#    define CONVERT_LE(n) BSWAP(n)
+#else
+#    error "undefined endianness"
+#endif
+
 /* Functions */
 
 int quivm_init(struct quivm *qvm, quivm_read_cb read_cb,
@@ -19,7 +33,7 @@ int quivm_init(struct quivm *qvm, quivm_read_cb read_cb,
 
     qvm->dstack = (uint32_t *) malloc(qvm->stacksize * sizeof(uint32_t));
     qvm->rstack = (uint32_t *) malloc(qvm->stacksize * sizeof(uint32_t));
-    qvm->mem = (uint32_t *) malloc(qvm->memsize);
+    qvm->mem = (uint8_t *) malloc(qvm->memsize);
 
     if (!qvm->dstack || !qvm->rstack || !qvm->mem) {
         quivm_destroy(qvm);
@@ -55,9 +69,10 @@ void quivm_destroy(struct quivm *qvm)
 void quivm_reset(struct quivm *qvm)
 {
     qvm->pc = INITIAL_PC;
-    qvm->acc = 0;
+    qvm->acc = EX_RESET;
     qvm->dsp = 0;
     qvm->rsp = 0;
+    qvm->scell = CELL_STACK_POINTER;
     qvm->status = 0;
     qvm->termvalue = 0;
 }
@@ -156,7 +171,7 @@ void on_exception(struct quivm *qvm, uint32_t err_cond)
 
     /* rstack points to the faulting instruction */
     stack_push(qvm, 1, qvm->pc);
-    qvm->pc = EXCEPTION_HANDLER;
+    qvm->pc = INITIAL_PC;
 }
 
 int quivm_step(struct quivm *qvm)
@@ -175,6 +190,7 @@ int quivm_step(struct quivm *qvm)
         stack_push(qvm, 0, qvm->acc);
         qvm->acc = (uint32_t) (insn - INSN_LIT_BASE);
         if (qvm->acc & 0x20) {
+	    /* sign-extend the literal value */
             qvm->acc |= ~0x3F;
         }
     } else {
@@ -247,17 +263,9 @@ int quivm_step(struct quivm *qvm)
             qvm->acc = v / qvm->acc;
             break;
         case INSN_RD:
-            if ((qvm->acc & 3) != 0) {
-                on_exception(qvm, EX_UNALIGNED_MEMORY);
-                return 1;
-            }
             qvm->acc = quivm_read(qvm, qvm->acc);
             break;
         case INSN_WRT:
-            if ((qvm->acc & 3) != 0) {
-                on_exception(qvm, EX_UNALIGNED_MEMORY);
-                return 1;
-            }
             v = stack_pop(qvm, 0);
             quivm_write(qvm, qvm->acc, v);
             qvm->acc = stack_pop(qvm, 0);
@@ -362,51 +370,55 @@ void quivm_stack_write(struct quivm *qvm, int use_rstack,
     stack[cell] = v;
 }
 
-uint32_t quivm_read(const struct quivm *qvm, uint32_t address)
+/* Performs an aligned read at `address`, which must be a multiple
+ * of 4-bytes. Returns the value read.
+ */
+static
+uint32_t aligned_read(const struct quivm *qvm, uint32_t address)
 {
     uint32_t v;
 
-    /* align the address to multiple of 4 bytes */
-    address &= ~0x03;
-
-    if (address < IO_BASE) {
-        if (address < qvm->memsize)
-            return qvm->mem[(address >> 2)];
-        return -1;
+    if (address < qvm->memsize) {
+	v = ((uint32_t *) &qvm->mem[address])[0];
+	v = CONVERT_LE(v);
+	return v;
     }
+
+    if (address < IO_BASE)
+        return -1;
 
     if (address >= IO_SYS_BASE) {
         switch (address - IO_SYS_BASE) {
-        case SYS_CELL_SADDR:
-            v = qvm->saddr;
+        case IO_SYS_SCELL:
+            v = qvm->scell;
             break;
-        case SYS_CELL_DSTACK:
-            if (qvm->saddr == 0xFFFFFFFF) {
+        case IO_SYS_DSTACK:
+            if (qvm->scell == CELL_STACK_POINTER) {
                 v = qvm->dsp;
             } else {
-                v = quivm_stack_read(qvm, 0, qvm->saddr);
+                v = quivm_stack_read(qvm, 0, qvm->scell);
             }
             break;
-        case SYS_CELL_RSTACK:
-            if (qvm->saddr == 0xFFFFFFFF) {
+        case IO_SYS_RSTACK:
+            if (qvm->scell == CELL_STACK_POINTER) {
                 v = qvm->rsp;
             } else {
-                v = quivm_stack_read(qvm, 1, qvm->saddr);
+                v = quivm_stack_read(qvm, 1, qvm->scell);
             }
             break;
-        case SYS_CELL_STATUS:
+        case IO_SYS_STATUS:
             v = qvm->status;
             break;
-        case SYS_CELL_STACKSIZE:
+        case IO_SYS_STACKSIZE:
             v = qvm->stacksize;
             break;
-        case SYS_CELL_MEMSIZE:
+        case IO_SYS_MEMSIZE:
             v = qvm->memsize;
             break;
-        case SYS_CELL_CELLSIZE:
+        case IO_SYS_CELLSIZE:
             v = 4;
             break;
-        case SYS_CELL_ID:
+        case IO_SYS_ID:
             v = 0;
             break;
         default:
@@ -422,40 +434,44 @@ uint32_t quivm_read(const struct quivm *qvm, uint32_t address)
     return -1;
 }
 
-void quivm_write(struct quivm *qvm, uint32_t address, uint32_t v)
+/* Performs an aligned write of `v` to a cell at `address`, which must
+ * be a multiple of 4-bytes.
+ */
+static
+void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
 {
-    /* align the address to multiple of 4 bytes */
-    address &= ~0x03;
-
-    if (address < IO_BASE) {
-        if (address < qvm->memsize)
-            qvm->mem[address >> 2] = v;
-        return;
+    if (address < qvm->memsize) {
+	v = CONVERT_LE(v);
+	((uint32_t *) &qvm->mem[address])[0] = v;
+	return;
     }
+
+    if (address < IO_BASE)
+        return;
 
     if (address >= IO_SYS_BASE) {
         switch (address - IO_SYS_BASE) {
-        case SYS_CELL_SADDR:
-            qvm->saddr = v;
+        case IO_SYS_SCELL:
+            qvm->scell = v;
             break;
-        case SYS_CELL_DSTACK:
-            if (qvm->saddr == 0xFFFFFFFF) {
+        case IO_SYS_DSTACK:
+            if (qvm->scell == CELL_STACK_POINTER) {
                 qvm->dsp = v;
             } else {
-                quivm_stack_write(qvm, 0, qvm->saddr, v);
+                quivm_stack_write(qvm, 0, qvm->scell, v);
             }
             break;
-        case SYS_CELL_RSTACK:
-            if (qvm->saddr == 0xFFFFFFFF) {
+        case IO_SYS_RSTACK:
+            if (qvm->scell == CELL_STACK_POINTER) {
                 qvm->rsp = v;
             } else {
-                quivm_stack_write(qvm, 1, qvm->saddr, v);
+                quivm_stack_write(qvm, 1, qvm->scell, v);
             }
             break;
-        case SYS_CELL_STATUS:
+        case IO_SYS_STATUS:
             qvm->status &= ~STS_EXCEPTION;
             break;
-        case SYS_CELL_TERMINATE:
+        case IO_SYS_TERMINATE:
             qvm->termvalue = v;
             qvm->status |= STS_TERMINATED;
             break;
@@ -467,18 +483,92 @@ void quivm_write(struct quivm *qvm, uint32_t address, uint32_t v)
         (qvm->write_cb)(qvm, address, v);
 }
 
+
+uint32_t quivm_read(const struct quivm *qvm, uint32_t address)
+{
+    uint32_t v, shift;
+
+    /* small optimization */
+    if (address + 4 <= qvm->memsize) {
+	v = ((uint32_t *) &qvm->mem[address])[0];
+	v = CONVERT_LE(v);
+	return v;
+    }
+
+    shift = (address & 3) << 3;
+    address &= ~3;
+    v = aligned_read(qvm, address);
+    if (shift == 0) return v;
+
+    /* handle misaligned addresses */
+    v >>= shift;
+    address += 4;
+    shift = 32 - shift;
+    v |= aligned_read(qvm, address) << shift;
+    return v;
+}
+
+void quivm_write(struct quivm *qvm, uint32_t address, uint32_t v)
+{
+    uint32_t w, shift, mask;
+
+    /* small optimization */
+    if (address + 4 <= qvm->memsize) {
+	v = CONVERT_LE(v);
+	((uint32_t *) &qvm->mem[address])[0] = v;
+	return;
+    }
+
+    shift = (address & 3) << 3;
+    address &= ~3;
+    if (shift == 0) {
+	/* address is multiple of 4-bytes, so can call aligned_write() */
+	aligned_write(qvm, address, v);
+	return;
+    }
+
+    /* handle misaligned addresses */
+    mask = (1 << shift) - 1;
+    w = aligned_read(qvm, address);
+    w &= mask;
+    w |= (v << shift);
+    aligned_write(qvm, address, w);
+
+    mask = ~mask;
+    address += 4;
+    shift = 32 - shift;
+    w = aligned_read(qvm, address);
+    w &= mask;
+    w |= (v >> shift);
+    aligned_write(qvm, address, w);
+}
+
 uint8_t quivm_read_byte(const struct quivm *qvm, uint32_t address)
 {
-    uint32_t v = quivm_read(qvm, address);
-    return (v >> ((address & 3) << 3)) & 0xFF;
+    uint32_t v, shift;
+
+    if (address < qvm->memsize)
+	return qvm->mem[address];
+
+    shift = (address & 3) << 3;
+    address &= ~3;
+    v = aligned_read(qvm, address);
+    return (v >> shift) & 0xFF;
 }
 
 void quivm_write_byte(struct quivm *qvm, uint32_t address, uint8_t b)
 {
     uint32_t v, shift, mask;
-    v = quivm_read(qvm, address);
+
+    if (address < qvm->memsize) {
+	qvm->mem[address] = b;
+	return;
+    }
+
     shift = (address & 3) << 3;
+    address &= ~3;
     mask = 0xFF << shift;
+    v = aligned_read(qvm, address);
     v = (v & (~mask)) | (((uint32_t) b) << shift);
-    quivm_write(qvm, address, v);
+    aligned_write(qvm, address, v);
 }

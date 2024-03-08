@@ -27,7 +27,7 @@ uint32_t console_read_callback(const struct console *cns,
     (void)(qvm); /* UNUSED */
 
     switch (address - IO_CONSOLE_BASE) {
-    case CONSOLE_CELL_IN:
+    case IO_CONSOLE_IN:
         v = fgetc(stdin);
         break;
     default:
@@ -44,7 +44,7 @@ void console_write_callback(struct console *cns,  struct quivm *qvm,
     (void)(qvm); /* UNUSED */
 
     switch (address - IO_CONSOLE_BASE) {
-    case CONSOLE_CELL_OUT:
+    case IO_CONSOLE_OUT:
         fputc(v, stdout);
         fflush(stdout);
         break;

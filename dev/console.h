@@ -6,10 +6,13 @@
 #include "vm/quivm.h"
 
 /* Constants */
+/* The I/O address space for the console device */
 #define IO_CONSOLE_BASE         0xFFFFFE00
-#define IO_CONSOLE_MAX          0xFFFFFF00
-#define CONSOLE_CELL_IN               0xFC
-#define CONSOLE_CELL_OUT              0xF8
+#define IO_CONSOLE_END          0xFFFFFF00
+
+/* Relative addresses within the console device */
+#define IO_CONSOLE_IN                 0xFC
+#define IO_CONSOLE_OUT                0xF8
 
 /* Data structures and types */
 struct console {
