@@ -9,7 +9,7 @@
 
 int console_init(struct console *cns)
 {
-    cns->internal = NULL;
+    cns->use_err = 0;
     return 0;
 }
 
@@ -22,13 +22,14 @@ uint32_t console_read_callback(const struct console *cns,
                                const struct quivm *qvm, uint32_t address)
 {
     uint32_t v;
-
-    (void)(cns); /* UNUSED */
     (void)(qvm); /* UNUSED */
 
     switch (address - IO_CONSOLE_BASE) {
     case IO_CONSOLE_IN:
         v = fgetc(stdin);
+        break;
+    case IO_CONSOLE_USE_ERR:
+        v = cns->use_err;
         break;
     default:
         v = -1;
@@ -40,13 +41,17 @@ uint32_t console_read_callback(const struct console *cns,
 void console_write_callback(struct console *cns,  struct quivm *qvm,
                             uint32_t address, uint32_t v)
 {
-    (void)(cns); /* UNUSED */
+    FILE *fp;
     (void)(qvm); /* UNUSED */
 
     switch (address - IO_CONSOLE_BASE) {
     case IO_CONSOLE_OUT:
-        fputc(v, stdout);
-        fflush(stdout);
+        fp =(cns->use_err) ? stderr : stdout;
+        fputc(v, fp);
+        fflush(fp);
+        break;
+    case IO_CONSOLE_USE_ERR:
+        cns->use_err = (int) v;
         break;
     }
 }

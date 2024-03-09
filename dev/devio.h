@@ -5,12 +5,13 @@
 
 #include "vm/quivm.h"
 #include "dev/console.h"
+#include "dev/storage.h"
 
 /* Data structures and types */
 /* A structure for the VM I/O devices */
 struct devio {
     struct console *cns;        /* A reference to the console device */
-    void *internal;             /* Pointer to private data */
+    struct storage *stg;        /* A reference to the storage device */
 };
 
 /* Functions */
