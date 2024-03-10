@@ -493,7 +493,7 @@ uint32_t quivm_read(const struct quivm *qvm, uint32_t address)
     uint32_t v, shift;
 
     /* small optimization */
-    if (address + 4 <= qvm->memsize) {
+    if (address <= qvm->memsize - 4) {
         v = ((uint32_t *) &qvm->mem[address])[0];
         v = CONVERT_LE(v);
         return v;
@@ -517,7 +517,7 @@ void quivm_write(struct quivm *qvm, uint32_t address, uint32_t v)
     uint32_t w, shift, mask;
 
     /* small optimization */
-    if (address + 4 <= qvm->memsize) {
+    if (address <= qvm->memsize - 4) {
         v = CONVERT_LE(v);
         ((uint32_t *) &qvm->mem[address])[0] = v;
         return;

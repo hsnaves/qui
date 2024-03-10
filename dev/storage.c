@@ -114,6 +114,9 @@ void do_operation(struct storage *stg, struct quivm *qvm)
         for (i = 0; i < stg->len; i++) {
             c = fgetc(fp);
             if (c == EOF) break;
+
+            /* Check if writing to memory */
+            if (!(address < qvm->memsize)) break;
             quivm_write_byte(qvm, address++, (uint8_t) c);
         }
         stg->len = i;
@@ -129,6 +132,9 @@ void do_operation(struct storage *stg, struct quivm *qvm)
         fp = fopen(filename, "w");
         address = stg->data;
         for (i = 0; i < stg->len; i++) {
+            /* Check if reading from memory */
+            if (!(address < qvm->memsize)) break;
+
             c = quivm_read_byte(qvm, address++);
             c = fputc(c, fp);
             if (c == EOF) break;
