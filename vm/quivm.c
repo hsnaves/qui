@@ -70,7 +70,7 @@ void quivm_reset(struct quivm *qvm)
 {
     qvm->pc = INITIAL_PC;
     qvm->acc = EX_RESET;
-    qvm->dsp = 0;
+    qvm->dsp = 1; /* leave a sentinel value of zero */
     qvm->rsp = 0;
     qvm->scell = CELL_STACK_POINTER;
     qvm->status = 0;
@@ -106,41 +106,14 @@ int quivm_load(struct quivm *qvm, const char *filename,
     return 0;
 }
 
-int quivm_dump(struct quivm *qvm, const char *filename,
-               uint32_t address, uint32_t *length)
-{
-    FILE *fp;
-    uint32_t i, len;
-    uint8_t b;
-    int c;
-
-    fp = fopen(filename, "wb");
-    if (!fp) {
-        fprintf(stderr, "vm/quivm: dump: "
-                "could not open file `%s` for writing\n",
-                filename);
-        *length = 0;
-        return 1;
-    }
-
-    len = *length;
-    for (i = 0; i < len; i++) {
-        b = quivm_read_byte(qvm, address + i);
-        c = fputc(b, fp);
-        if (c == EOF) break;
-    }
-    *length = i;
-    fclose(fp);
-    return 0;
-}
-
 /* Pushes a value `v` onto a stack selected by `use_rstack`. */
 static
 void stack_push(struct quivm *qvm, int use_rstack, uint32_t v)
 {
     uint32_t *sp;
     sp = (use_rstack) ? &qvm->rsp : &qvm->dsp;
-    quivm_stack_write(qvm, use_rstack, (*sp)++, v);
+    quivm_stack_write(qvm, use_rstack, sp[0], v);
+    if (++sp[0] == qvm->stacksize) sp[0] = 0;
 }
 
 /* Pops a value from the selected by `use_rstack`.
@@ -151,7 +124,8 @@ uint32_t stack_pop(struct quivm *qvm, int use_rstack)
 {
     uint32_t *sp;
     sp = (use_rstack) ? &qvm->rsp : &qvm->dsp;
-    return quivm_stack_read(qvm, use_rstack, --(*sp));
+    if (sp[0]-- == 0) sp[0] = qvm->stacksize - 1;
+    return quivm_stack_read(qvm, use_rstack, sp[0]);
 }
 
 /* Auxiliary function to run when an exception is found.
@@ -172,18 +146,23 @@ void on_exception(struct quivm *qvm, uint32_t err_cond)
     /* rstack points to the faulting instruction */
     stack_push(qvm, 1, qvm->pc);
     qvm->pc = INITIAL_PC;
+
+    qvm->status |= STS_EXCEPTION;
 }
 
 int quivm_step(struct quivm *qvm)
 {
     uint32_t v, w;
     uint64_t dv, dw;
+    uint32_t old_pc;
     uint8_t insn;
 
     if (qvm->status & (STS_HALTED | STS_TERMINATED))
         return 0;
 
+    old_pc = qvm->pc;
     insn = quivm_read_byte(qvm, qvm->pc++);
+
     if (insn < INSN_LIT_BASE) {
         qvm->acc <<= 7;
         qvm->acc |= (uint32_t) insn;
@@ -259,6 +238,7 @@ int quivm_step(struct quivm *qvm)
         case INSN_UDIV:
             /* check for division by zero */
             if (qvm->acc == 0) {
+                qvm->pc = old_pc;
                 on_exception(qvm, EX_DIVIDE_BY_ZERO);
                 return 1;
             }
@@ -338,9 +318,23 @@ int quivm_step(struct quivm *qvm)
             break;
         case INSN_INVL: /* fall through */
         default:
+            qvm->pc = old_pc;
             on_exception(qvm, EX_INVALID_INSN);
             return 1;
         }
+    }
+
+    /* Detect stack overflow
+     * Overflows are detected even if the last
+     * instruction halted or terminated the VM
+     */
+    if (!(qvm->status & STS_EXCEPTION)
+        && ((qvm->dsp >= qvm->stacksize - STACK_THRESHOLD)
+            || (qvm->rsp >= qvm->stacksize - STACK_THRESHOLD))) {
+
+        stack_push(qvm, 0, qvm->acc);
+        qvm->acc = old_pc;
+        on_exception(qvm, EX_STACK_OVERFLOW);
     }
 
     return 1;
@@ -460,20 +454,21 @@ void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
             break;
         case IO_SYS_DSTACK:
             if (qvm->scell == CELL_STACK_POINTER) {
-                qvm->dsp = v;
+                qvm->dsp = v % qvm->stacksize;
             } else {
                 quivm_stack_write(qvm, 0, qvm->scell, v);
             }
             break;
         case IO_SYS_RSTACK:
             if (qvm->scell == CELL_STACK_POINTER) {
-                qvm->rsp = v;
+                qvm->rsp = v % qvm->stacksize;
             } else {
                 quivm_stack_write(qvm, 1, qvm->scell, v);
             }
             break;
         case IO_SYS_STATUS:
-            qvm->status &= ~STS_EXCEPTION;
+            qvm->status &= ~(STS_EXCEPTION | STS_HALTED);
+            qvm->status |= v & STS_HALTED;
             break;
         case IO_SYS_TERMINATE:
             qvm->termvalue = v;

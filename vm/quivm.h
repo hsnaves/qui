@@ -56,6 +56,13 @@
 #define EX_RESET                0x00000000
 #define EX_INVALID_INSN         0x00000001
 #define EX_DIVIDE_BY_ZERO       0x00000002
+#define EX_STACK_OVERFLOW       0x00000003
+
+/* Threshold number of stack cells close
+ * to the stack limit to declarate stack
+ * overflow.
+ */
+#define STACK_THRESHOLD                  8
 
 /* The I/O address for the system device */
 #define IO_BASE                 0xFFF00000
@@ -139,15 +146,6 @@ void quivm_reset(struct quivm *qvm);
  * Returns zero on success.
  */
 int quivm_load(struct quivm *qvm, const char *filename,
-               uint32_t address, uint32_t *length);
-
-/* Dumps an image to a file named `filename`.
- * The image start at address `address`, and has `length` words.
- * The parameter `length` is populated with the number of
- * words written on return.
- * Returns zero on success.
- */
-int quivm_dump(struct quivm *qvm, const char *filename,
                uint32_t address, uint32_t *length);
 
 /* Runs one step of the virtual machine.
