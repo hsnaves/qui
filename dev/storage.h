@@ -7,14 +7,14 @@
 
 /* Constants */
 /* The I/O address space for the storage device */
-#define IO_STORAGE_BASE         0xFFFFFE00
-#define IO_STORAGE_END          0xFFFFFE00
+#define IO_STORAGE_BASE         0xFFFFFF40
+#define IO_STORAGE_END          0xFFFFFF80
 
-/* Relative addresses within the storage device */
-#define IO_STORAGE_NAME               0xFC
-#define IO_STORAGE_DATA               0xF8
-#define IO_STORAGE_LEN                0xF4
-#define IO_STORAGE_OP                 0xF0
+/* Addresses within the storage device */
+#define IO_STORAGE_NAME         0xFFFFFF7C
+#define IO_STORAGE_DATA         0xFFFFFF78
+#define IO_STORAGE_LEN          0xFFFFFF74
+#define IO_STORAGE_OP           0xFFFFFF70
 
 /* The possible operations */
 #define STORAGE_OP_READ                  1

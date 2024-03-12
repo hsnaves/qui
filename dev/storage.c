@@ -33,7 +33,7 @@ uint32_t storage_read_callback(const struct storage *stg,
     uint32_t v;
     (void)(qvm); /* UNUSED */
 
-    switch (address - IO_STORAGE_BASE) {
+    switch (address) {
     case IO_STORAGE_NAME:
         v = stg->name;
         break;
@@ -148,7 +148,7 @@ void do_operation(struct storage *stg, struct quivm *qvm)
 void storage_write_callback(struct storage *stg,  struct quivm *qvm,
                             uint32_t address, uint32_t v)
 {
-    switch (address - IO_STORAGE_BASE) {
+    switch (address) {
     case IO_STORAGE_NAME:
         stg->name = v;
         break;

@@ -24,7 +24,7 @@ uint32_t console_read_callback(const struct console *cns,
     uint32_t v;
     (void)(qvm); /* UNUSED */
 
-    switch (address - IO_CONSOLE_BASE) {
+    switch (address) {
     case IO_CONSOLE_IN:
         v = fgetc(stdin);
         break;
@@ -44,7 +44,7 @@ void console_write_callback(struct console *cns,  struct quivm *qvm,
     FILE *fp;
     (void)(qvm); /* UNUSED */
 
-    switch (address - IO_CONSOLE_BASE) {
+    switch (address) {
     case IO_CONSOLE_OUT:
         fp =(cns->use_err) ? stderr : stdout;
         fputc(v, fp);

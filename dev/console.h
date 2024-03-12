@@ -7,13 +7,13 @@
 
 /* Constants */
 /* The I/O address space for the console device */
-#define IO_CONSOLE_BASE         0xFFFFFE00
-#define IO_CONSOLE_END          0xFFFFFF00
+#define IO_CONSOLE_BASE         0xFFFFFF80
+#define IO_CONSOLE_END          0xFFFFFFC0
 
-/* Relative addresses within the console device */
-#define IO_CONSOLE_IN                 0xFC
-#define IO_CONSOLE_OUT                0xF8
-#define IO_CONSOLE_USE_ERR            0xF4
+/* Addresses within the console device */
+#define IO_CONSOLE_IN           0xFFFFFFBC
+#define IO_CONSOLE_OUT          0xFFFFFFB8
+#define IO_CONSOLE_USE_ERR      0xFFFFFFB4
 
 /* Data structures and types */
 /* A structure representing the console device */

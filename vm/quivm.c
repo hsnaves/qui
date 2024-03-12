@@ -392,7 +392,7 @@ uint32_t aligned_read(const struct quivm *qvm, uint32_t address)
         return -1;
 
     if (address >= IO_SYS_BASE) {
-        switch (address - IO_SYS_BASE) {
+        switch (address) {
         case IO_SYS_SCELL:
             v = qvm->scell;
             break;
@@ -454,7 +454,7 @@ void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
         return;
 
     if (address >= IO_SYS_BASE) {
-        switch (address - IO_SYS_BASE) {
+        switch (address) {
         case IO_SYS_SCELL:
             qvm->scell = v;
             break;

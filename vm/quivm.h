@@ -59,18 +59,18 @@
 
 /* The I/O address for the system device */
 #define IO_BASE                 0xFFF00000
-#define IO_SYS_BASE             0xFFFFFF00
+#define IO_SYS_BASE             0xFFFFFFC0
 
-/* Relative addresses within the system device */
-#define IO_SYS_SCELL                  0xF8
-#define IO_SYS_DSTACK                 0xF4
-#define IO_SYS_RSTACK                 0xF0
-#define IO_SYS_STATUS                 0xEC
-#define IO_SYS_TERMINATE              0xE8
-#define IO_SYS_STACKSIZE              0xE4
-#define IO_SYS_MEMSIZE                0xE0
-#define IO_SYS_CELLSIZE               0xDC
-#define IO_SYS_ID                     0xD8
+/* Addresses within the system device */
+#define IO_SYS_SCELL            0xFFFFFFF8
+#define IO_SYS_DSTACK           0xFFFFFFF4
+#define IO_SYS_RSTACK           0xFFFFFFF0
+#define IO_SYS_STATUS           0xFFFFFFEC
+#define IO_SYS_TERMINATE        0xFFFFFFE8
+#define IO_SYS_STACKSIZE        0xFFFFFFE4
+#define IO_SYS_MEMSIZE          0xFFFFFFE0
+#define IO_SYS_CELLSIZE         0xFFFFFFDC
+#define IO_SYS_ID               0xFFFFFFD8
 
 /* Data structures and types */
 
@@ -101,7 +101,9 @@ struct quivm {
     uint32_t acc;                   /* accumulator */
     uint32_t dsp, rsp;              /* data and return stack pointers */
     uint32_t stacksize;             /* stack size (in cells) */
-    uint32_t memsize;               /* memory size (in bytes) */
+    uint32_t memsize;               /* memory size (in bytes)
+                                     * note: must be a multiple of 4
+                                     */
 
     uint32_t scell;                 /* The cell for the stack read/write */
     uint32_t status;                /* The status of the VM */
