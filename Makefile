@@ -27,8 +27,6 @@ LDFLAGS :=
 INCLUDES := -I.
 LIBS :=
 
-TARGET := qui
-
 # Modify the FLAGS based on the options
 
 ifneq ($(OPTIMIZE), 0)
@@ -45,7 +43,7 @@ endif
 
 # Main targets
 
-all: $(TARGET)
+all: qui rom.bin
 
 include module.mk
 
@@ -54,14 +52,20 @@ include module.mk
 qui: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+rom.bin: rom/extra.fth
+	cat rom/extra.fth | ./qui kernel.bin > rom.bin
+
+kernel.bin: rom/meta.fth rom/kernel.fth
+	cat rom/meta.fth rom/kernel.fth | ./qui rom.bin > kernel.bin
+
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
-install: $(TARGET)
+install: qui rom.bin
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/bin/
 	$(INSTALL) -m 755 qui $(DESTDIR)$(PREFIX)/bin/
 
 clean:
-	$(RM) $(TARGET) $(OBJS)
+	$(RM) qui rom.bin $(OBJS)
 
 .PHONY: all install clean
