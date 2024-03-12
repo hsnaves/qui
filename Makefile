@@ -52,7 +52,7 @@ include module.mk
 qui: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-rom.bin: rom/extra.fth
+rom.bin: rom/extra.fth kernel.bin
 	cat rom/extra.fth | ./qui kernel.bin > rom.bin
 
 kernel.bin: rom/meta.fth rom/kernel.fth

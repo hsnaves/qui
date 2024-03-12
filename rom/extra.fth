@@ -256,6 +256,7 @@ forth current !
 00 60 dict>last !
 70 60 dict>code !
 70 60 dict>data !
+compiler 80 !
 
 \ set the current to temp
 60 use
@@ -263,11 +264,10 @@ forth current !
 
 ( define the location of temporary buffer and temporary dictionary )
 : temp ( -- addr )     60 ; inl
-: tmpbuf ( -- addr)    70 ; inl
+: tmpbuf ( -- addr )   70 ; inl
+: tempref ( -- addr )  80 ; inl
 
-\ set the temp dictionary in the context
 forth current !
-60 context !
 
 \ start the scope
 : scope{ ( -- )
@@ -278,56 +278,52 @@ forth current !
    \ set last word to zero
    0 [ temp dict>last lit, ] !  \ d:
 
-   \ set the next dictionary to empty
-   0 [ temp dict>next lit, ] !
+   \ clear the tempref
+   0 tempref !
 
    \ set temp code to tmpbuf
    tmpbuf [ temp dict>code lit, ] !
 
    \ set temp data to tmpbuf
    tmpbuf [ temp dict>code lit, ] !
+
+   \ set the context to the temp
+   temp use
    ;
 
-\ stop the scope
-: }scope ( -- )
-   [ temp dict>next lit, ] @    \ d: vnext
-   current @                    \ d: vnext vcurrent
-   temp =                       \ d: vnext tempcurrent?
-   if current ! exit then
-   context @                    \ d: vnext vcontext
-   temp =                       \ d: vnext tempcontext?
-   if context ! exit then
-   drop
-   ;
-
-\ auxiliary declarations in the scope
-: auxiliary ( -- )
-   }scope                       \ d:
+\ the public declarations of the scope
+: public ( -- )
    current @                    \ d: vcurrent
-   [ temp dict>next lit, ] !    \ d:
-   temp current !               \ d:
-   tmpbuf                       \ d: tmpbuf
-   [ temp dict>code lit, ] !    \ d:
+   temp =                       \ d: eq?
+   if
+      tempref @ current !
+   then
    ;
 
 \ the private declarations of the scope
 : private ( -- )
-   }scope                       \ d:
+   public                       \ d:
    current @                    \ d: vcurrent
-   dup                          \ d: vcurrent vcurrent
-   [ temp dict>next lit, ] !    \ d: vcurrent
+   dup tempref !                \ d: vcurrent
    temp current !               \ d: vcurrent
    dict>code @                  \ d: currentbuf
    [ temp dict>code lit, ] !    \ d:
    ;
 
-\ the public declarations of the scope
-: public ( -- )
-   }scope                       \ d:
-   temp use                     \ d:
-   current @                    \ d: vcurrent
-   dict>code @                  \ d: currentbuf
+\ auxiliary declarations in the scope
+: auxiliary ( -- )
+   private                      \ d:
+   tmpbuf                       \ d: tmpbuf
    [ temp dict>code lit, ] !    \ d:
+   ;
+
+\ stop the scope
+: }scope ( -- )
+   public
+   [ temp dict>next lit, ] @    \ d: vcontext
+   context !                    \ d:
+   0 [ temp dict>next lit, ] !  \ d:
+   0 tempref !
    ;
 
 }scope
@@ -374,7 +370,7 @@ public
 
 \ prints an unsigned word to the output in the current
 \ base (no space at end)
-: U. ( u -- )
+: u. ( u -- )
    begin                        \ d: u
       base c@ u/mod             \ d: rem quot
       dup =0 if                 \ d: rem quot
@@ -395,8 +391,19 @@ public
       [ char - lit, ] emit      \ print minus sign
       0 swap -                  \ d: -num
    then
-   U. tail                      \ d:
+   u. tail                      \ d:
    ; noexit
+
+\ prints a given number of spaces
+: spaces ( n -- )
+   begin
+      dup if
+         space 1-
+         again
+      then
+   end
+   drop
+   ;
 
 private
 
@@ -499,8 +506,6 @@ private
 
 
 decimal
-
-scope{ }scope
 
 ( dump rom file to standard output )
 0 here @ type

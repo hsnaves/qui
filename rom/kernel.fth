@@ -4,8 +4,6 @@
 \ placeholder for the jump
 0 5 m:insn_jmp m:jumpn,
 
-m:code m:buf>here m:@ m:last m:!
-
 m:scope{
 
 ( *** forth dictionary *** )
@@ -1018,6 +1016,7 @@ m:: boot ( status -- )
 
 m:}scope
 
+
 \ set the right size of the word buffer
 40000 m:wordbuf m:buf>end m:!
 
@@ -1028,15 +1027,12 @@ m:}scope
 50000 m:tmpbuf m:buf>end m:!
 40000 m:tmpbuf m:buf>off m:!
 
-m:scope{ m:}scope
-
 ( resolve the initial jump )
 m:here m:@                      \ d: vhere
 100 m:here m:!                  \ d: vhere
 m:' boot
 5 m:insn_jmp m:jumpn,           \ write the jump
 m:here m:!
-
 
 ( dump rom file to standard output )
 0 m:addr>host

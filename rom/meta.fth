@@ -32,6 +32,7 @@ align
 : m:tib      50 ; inl
 : m:temp     60 ; inl
 : m:tmpbuf   70 ; inl
+: m:tempref  80 ; inl
 
 : m:insn_ret C0 ; inl
 : m:insn_jsr C1 ; inl
@@ -702,62 +703,73 @@ F_IMM swap setflag
 
 ( implementation of the private / public framework )
 
+\ uses a dictionary
+: m:use ( addr -- )
+   m:context m:@                \ d: addr vcontext
+   over m:dict>next m:!         \ d: addr
+   m:context m:!                \ d:
+   ;
+
 \ start the scope
 : m:scope{ ( -- )
+   \ set here to start
    m:tmpbuf m:buf>start m:@     \ d: vtmpstart
    m:tmpbuf m:buf>here m:!      \ d:
 
-   0 m:temp m:dict>next m:!
+   \ set last word to zero
    0 m:temp m:dict>last m:!
 
+   \ clear the tempref
+   0 m:tempref m:!
+
+   \ set temp code to tmpbuf
    m:tmpbuf m:temp              \ d: tmpbuf temp
    2dup m:dict>code m:!         \ d: tmpbuf temp
+   \ set temp data to tmpbuf
    m:dict>data m:!              \ d:
-   ;
 
-\ stop the scope
-: m:}scope ( -- )
-   m:temp m:dict>next m:@       \ d: vnext
-   m:current m:@                \ d: vnext vcurrent
-   m:temp =                     \ d: vnext tempcurrent?
-   if m:current m:! tail then
-   m:context m:@                \ d: vnext vcontext
-   m:temp =                     \ d: vnext tempcontext?
-   if m:context m:! tail then
-   drop
-   ;
+   \ set the context to the temp
+   m:temp m:use tail
+   ; noexit
 
-\ auxiliary declarations
-: m:auxiliary ( -- )
-   m:}scope                     \ d:
+\ the public declarations of the scope
+: m:public ( -- )
    m:current m:@                \ d: vcurrent
-   m:temp m:dict>next m:!       \ d:
-   m:temp m:current m:!         \ d:
-   m:tmpbuf                     \ d: tmpbuf
-   m:temp m:dict>code m:!       \ d:
+   m:temp =                     \ d: eq?
+   if
+      m:tempref m:@ m:current m:!
+   then
    ;
 
 \ the private declarations of the scope
 : m:private ( -- )
-   m:}scope                     \ d:
+   m:public                     \ d:
    m:current m:@                \ d: vcurrent
-   dup                          \ d: vcurrent vcurrent
-   m:temp m:dict>next m:!       \ d: vcurrent
+   dup m:tempref m:!            \ d: vcurrent
    m:temp m:current m:!         \ d: vcurrent
    m:dict>code m:@              \ d: currentbuf
-   m:temp m:dict>code m:!       \ d:
-   ;
+   [ m:temp m:dict>code lit, ]
+   m:! tail                     \ d:
+   ; noexit
 
-\ the public declarations of the scope
-: m:public ( -- )
-   m:}scope                     \ d:
-   m:context m:@                \ d: vcontext
-   m:temp m:dict>next m:!       \ d:
-   m:temp m:context m:!         \ d:
-   m:current m:@                \ d: vcurrent
-   m:dict>code m:@              \ d: currentbuf
-   m:temp m:dict>code m:!       \ d:
-   ;
+\ auxiliary declarations
+: m:auxiliary ( -- )
+   m:private                    \ d:
+   m:tmpbuf                     \ d: tmpbuf
+   [ m:temp m:dict>code lit, ]
+   m:! tail                     \ d:
+   ; noexit
+
+\ stop the scope
+: m:}scope ( -- )
+   m:public
+   [ m:temp m:dict>next lit, ]
+   m:@                          \ d: vcontext
+   m:context m:!                \ d:
+   0 [ m:temp m:dict>next lit, ]
+   m:!                          \ d:
+   0 m:tempref m:! tail
+   ; noexit
 
 }scope
 
