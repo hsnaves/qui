@@ -5,6 +5,7 @@
 #include "vm/quivm.h"
 #include "dev/devio.h"
 #include "dev/console.h"
+#include "dev/display.h"
 
 /* Functions */
 
@@ -12,6 +13,7 @@ int devio_init(struct devio *io)
 {
     io->cns = NULL;
     io->stg = NULL;
+    io->dpl = NULL;
 
     io->cns = (struct console *) malloc(sizeof(struct console));
     if (!io->cns) {
@@ -43,6 +45,21 @@ int devio_init(struct devio *io)
         return 1;
     }
 
+    io->dpl = (struct display *) malloc(sizeof(struct display));
+    if (!io->dpl) {
+        fprintf(stderr, "dev/devio: init: "
+                "memory exhausted\n");
+        devio_destroy(io);
+        return 1;
+    }
+
+    if (display_init(io->dpl)) {
+        fprintf(stderr, "dev/devio: init: "
+                "error while initializing the display device\n");
+        devio_destroy(io);
+        return 1;
+    }
+
     return 0;
 }
 
@@ -59,11 +76,20 @@ void devio_destroy(struct devio *io)
         free(io->stg);
     }
     io->stg = NULL;
+
+    if (io->dpl) {
+        display_destroy(io->dpl);
+        free(io->dpl);
+    }
+    io->dpl = NULL;
 }
 
-void devio_update(struct devio *io)
+void devio_update(struct quivm *qvm)
 {
-    (void)(io); /* UNUSED */
+    struct devio *io;
+    io = (struct devio *) qvm->arg;
+
+    display_update(io->dpl, qvm);
 }
 
 uint32_t devio_read_callback(const struct quivm *qvm, uint32_t address)
@@ -76,6 +102,9 @@ uint32_t devio_read_callback(const struct quivm *qvm, uint32_t address)
     }
     if ((address >= IO_STORAGE_BASE) && (address < IO_STORAGE_END)) {
         return storage_read_callback(io->stg, qvm, address);
+    }
+    if ((address >= IO_DISPLAY_BASE) && (address < IO_DISPLAY_END)) {
+        return display_read_callback(io->dpl, qvm, address);
     }
 
     return -1;
@@ -92,6 +121,10 @@ void devio_write_callback(struct quivm *qvm, uint32_t address, uint32_t v)
     }
     if ((address >= IO_STORAGE_BASE) && (address < IO_STORAGE_END)) {
         storage_write_callback(io->stg, qvm, address, v);
+        return;
+    }
+    if ((address >= IO_DISPLAY_BASE) && (address < IO_DISPLAY_END)) {
+        display_write_callback(io->dpl, qvm, address, v);
         return;
     }
 }
