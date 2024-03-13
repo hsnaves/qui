@@ -10,6 +10,7 @@
 #include "dev/rtclock.h"
 #include "dev/display.h"
 #include "dev/audio.h"
+#include "dev/keyboard.h"
 
 /* Functions */
 
@@ -21,6 +22,7 @@ int devio_init(struct devio *io)
     io->rtc = NULL;
     io->dpl = NULL;
     io->aud = NULL;
+    io->kbd = NULL;
 
     /* initialize the console device */
     io->cns = (struct console *) malloc(sizeof(struct console));
@@ -118,6 +120,22 @@ int devio_init(struct devio *io)
         return 1;
     }
 
+    /* initialize the keyboard device */
+    io->kbd = (struct keyboard *) malloc(sizeof(struct keyboard));
+    if (!io->kbd) {
+        fprintf(stderr, "dev/devio: init: "
+                "memory exhausted\n");
+        devio_destroy(io);
+        return 1;
+    }
+
+    if (keyboard_init(io->kbd)) {
+        fprintf(stderr, "dev/devio: init: "
+                "error while initializing the keyboard device\n");
+        devio_destroy(io);
+        return 1;
+    }
+
     return 0;
 }
 
@@ -164,6 +182,13 @@ void devio_destroy(struct devio *io)
         free(io->aud);
     }
     io->aud = NULL;
+
+    /* destroy the keyboard device */
+    if (io->kbd) {
+        keyboard_destroy(io->kbd);
+        free(io->kbd);
+    }
+    io->kbd = NULL;
 }
 
 void devio_update(struct quivm *qvm)
@@ -197,6 +222,9 @@ uint32_t devio_read_callback(struct quivm *qvm, uint32_t address)
     if ((address >= IO_AUDIO_BASE) && (address < IO_AUDIO_END)) {
         return audio_read_callback(io->aud, qvm, address);
     }
+    if ((address >= IO_KEYBOARD_BASE) && (address < IO_KEYBOARD_END)) {
+        return keyboard_read_callback(io->kbd, qvm, address);
+    }
 
     return -1;
 }
@@ -228,6 +256,10 @@ void devio_write_callback(struct quivm *qvm, uint32_t address, uint32_t v)
     }
     if ((address >= IO_AUDIO_BASE) && (address < IO_AUDIO_END)) {
         audio_write_callback(io->aud, qvm, address, v);
+        return;
+    }
+    if ((address >= IO_KEYBOARD_BASE) && (address < IO_KEYBOARD_END)) {
+        keyboard_write_callback(io->kbd, qvm, address, v);
         return;
     }
 }

@@ -10,6 +10,7 @@
 #include "dev/rtclock.h"
 #include "dev/display.h"
 #include "dev/audio.h"
+#include "dev/keyboard.h"
 
 /* Data structures and types */
 /* A structure for the VM I/O devices */
@@ -20,6 +21,7 @@ struct devio {
     struct rtclock *rtc;        /* A reference to the clock device */
     struct display *dpl;        /* A reference to the display device */
     struct audio *aud;          /* A reference to the audio device */
+    struct keyboard *kbd;       /* A reference to the keyboard device */
 };
 
 /* Functions */

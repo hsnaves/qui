@@ -15,6 +15,7 @@
 #include "dev/rtclock.h"
 #include "dev/display.h"
 #include "dev/audio.h"
+#include "dev/keyboard.h"
 
 /* Constants */
 #define NUM_INSN_PER_FRAME      6000000
