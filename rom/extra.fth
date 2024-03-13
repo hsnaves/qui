@@ -207,10 +207,9 @@ forth current !
 
 \ creates a deferred word
 : defer ( -- )
-   align
-   here @                       \ d: size vhere
-   0 ,                          \ d: vhere
-   create                       \ d: vhere
+   here @                       \ d: addr
+   0 ,                          \ d: addr
+   create                       \ d: addr
    lit,                         \ d:
    [ ' @ c@ lit, ]              \ get the xt of @
    c,                           \ compile "@"
@@ -252,20 +251,20 @@ forth current !
 ( implementation of the private / public framework )
 
 \ initialize the tempbuf and temp
-70 buf>start @ 60 buf>here !
-00 60 dict>last !
-70 60 dict>code !
-70 60 dict>data !
-compiler 80 !
+60 buf>start @ 60 buf>here !
+00 50 dict>last !
+60 50 dict>code !
+60 50 dict>data !
+compiler 70 !
 
 \ set the current to temp
-60 use
-60 current !
+50 use
+50 current !
 
 ( define the location of temporary buffer and temporary dictionary )
-: temp ( -- addr )     60 ; inl
-: tmpbuf ( -- addr )   70 ; inl
-: tempref ( -- addr )  80 ; inl
+: temp ( -- addr )     50 ; inl
+: tmpbuf ( -- addr )   60 ; inl
+: tempref ( -- addr )  70 ; inl
 
 forth current !
 
@@ -444,12 +443,12 @@ private
 
 \ handles general exceptios
 : general_exception ( status c-str n -- )
-   1 use_err !                  \ d: status c-str n
+   1 channel c!                 \ d: status c-str n
    type                         \ d: status
    drop r>                      \ d: pc
    dup w. space                 \ d: pc
    c@ b. nl                     \ d:
-   0 use_err !
+   0 channel c!
    clearexception
    quit tail
    ; noexit
@@ -472,7 +471,7 @@ private
 
 ," stack overflow at "
 : stack_overflow ( pc status -- )
-   1 use_err !                  \ d: pc status | r: newpc
+   1 channel c!                 \ d: pc status | r: newpc
    [ swap lit, lit, ]           \ d: pc status c-str n | r: newpc
    type                         \ d: pc status | r: newpc
    drop                         \ d: pc | r: newpc
@@ -480,7 +479,7 @@ private
    c@ b. space                  \ d: | r: newpc
    r>                           \ d: newpc
    w. nl                        \ d:
-   0 use_err !
+   0 channel c!
    1 dsp! 0 rsp!
    clearexception
    quit tail
@@ -503,7 +502,6 @@ private
 ' my_onexception is onexception
 
 }scope
-
 
 decimal
 

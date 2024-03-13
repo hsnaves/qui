@@ -28,11 +28,10 @@ align
 : m:forth    10 ; inl
 : m:compiler 20 ; inl
 : m:wordbuf  30 ; inl
-: m:extrabuf 40 ; inl
-: m:tib      50 ; inl
-: m:temp     60 ; inl
-: m:tmpbuf   70 ; inl
-: m:tempref  80 ; inl
+: m:tib      40 ; inl
+: m:temp     50 ; inl
+: m:tmpbuf   60 ; inl
+: m:tempref  70 ; inl
 
 : m:insn_ret C0 ; inl
 : m:insn_jsr C1 ; inl
@@ -795,10 +794,9 @@ F_IMM swap setflag
 
 \ creates a deferred word
 : m:defer ( -- )
-   m:align
-   m:here m:@                   \ d: size vhere
-   0 m:,                        \ d: vhere
-   m:create                     \ d: vhere
+   m:here m:@                   \ d: addr
+   0 m:,                        \ d: addr
+   m:create                     \ d: addr
    m:lit,                       \ d:
    D0 m:c,                      \ compile "@"
    [ swap lit, lit, ]           \ d: c-str n
@@ -859,15 +857,3 @@ m:tmpbuf m:temp m:dict>data m:!
 10000 m:tmpbuf m:buf>start m:!
 20000 m:tmpbuf m:buf>end m:!
 10000 m:tmpbuf m:buf>off m:!
-
-\ initialize the TIB
-50000 m:tib m:buf>here m:!
-50000 m:tib m:buf>start m:!
-51000 m:tib m:buf>end m:!
-50000 m:tib m:buf>off m:!
-
-\ Initialize the extra buffer
-51000 m:extrabuf m:buf>here m:!
-51000 m:extrabuf m:buf>start m:!
-100000 m:extrabuf m:buf>end m:!
-51000 m:extrabuf m:buf>off m:!

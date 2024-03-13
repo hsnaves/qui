@@ -135,7 +135,7 @@ private
    ;
 
 \ fully disassemble a single instruction at given address
-: disasm ( addr -- )
+: disasm1 ( addr -- )
    dup w. space                \ d: addr
    c@ dup b.                   \ d: insn
    5 spaces                    \ d: insn
@@ -146,11 +146,11 @@ private
 public
 
 \ disassembles many instructions at a given address
-: disassemble ( addr n -- addr' )
+: disasm ( addr n -- addr' )
    begin
       dup if
          1- swap               \ d: n' addr
-         dup disasm            \ d: n addr
+         dup disasm1           \ d: n addr
          1+ swap               \ d: addr' n
          again
       then

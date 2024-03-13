@@ -16,11 +16,13 @@ m:: this ( -- addr )     08 m:; m:inl
 m:: flags ( -- addr )    0C m:; m:inl
 m:: state ( -- addr )    0D m:; m:inl
 m:: base ( -- addr )     0E m:; m:inl
+m:: channel ( -- addr)   0F m:; m:inl
 m:: forth ( -- addr )    10 m:; m:inl
 m:: compiler ( -- addr ) 20 m:; m:inl
 m:: wordbuf ( -- addr )  30 m:; m:inl
-m:: extrabuf ( -- addr ) 40 m:; m:inl
-m:: tib ( -- addr )      50 m:; m:inl
+m:: tib ( -- addr )      40 m:; m:inl
+
+m:public
 
 ( basic words )
 m:: =0    ( n -- {n==0} )          [ C4 m:c, ] m:; m:inl
@@ -398,20 +400,34 @@ m:: bye ( n -- )
    -18 !
    m:;
 
-\ emits one character to the standard output
-m:: emit ( c -- )
-   -48 !
-   m:;
 
-\ address of the variable to use the standard error
-m:: use_err ( -- addr )
-   -4C
-   m:; m:inl
+m:align
+\ emits one character to the standard output
+m:defer emit ( c -- )
+
+m:align
+\ obtains an input character from standard input
+m:defer getc ( -- c)
+
+m:private
+
+\ emits one character to the standard output
+m:: default_emit ( c -- )
+   -48
+   channel c@                   \ select based on the channel
+   m:if 4 - m:then
+   !
+   m:;
 
 \ obtains an input character from standard input
-m:: getc ( -- c )
+m:: default_getc ( -- c )
    -44 @
    m:;
+
+m:' default_emit m:is emit
+m:' default_getc m:is getc
+
+m:public
 
 \ prints a newline to the console
 m:: nl ( -- )
@@ -876,9 +892,9 @@ m:," ? "
 \ prints an error message of an unknown word
 m:: unknown ( c-str n -- )
    [ swap m:lit, m:lit, ]       \ d: c-str n c-str' n'
-   1 use_err !
+   1 channel c!
    type
-   0 use_err !
+   0 channel c!
    onerror m:tail
    m:; m:noexit
 
@@ -984,9 +1000,9 @@ m:private
 
 \ default implementation of onerror
 m:: default_onerror ( c-str n -- )
-   1 use_err !
+   1 channel c!
    type nl                      \ d:
-   0 use_err !
+   0 channel c!
    line                         \ flush the current line
    quit tail
    m:; noexit
@@ -1007,25 +1023,50 @@ m:: boot ( status -- )
    \ check if status is nonzero (for exceptions)
    dup m:if onexception m:tail m:then
    drop
-   0 rsp!
-   1 dsp!
-   memsize
-   extrabuf buf>end !
+   \ initialize the stacks
+   0 rsp! 1 dsp!
+   memsize                      \ d: addr
+
+   \ set the end of the temporary buffer
+   dup [ m:tmpbuf m:buf>end m:lit, ] !
+
+   10000 -                      \ d: addr'
+   \ initialize the other parts of the tmpbuf
+   dup [ m:tmpbuf m:buf>start m:lit, ] !
+   dup [ m:tmpbuf m:buf>here m:lit, ] !
+   dup [ m:tmpbuf m:buf>off m:lit, ] !
+
+   \ set the end of the TIB
+   dup [ m:tib m:buf>end m:lit, ] !
+
+   1000 -                      \ d: addr'
+   \ initialize the other parts of the TIB
+   dup [ m:tib m:buf>start m:lit, ] !
+   dup [ m:tib m:buf>here m:lit, ] !
+   dup [ m:tib m:buf>off m:lit, ] !
+
+   \ set the end of the wordbuf
+   [ m:wordbuf m:buf>end m:lit, ] !
+
    start tail
    m:; noexit
 
 m:}scope
 
-
 \ set the right size of the word buffer
 40000 m:wordbuf m:buf>end m:!
 
-\ initialize the tmpbuffer
-\ now set it to the proper size
-40000 m:tmpbuf m:buf>here m:!
-40000 m:tmpbuf m:buf>start m:!
-50000 m:tmpbuf m:buf>end m:!
-40000 m:tmpbuf m:buf>off m:!
+\ zero the tmpbuffer
+0 m:tmpbuf m:buf>here m:!
+0 m:tmpbuf m:buf>start m:!
+0 m:tmpbuf m:buf>end m:!
+0 m:tmpbuf m:buf>off m:!
+
+\ zero the TIB
+0 m:tib m:buf>here m:!
+0 m:tib m:buf>start m:!
+0 m:tib m:buf>end m:!
+0 m:tib m:buf>off m:!
 
 ( resolve the initial jump )
 m:here m:@                      \ d: vhere

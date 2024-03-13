@@ -13,12 +13,12 @@
 /* Addresses within the console device */
 #define IO_CONSOLE_IN           0xFFFFFFBC
 #define IO_CONSOLE_OUT          0xFFFFFFB8
-#define IO_CONSOLE_USE_ERR      0xFFFFFFB4
+#define IO_CONSOLE_ERR          0xFFFFFFB4
 
 /* Data structures and types */
 /* A structure representing the console device */
 struct console {
-    int use_err;                /* To use the standar error as output */
+    void *unused;               /* so that the structure is not empty */
 };
 
 /* Functions */
