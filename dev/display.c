@@ -1,7 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <string.h>
 
 #include "vm/quivm.h"
 #include "dev/display.h"
@@ -12,21 +9,25 @@ int display_init(struct display *dpl)
 {
     dpl->width = 0;
     dpl->height = 0;
-    dpl->buffer = NULL;
+    dpl->buffer = 0;
+    dpl->stride = 0;
+    dpl->waitsync = 0;
     dpl->initialized = 0;
     return 0;
 }
 
 void display_destroy(struct display *dpl)
 {
-    if (dpl->buffer) free(dpl->buffer);
-    dpl->buffer = NULL;
+    (void)(dpl); /* UNUSED */
 }
 
 void display_update(struct display *dpl, struct quivm *qvm)
 {
-    (void)(dpl); /* UNUSED */
-    (void)(qvm); /* UNUSED */
+    if (dpl->waitsync) {
+        /* resume the VM */
+        qvm->status &= ~STS_HALTED;
+    }
+    dpl->waitsync = 0;
 }
 
 uint32_t display_read_callback(struct display *dpl,
@@ -41,6 +42,12 @@ uint32_t display_read_callback(struct display *dpl,
         break;
     case IO_DISPLAY_HEIGHT:
         v = dpl->height;
+        break;
+    case IO_DISPLAY_BUFFER:
+        v = dpl->buffer;
+        break;
+    case IO_DISPLAY_STRIDE:
+        v = dpl->stride;
         break;
     default:
         v = -1;
@@ -61,31 +68,20 @@ void display_write_callback(struct display *dpl,  struct quivm *qvm,
     case IO_DISPLAY_HEIGHT:
         if (!dpl->initialized) {
             dpl->height = v;
-            dpl->buffer = (uint8_t *) malloc(dpl->width * dpl->height);
-            if (!dpl->buffer) {
-                fprintf(stderr, "display: write_callback: "
-                        "memory exhausted\n");
-                qvm->status |= STS_TERMINATED;
-                qvm->termvalue = 1;
-            }
         }
-        dpl->initialized = 1;
         break;
     case IO_DISPLAY_BUFFER:
-        if (dpl->initialized) {
-            uint32_t address, length;
+        dpl->buffer = v;
+        break;
+    case IO_DISPLAY_STRIDE:
+        dpl->stride = v;
+        break;
+    case IO_DISPLAY_WAITSYNC:
+        dpl->initialized = 1;
+        dpl->waitsync = !!v;
 
-            address = v;
-            length = dpl->width * dpl->height;
-            if (address < qvm->memsize) {
-                if (length > (qvm->memsize - address))
-                    length = qvm->memsize - address;
-            } else {
-                length = 0;
-            }
-
-            memcpy(dpl->buffer, &qvm->mem[address], length);
-        }
+        /* halts the VM */
+        qvm->status |= STS_HALTED;
         break;
     }
 }

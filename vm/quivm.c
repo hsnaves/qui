@@ -157,8 +157,13 @@ int quivm_step(struct quivm *qvm)
     uint32_t old_pc;
     uint8_t insn;
 
-    if (qvm->status & (STS_HALTED | STS_TERMINATED))
+    /* check if it is terminated */
+    if (qvm->status & STS_TERMINATED)
         return 0;
+
+    /* check if it is halted */
+    if (qvm->status & STS_HALTED)
+        return 1;
 
     old_pc = qvm->pc;
     insn = quivm_read_byte(qvm, qvm->pc++);

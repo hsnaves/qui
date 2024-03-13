@@ -14,13 +14,17 @@
 #define IO_DISPLAY_WIDTH        0xFFFFFEBC
 #define IO_DISPLAY_HEIGHT       0xFFFFFEB8
 #define IO_DISPLAY_BUFFER       0xFFFFFEB4
+#define IO_DISPLAY_STRIDE       0xFFFFFEB0
+#define IO_DISPLAY_WAITSYNC     0xFFFFFEAC
 
 /* Data structures and types */
 /* A structure representing the display device */
 struct display {
     uint32_t width;             /* display width */
     uint32_t height;            /* display height */
-    uint8_t *buffer;            /* frame buffer */
+    uint32_t buffer;            /* address of the framebuffer in memory */
+    uint32_t stride;            /* the row stride for the framebuffer */
+    int waitsync;               /* the vm is waiting for a sync */
     int initialized;            /* device was initialized */
 };
 

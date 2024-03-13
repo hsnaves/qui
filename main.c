@@ -16,7 +16,7 @@
 #include "dev/display.h"
 
 /* Constants */
-#define NUM_INSN_PER_FRAME      1000000
+#define NUM_INSN_PER_FRAME      6000000
 
 /* Global variables */
 #ifdef USE_SDL
@@ -104,9 +104,9 @@ void update_screen(struct quivm *qvm)
 {
     struct devio *io;
     struct display *dpl;
+    uint32_t i, address, length;
     uint8_t *pixels;
     int stride, ret;
-    uint32_t i;
 
     /* Check if texture and renderer are defined. */
     if (!texture || !renderer) return;
@@ -122,11 +122,18 @@ void update_screen(struct quivm *qvm)
         return;
     }
 
+    address = dpl->buffer;
     for (i = 0; i < dpl->height; i++) {
-        memcpy(&pixels[stride * i],
-               &dpl->buffer[dpl->width * i],
-               dpl->width * sizeof(uint8_t));
+        if (!(address < qvm->memsize)) break;
+
+        length = dpl->width;
+        if (length > (qvm->memsize - address))
+            length = qvm->memsize - address;
+
+        memcpy(&pixels[stride * i], &qvm->mem[address], length);
+        address += dpl->stride;
     }
+
     SDL_UnlockTexture(texture);
 
     ret = SDL_RenderCopy(renderer, texture, NULL, NULL);
@@ -183,9 +190,16 @@ int run(struct quivm *qvm)
 {
     struct devio *io;
     struct display *dpl;
+#ifdef USE_SDL
+    uint32_t time0_3x, time_3x, delta_3x;
+#endif
 
     io = (struct devio *) qvm->arg;
     dpl = io->dpl;
+
+#ifdef USE_SDL
+    time0_3x = 3 * SDL_GetTicks();
+#endif
 
     while (quivm_run(qvm, NUM_INSN_PER_FRAME)) {
         devio_update(qvm);
@@ -200,6 +214,16 @@ int run(struct quivm *qvm)
         }
         process_events(qvm);
         update_screen(qvm);
+
+        time_3x = 3 * SDL_GetTicks();
+        delta_3x = time_3x - time0_3x;
+        time0_3x = time_3x;
+
+        /* For 30 FPS, 100 / 3 = 33.3333ms */
+        if (delta_3x < 100) {
+            SDL_Delay((100 - delta_3x + 2) / 3);
+            time0_3x += (100 - delta_3x);
+        }
 #else
         /* No support for display here */
         if (dpl->initialized) {
