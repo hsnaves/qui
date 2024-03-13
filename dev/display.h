@@ -7,13 +7,13 @@
 
 /* Constants */
 /* The I/O address space for the display device */
-#define IO_DISPLAY_BASE         0xFFFFFEC0
-#define IO_DISPLAY_END          0xFFFFFF00
+#define IO_DISPLAY_BASE         0xFFFFFE80
+#define IO_DISPLAY_END          0xFFFFFEC0
 
 /* Addresses within the display device */
-#define IO_DISPLAY_WIDTH        0xFFFFFEFC
-#define IO_DISPLAY_HEIGHT       0xFFFFFEF8
-#define IO_DISPLAY_BUFFER       0xFFFFFEF4
+#define IO_DISPLAY_WIDTH        0xFFFFFEBC
+#define IO_DISPLAY_HEIGHT       0xFFFFFEB8
+#define IO_DISPLAY_BUFFER       0xFFFFFEB4
 
 /* Data structures and types */
 /* A structure representing the display device */

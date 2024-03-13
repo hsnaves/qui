@@ -7,6 +7,7 @@
 #include "dev/console.h"
 #include "dev/storage.h"
 #include "dev/network.h"
+#include "dev/rtclock.h"
 #include "dev/display.h"
 
 /* Data structures and types */
@@ -15,6 +16,7 @@ struct devio {
     struct console *cns;        /* A reference to the console device */
     struct storage *stg;        /* A reference to the storage device */
     struct network *ntw;        /* A reference to the network device */
+    struct rtclock *rtc;        /* A reference to the clock device */
     struct display *dpl;        /* A reference to the display device */
 };
 

@@ -12,6 +12,7 @@
 #include "dev/console.h"
 #include "dev/storage.h"
 #include "dev/network.h"
+#include "dev/rtclock.h"
 #include "dev/display.h"
 
 /* Constants */
