@@ -10,6 +10,10 @@ ifndef DEBUG
     DEBUG := 0
 endif
 
+ifndef USE_SDL
+    USE_SDL := 1
+endif
+
 # PREFIX is environment variable, but if it is not set, then set default value
 ifeq ($(PREFIX),)
     PREFIX := /usr/local
@@ -21,14 +25,17 @@ CC := gcc
 INSTALL := install
 RM := rm -f
 
-CFLAGS := -Wall -Wextra -ansi -pedantic \
-          $(shell sdl2-config --cflags) $(EXTRA_CFLAGS)
-LDFLAGS := $(shell sdl2-config --libs)
-
+CFLAGS := -Wall -Wextra -ansi -pedantic $(EXTRA_CFLAGS)
+LDFLAGS :=
 INCLUDES := -I.
 LIBS :=
 
 # Modify the FLAGS based on the options
+
+ifneq ($(USE_SDL), 0)
+    CFLAGS := $(CFLAGS) -DUSE_SDL $(shell sdl2-config --cflags)
+    LDFLAGS := $(LDFLAGS) $(shell sdl2-config --libs)
+endif
 
 ifneq ($(OPTIMIZE), 0)
     # Maybe add -fno-math-errno

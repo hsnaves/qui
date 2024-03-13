@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <signal.h>
-#include <SDL.h>
+
+#ifdef USE_SDL
+#    include <SDL.h>
+#endif
 
 #include "vm/quivm.h"
 #include "dev/devio.h"
@@ -11,12 +14,15 @@
 #define NUM_INSN_PER_FRAME      1000000
 
 /* Global variables */
+#ifdef USE_SDL
 SDL_Window *window;             /* the interface window */
 SDL_Renderer *renderer;         /* the renderer for the window */
 SDL_Texture *texture;           /* the texture for drawing */
+#endif
 
 /* Functions */
 
+#ifdef USE_SDL
 /* Auxiliary function to destroy the SDL window */
 static
 void destroy_window(void)
@@ -136,8 +142,9 @@ static
 void process_events(struct quivm *qvm)
 {
     SDL_Event e;
-
     (void)(qvm); /* UNUSED */
+
+    if (!window) return;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
@@ -161,6 +168,8 @@ void process_events(struct quivm *qvm)
     }
 }
 
+#endif /* USE_SDL */
+
 /* Auxiliary function to run the VM with a given set of I/O devices. */
 static
 int run(struct quivm *qvm, int argc, char **argv)
@@ -174,6 +183,8 @@ int run(struct quivm *qvm, int argc, char **argv)
     io = (struct devio *) qvm->arg;
     dpl = io->dpl;
     while (quivm_run(qvm, NUM_INSN_PER_FRAME)) {
+        devio_update(qvm);
+#ifdef USE_SDL
         if (dpl->initialized && !window) {
             create_window(dpl->width, dpl->height);
             if (!window) {
@@ -182,10 +193,16 @@ int run(struct quivm *qvm, int argc, char **argv)
                 break;
             }
         }
-
-        devio_update(qvm);
         process_events(qvm);
         update_screen(qvm);
+#else
+        /* No support for display here */
+        if (dpl->initialized) {
+            qvm->status |= STS_TERMINATED;
+            qvm->termvalue = 1;
+            break;
+        }
+#endif
     }
 
     return qvm->termvalue;
@@ -198,7 +215,7 @@ int main(int argc, char **argv)
     struct devio io;
     const char *filename;
     uint32_t length;
-    int ret, termvalue;
+    int ret;
 
     argv++; argc--;
     if (argc > 0) {
@@ -228,6 +245,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
+#ifdef USE_SDL
     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
     ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
     if (ret < 0) {
@@ -240,13 +258,16 @@ int main(int argc, char **argv)
         return 1;
     }
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+#endif
 
-    termvalue = run(&qvm, argc, argv);
+    ret = run(&qvm, argc, argv);
 
+#ifdef USE_SDL
     destroy_window();
     SDL_Quit();
+#endif
 
     quivm_destroy(&qvm);
     devio_destroy(&io);
-    return termvalue;
+    return ret;
 }

@@ -1,2 +1,1 @@
 - Add floating point support to the VM;
-- Make the dependency on SDL optional;
