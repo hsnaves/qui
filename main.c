@@ -172,16 +172,21 @@ void process_events(struct quivm *qvm)
 
 /* Auxiliary function to run the VM with a given set of I/O devices. */
 static
-int run(struct quivm *qvm, int argc, char **argv)
+int run(struct quivm *qvm, int argc, char **argv, char **envp)
 {
     struct devio *io;
+    struct console *cns;
     struct display *dpl;
 
-    (void)(argc); /* UNUSED */
-    (void)(argv); /* UNUSED */
-
     io = (struct devio *) qvm->arg;
+    cns = io->cns;
     dpl = io->dpl;
+
+    /* set up the arguments and enviroment variables */
+    cns->argc = argc;
+    cns->argv = argv;
+    cns->envp = envp;
+
     while (quivm_run(qvm, NUM_INSN_PER_FRAME)) {
         devio_update(qvm);
 #ifdef USE_SDL
@@ -208,22 +213,49 @@ int run(struct quivm *qvm, int argc, char **argv)
     return qvm->termvalue;
 }
 
+/* Prints the help text to the console.
+ * The name of the executable is given in `execname`.
+ */
+static
+void print_help(const char *execname)
+{
+    printf("Usage:\n");
+    printf("  %s [-r <romfile>] [-h|--help] args...\n", execname);
+    printf("where:\n");
+    printf("  -r <romfile>    Specify the rom file to use\n");
+    printf("  -h|--help       Print this help\n");
+}
+
 /* main function */
-int main(int argc, char **argv)
+int main(int argc, char **argv, char **envp)
 {
     struct quivm qvm;
     struct devio io;
     const char *filename;
     uint32_t length;
-    int ret;
+    int i, ret;
 
-    argv++; argc--;
-    if (argc > 0) {
-        filename = argv[0];
-        argv++; argc--;
-    } else {
-        filename = "rom.bin";
+    filename = "rom.bin";
+    for (i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-r") == 0) {
+            if (i == argc - 1) {
+                fprintf(stderr, "main: "
+                        "missing argument for `-r`\n");
+                return 1;
+            }
+            filename = argv[++i];
+        } else if ((strcmp(argv[i], "-h") == 0)
+                   || (strcmp(argv[i], "--help") == 0)) {
+            print_help(argv[0]);
+            return 0;
+        } else {
+            break;
+        }
     }
+
+    /* Move the arguments forward */
+    argc -= i;
+    argv = &argv[i];
 
     if (devio_init(&io)) {
         fprintf(stderr, "main: could not initialize I/O\n");
@@ -260,7 +292,7 @@ int main(int argc, char **argv)
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 #endif
 
-    ret = run(&qvm, argc, argv);
+    ret = run(&qvm, argc, argv, envp);
 
 #ifdef USE_SDL
     destroy_window();

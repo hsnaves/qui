@@ -29,8 +29,8 @@ void display_update(struct display *dpl, struct quivm *qvm)
     (void)(qvm); /* UNUSED */
 }
 
-uint32_t display_read_callback(const struct display *dpl,
-                               const struct quivm *qvm, uint32_t address)
+uint32_t display_read_callback(struct display *dpl,
+                               struct quivm *qvm, uint32_t address)
 {
     uint32_t v;
     (void)(qvm); /* UNUSED */

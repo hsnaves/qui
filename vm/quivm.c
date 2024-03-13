@@ -372,7 +372,7 @@ void quivm_stack_write(struct quivm *qvm, int use_rstack,
  * of 4-bytes. Returns the value read.
  */
 static
-uint32_t aligned_read(const struct quivm *qvm, uint32_t address)
+uint32_t aligned_read(struct quivm *qvm, uint32_t address)
 {
     uint32_t v;
 
@@ -483,7 +483,7 @@ void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
 }
 
 
-uint32_t quivm_read(const struct quivm *qvm, uint32_t address)
+uint32_t quivm_read(struct quivm *qvm, uint32_t address)
 {
     uint32_t v, shift;
 
@@ -542,7 +542,7 @@ void quivm_write(struct quivm *qvm, uint32_t address, uint32_t v)
     aligned_write(qvm, address, w);
 }
 
-uint8_t quivm_read_byte(const struct quivm *qvm, uint32_t address)
+uint8_t quivm_read_byte(struct quivm *qvm, uint32_t address)
 {
     uint32_t v, shift;
 

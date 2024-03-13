@@ -88,8 +88,7 @@ struct quivm;                       /* forward pre-declaration */
  * The `address` is guaranteed to be aligned to 4-bytes.
  * Returns the value read.
  */
-typedef uint32_t (*quivm_read_cb)(const struct quivm *qvm,
-                                  uint32_t address);
+typedef uint32_t (*quivm_read_cb)(struct quivm *qvm, uint32_t address);
 
 /* Callback for write calls (on the external I/O region).
  * The parameter `address` is the address to write, and `v` is the value.
@@ -179,7 +178,7 @@ void quivm_stack_write(struct quivm *qvm, int use_rstack,
 /* Reads the value of a cell in memory at `address`.
  * Returns the value read.
  */
-uint32_t quivm_read(const struct quivm *qvm, uint32_t address);
+uint32_t quivm_read(struct quivm *qvm, uint32_t address);
 
 /* Writes a value `v` to a cell in memory at `address`. */
 void quivm_write(struct quivm *qvm, uint32_t address, uint32_t v);
@@ -187,7 +186,7 @@ void quivm_write(struct quivm *qvm, uint32_t address, uint32_t v);
 /* Reads a byte from memory at `address`.
  * Returns the byte read.
  */
-uint8_t quivm_read_byte(const struct quivm *qvm, uint32_t address);
+uint8_t quivm_read_byte(struct quivm *qvm, uint32_t address);
 
 /* Writes a byte `v` to  memory at `address`. */
 void quivm_write_byte(struct quivm *qvm, uint32_t address, uint8_t b);

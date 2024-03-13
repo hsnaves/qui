@@ -39,7 +39,7 @@ void devio_update(struct quivm *qvm);
  * The parameter `address` is the address to read.
  * Returns the value read.
  */
-uint32_t devio_read_callback(const struct quivm *qvm, uint32_t address);
+uint32_t devio_read_callback(struct quivm *qvm, uint32_t address);
 
 /* Main implementation of the QUI write callback.
  * The parameter `address` is the address to write, and `v` is the value.

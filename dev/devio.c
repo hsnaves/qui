@@ -92,10 +92,10 @@ void devio_update(struct quivm *qvm)
     display_update(io->dpl, qvm);
 }
 
-uint32_t devio_read_callback(const struct quivm *qvm, uint32_t address)
+uint32_t devio_read_callback(struct quivm *qvm, uint32_t address)
 {
-    const struct devio *io;
-    io = (const struct devio *) qvm->arg;
+    struct devio *io;
+    io = (struct devio *) qvm->arg;
 
     if ((address >= IO_CONSOLE_BASE) && (address < IO_CONSOLE_END)) {
         return console_read_callback(io->cns, qvm, address);

@@ -28,8 +28,8 @@ void storage_destroy(struct storage *stg)
     (void)(stg); /* UNUSED */
 }
 
-uint32_t storage_read_callback(const struct storage *stg,
-                               const struct quivm *qvm, uint32_t address)
+uint32_t storage_read_callback(struct storage *stg,
+                               struct quivm *qvm, uint32_t address)
 {
     uint32_t v;
     (void)(qvm); /* UNUSED */

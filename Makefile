@@ -61,10 +61,10 @@ qui: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 rom.bin: rom/extra.fth
-	cat rom/extra.fth | ./qui kernel.bin > rom.bin
+	cat rom/extra.fth | ./qui -r kernel.bin > rom.bin
 
 kernel.bin: rom/meta.fth rom/kernel.fth rom.bin
-	cat rom/meta.fth rom/kernel.fth | ./qui rom.bin > kernel.bin
+	cat rom/meta.fth rom/kernel.fth | ./qui -r rom.bin > kernel.bin
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@

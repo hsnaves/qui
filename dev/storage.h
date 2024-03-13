@@ -55,8 +55,8 @@ void storage_destroy(struct storage *stg);
  * the QUI vm is given by `qvm`.
  * Returns the value read.
  */
-uint32_t storage_read_callback(const struct storage *stg,
-                               const struct quivm *qvm, uint32_t address);
+uint32_t storage_read_callback(struct storage *stg,
+                               struct quivm *qvm, uint32_t address);
 
 /* Implementation of the write callback for the storage device.
  * The parameter `address` is the address to write, and `v` is the value.

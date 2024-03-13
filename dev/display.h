@@ -48,8 +48,8 @@ void display_update(struct display *dpl, struct quivm *qvm);
  * the QUI vm is given by `qvm`.
  * Returns the value read.
  */
-uint32_t display_read_callback(const struct display *dpl,
-                               const struct quivm *qvm, uint32_t address);
+uint32_t display_read_callback(struct display *dpl,
+                               struct quivm *qvm, uint32_t address);
 
 /* Implementation of the write callback for the display.
  * The parameter `address` is the address to write, and `v` is the value.

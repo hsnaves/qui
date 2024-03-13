@@ -14,11 +14,18 @@
 #define IO_CONSOLE_IN           0xFFFFFFBC
 #define IO_CONSOLE_OUT          0xFFFFFFB8
 #define IO_CONSOLE_ERR          0xFFFFFFB4
+#define IO_CONSOLE_ARGIN        0xFFFFFFAC
+#define IO_CONSOLE_ENVIN        0xFFFFFFA8
 
 /* Data structures and types */
 /* A structure representing the console device */
 struct console {
-    void *unused;               /* so that the structure is not empty */
+    int argc;                   /* number of arguments in the input */
+    char **argv;                /* arguments passed to the program */
+    char **envp;                /* pointer to enviroment variables */
+
+    int argi, argii;            /* indices to traverse the arguments */
+    int envi, envii;            /* indices to traverse the env vars */
 };
 
 /* Functions */
@@ -38,8 +45,8 @@ void console_destroy(struct console *cns);
  * the QUI vm is given by `qvm`.
  * Returns the value read.
  */
-uint32_t console_read_callback(const struct console *cns,
-                               const struct quivm *qvm, uint32_t address);
+uint32_t console_read_callback(struct console *cns,
+                               struct quivm *qvm, uint32_t address);
 
 /* Implementation of the write callback for the console.
  * The parameter `address` is the address to write, and `v` is the value.
