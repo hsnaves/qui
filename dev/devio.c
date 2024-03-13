@@ -9,6 +9,7 @@
 #include "dev/network.h"
 #include "dev/rtclock.h"
 #include "dev/display.h"
+#include "dev/audio.h"
 
 /* Functions */
 
@@ -19,6 +20,7 @@ int devio_init(struct devio *io)
     io->ntw = NULL;
     io->rtc = NULL;
     io->dpl = NULL;
+    io->aud = NULL;
 
     /* initialize the console device */
     io->cns = (struct console *) malloc(sizeof(struct console));
@@ -100,6 +102,22 @@ int devio_init(struct devio *io)
         return 1;
     }
 
+    /* initialize the audio device */
+    io->aud = (struct audio *) malloc(sizeof(struct audio));
+    if (!io->aud) {
+        fprintf(stderr, "dev/devio: init: "
+                "memory exhausted\n");
+        devio_destroy(io);
+        return 1;
+    }
+
+    if (audio_init(io->aud)) {
+        fprintf(stderr, "dev/devio: init: "
+                "error while initializing the audio device\n");
+        devio_destroy(io);
+        return 1;
+    }
+
     return 0;
 }
 
@@ -139,6 +157,13 @@ void devio_destroy(struct devio *io)
         free(io->dpl);
     }
     io->dpl = NULL;
+
+    /* destroy the audio device */
+    if (io->aud) {
+        audio_destroy(io->aud);
+        free(io->aud);
+    }
+    io->aud = NULL;
 }
 
 void devio_update(struct quivm *qvm)
@@ -169,6 +194,9 @@ uint32_t devio_read_callback(struct quivm *qvm, uint32_t address)
     if ((address >= IO_DISPLAY_BASE) && (address < IO_DISPLAY_END)) {
         return display_read_callback(io->dpl, qvm, address);
     }
+    if ((address >= IO_AUDIO_BASE) && (address < IO_AUDIO_END)) {
+        return audio_read_callback(io->aud, qvm, address);
+    }
 
     return -1;
 }
@@ -196,6 +224,10 @@ void devio_write_callback(struct quivm *qvm, uint32_t address, uint32_t v)
     }
     if ((address >= IO_DISPLAY_BASE) && (address < IO_DISPLAY_END)) {
         display_write_callback(io->dpl, qvm, address, v);
+        return;
+    }
+    if ((address >= IO_AUDIO_BASE) && (address < IO_AUDIO_END)) {
+        audio_write_callback(io->aud, qvm, address, v);
         return;
     }
 }

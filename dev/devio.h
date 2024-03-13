@@ -9,6 +9,7 @@
 #include "dev/network.h"
 #include "dev/rtclock.h"
 #include "dev/display.h"
+#include "dev/audio.h"
 
 /* Data structures and types */
 /* A structure for the VM I/O devices */
@@ -18,6 +19,7 @@ struct devio {
     struct network *ntw;        /* A reference to the network device */
     struct rtclock *rtc;        /* A reference to the clock device */
     struct display *dpl;        /* A reference to the display device */
+    struct audio *aud;          /* A reference to the audio device */
 };
 
 /* Functions */

@@ -14,6 +14,7 @@
 #include "dev/network.h"
 #include "dev/rtclock.h"
 #include "dev/display.h"
+#include "dev/audio.h"
 
 /* Constants */
 #define NUM_INSN_PER_FRAME      6000000
