@@ -5,6 +5,8 @@
 #include "vm/quivm.h"
 #include "dev/devio.h"
 #include "dev/console.h"
+#include "dev/storage.h"
+#include "dev/network.h"
 #include "dev/display.h"
 
 /* Functions */
@@ -13,6 +15,7 @@ int devio_init(struct devio *io)
 {
     io->cns = NULL;
     io->stg = NULL;
+    io->ntw = NULL;
     io->dpl = NULL;
 
     io->cns = (struct console *) malloc(sizeof(struct console));
@@ -41,6 +44,21 @@ int devio_init(struct devio *io)
     if (storage_init(io->stg)) {
         fprintf(stderr, "dev/devio: init: "
                 "error while initializing the storage device\n");
+        devio_destroy(io);
+        return 1;
+    }
+
+    io->ntw = (struct network *) malloc(sizeof(struct network));
+    if (!io->ntw) {
+        fprintf(stderr, "dev/devio: init: "
+                "memory exhausted\n");
+        devio_destroy(io);
+        return 1;
+    }
+
+    if (network_init(io->ntw)) {
+        fprintf(stderr, "dev/devio: init: "
+                "error while initializing the network device\n");
         devio_destroy(io);
         return 1;
     }
@@ -77,6 +95,12 @@ void devio_destroy(struct devio *io)
     }
     io->stg = NULL;
 
+    if (io->ntw) {
+        network_destroy(io->ntw);
+        free(io->ntw);
+    }
+    io->ntw = NULL;
+
     if (io->dpl) {
         display_destroy(io->dpl);
         free(io->dpl);
@@ -103,6 +127,9 @@ uint32_t devio_read_callback(struct quivm *qvm, uint32_t address)
     if ((address >= IO_STORAGE_BASE) && (address < IO_STORAGE_END)) {
         return storage_read_callback(io->stg, qvm, address);
     }
+    if ((address >= IO_NETWORK_BASE) && (address < IO_NETWORK_END)) {
+        return network_read_callback(io->ntw, qvm, address);
+    }
     if ((address >= IO_DISPLAY_BASE) && (address < IO_DISPLAY_END)) {
         return display_read_callback(io->dpl, qvm, address);
     }
@@ -121,6 +148,10 @@ void devio_write_callback(struct quivm *qvm, uint32_t address, uint32_t v)
     }
     if ((address >= IO_STORAGE_BASE) && (address < IO_STORAGE_END)) {
         storage_write_callback(io->stg, qvm, address, v);
+        return;
+    }
+    if ((address >= IO_NETWORK_BASE) && (address < IO_NETWORK_END)) {
+        network_write_callback(io->ntw, qvm, address, v);
         return;
     }
     if ((address >= IO_DISPLAY_BASE) && (address < IO_DISPLAY_END)) {

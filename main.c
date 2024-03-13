@@ -9,6 +9,10 @@
 
 #include "vm/quivm.h"
 #include "dev/devio.h"
+#include "dev/console.h"
+#include "dev/storage.h"
+#include "dev/network.h"
+#include "dev/display.h"
 
 /* Constants */
 #define NUM_INSN_PER_FRAME      1000000
