@@ -25,7 +25,7 @@ CC := gcc
 INSTALL := install
 RM := rm -f
 
-CFLAGS := -Wall -Wextra -ansi -pedantic $(EXTRA_CFLAGS)
+CFLAGS := -Wall -Wextra -pedantic $(EXTRA_CFLAGS)
 LDFLAGS :=
 INCLUDES := -I.
 LIBS :=

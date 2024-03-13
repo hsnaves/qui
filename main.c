@@ -175,22 +175,17 @@ void process_events(struct quivm *qvm)
 
 #endif /* USE_SDL */
 
-/* Auxiliary function to run the VM with a given set of I/O devices. */
+/* Auxiliary function to run the VM with a given set of I/O devices.
+ * Returns zero on success.
+ */
 static
-int run(struct quivm *qvm, int argc, char **argv, char **envp)
+int run(struct quivm *qvm)
 {
     struct devio *io;
-    struct console *cns;
     struct display *dpl;
 
     io = (struct devio *) qvm->arg;
-    cns = io->cns;
     dpl = io->dpl;
-
-    /* set up the arguments and enviroment variables */
-    cns->argc = argc;
-    cns->argv = argv;
-    cns->envp = envp;
 
     while (quivm_run(qvm, NUM_INSN_PER_FRAME)) {
         devio_update(qvm);
@@ -225,9 +220,17 @@ static
 void print_help(const char *execname)
 {
     printf("Usage:\n");
-    printf("  %s [-r <romfile>] [-h|--help] args...\n", execname);
+    printf("  %s [-r <romfile>] [--readonly] [--bind <addr>]\n", execname);
+    printf("        [--target <addr>] [--port <port> ] [--utc]\n");
+    printf("        [-h|--help] args...\n");
+
     printf("where:\n");
     printf("  -r <romfile>    Specify the rom file to use\n");
+    printf("  --readonly      To not allow writes in the storage device\n");
+    printf("  --bind <addr>   Binds the UDP socket to a given address\n");
+    printf("  --target <addr> The address of the target socket\n");
+    printf("  --port <port>   The UDP port to bind to\n");
+    printf("  --utc           To use UTC for the real time clock\n");
     printf("  -h|--help       Print this help\n");
 }
 
@@ -237,18 +240,45 @@ int main(int argc, char **argv, char **envp)
     struct quivm qvm;
     struct devio io;
     const char *filename;
+    const char *bind_address;
+    const char *target_address;
     uint32_t length;
+    int use_utc;
+    int disable_write;
+    int port;
     int i, ret;
 
     filename = "rom.bin";
+    bind_address = NULL;
+    target_address = NULL;
+    use_utc = 0;
+    disable_write = 0;
+    port = 0;
+
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-r") == 0) {
-            if (i == argc - 1) {
+            if (i == argc - 1) goto missing_argument;
+            filename = argv[++i];
+        } else if (strcmp(argv[i], "--readonly") == 0) {
+            disable_write = 1;
+        } else if (strcmp(argv[i], "--utc") == 0) {
+            use_utc = 1;
+        } else if (strcmp(argv[i], "--port") == 0) {
+            char *end;
+            if (i == argc - 1) goto missing_argument;
+            port = strtol(argv[++i], &end, 10);
+            if (end[0] != '\0') {
                 fprintf(stderr, "main: "
-                        "missing argument for `-r`\n");
+                        "invalid port `%s`\n",
+                        argv[i]);
                 return 1;
             }
-            filename = argv[++i];
+        } else if (strcmp(argv[i], "--bind") == 0) {
+            if (i == argc - 1) goto missing_argument;
+            bind_address = argv[++i];
+        } else if (strcmp(argv[i], "--target") == 0) {
+            if (i == argc - 1) goto missing_argument;
+            target_address = argv[++i];
         } else if ((strcmp(argv[i], "-h") == 0)
                    || (strcmp(argv[i], "--help") == 0)) {
             print_help(argv[0]);
@@ -256,6 +286,13 @@ int main(int argc, char **argv, char **envp)
         } else {
             break;
         }
+        continue;
+
+    missing_argument:
+        fprintf(stderr, "main: "
+                "missing argument for `%s`\n",
+                argv[i]);
+        return 1;
     }
 
     /* Move the arguments forward */
@@ -297,7 +334,19 @@ int main(int argc, char **argv, char **envp)
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 #endif
 
-    ret = run(&qvm, argc, argv, envp);
+    /* set up the options */
+    io.stg->disable_write = disable_write;
+    io.rtc->use_utc = use_utc;
+    if (port != 0) io.ntw->port = port;
+    if (bind_address) io.ntw->bind_address = bind_address;
+    if (target_address) io.ntw->target_address = target_address;
+
+    /* set up the arguments and enviroment variables */
+    io.cns->argc = argc;
+    io.cns->argv = argv;
+    io.cns->envp = envp;
+
+    ret = run(&qvm);
 
 #ifdef USE_SDL
     destroy_window();

@@ -11,11 +11,26 @@
 #define IO_NETWORK_END          0xFFFFFF40
 
 /* Addresses within the network device */
+#define IO_NETWORK_DATA         0xFFFFFF3C
+#define IO_NETWORK_LEN          0xFFFFFF38
+#define IO_NETWORK_OP           0xFFFFFF34
+
+/* The possible operations */
+#define NETWORK_OP_RECEIVE               1
+#define NETWORK_OP_SEND                  2
+
 
 /* Data structures and types */
 /* A structure representing the external network device */
 struct network {
-    void *unused;               /* not used (so struct is not empty) */
+    uint32_t data;              /* address of the data buffer */
+    uint32_t len;               /* the length of the data buffer */
+    uint32_t op;                /* the operation */
+    const char *bind_address;   /* the address to bind the port */
+    const char *target_address; /* the address where to send messages */
+    int port;                   /* the port used for the udp sockets */
+    int initialized;            /* device was initialized */
+    void *internal;             /* internal data used by the device */
 };
 
 /* Functions */

@@ -102,7 +102,7 @@ void do_operation(struct storage *stg, struct quivm *qvm)
     FILE *fp;
     char filename[MAX_FILENAME_LENGTH];
 
-    if (stg->op != STORAGE_OP_READ && stg->op != STORAGE_OP_WRITE) {
+    if ((stg->op != STORAGE_OP_READ) && (stg->op != STORAGE_OP_WRITE)) {
         stg->len = 0;
         return;
     }
