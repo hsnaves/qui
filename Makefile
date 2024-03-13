@@ -60,10 +60,10 @@ include module.mk
 qui: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-rom.bin: rom/extra.fth kernel.bin
+rom.bin: rom/extra.fth
 	cat rom/extra.fth | ./qui kernel.bin > rom.bin
 
-kernel.bin: rom/meta.fth rom/kernel.fth
+kernel.bin: rom/meta.fth rom/kernel.fth rom.bin
 	cat rom/meta.fth rom/kernel.fth | ./qui rom.bin > kernel.bin
 
 %.o: %.c

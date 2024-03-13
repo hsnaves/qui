@@ -14,7 +14,8 @@
 #define IO_STORAGE_NAME         0xFFFFFF7C
 #define IO_STORAGE_DATA         0xFFFFFF78
 #define IO_STORAGE_LEN          0xFFFFFF74
-#define IO_STORAGE_OP           0xFFFFFF70
+#define IO_STORAGE_OFFSET       0xFFFFFF70
+#define IO_STORAGE_OP           0xFFFFFF6C
 
 /* The possible operations */
 #define STORAGE_OP_READ                  1
@@ -23,9 +24,16 @@
 /* Data structures and types */
 /* A structure representing the external storage device */
 struct storage {
-    uint32_t name;              /* address of the name */
+    uint32_t name;              /* address of the name (nul-terminated) */
     uint32_t data;              /* addres of the data */
-    uint32_t len;               /* length of the data */
+    uint32_t len;               /* length of the data
+                                 * at the end of the operation, it contains
+                                 * the number of bytes read/written.
+                                 */
+    uint32_t offset;            /* the offset to seek, for read operations.
+                                 * if writing, and offset is non-zero
+                                 * then file is appended instead of truncated.
+                                 */
     uint32_t op;                /* the operation */
     int disable_write;          /* to disable write operations */
 };

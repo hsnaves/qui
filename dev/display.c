@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "vm/quivm.h"
 #include "dev/display.h"
@@ -72,16 +73,18 @@ void display_write_callback(struct display *dpl,  struct quivm *qvm,
         break;
     case IO_DISPLAY_BUFFER:
         if (dpl->initialized) {
-            uint32_t i, size, address;
+            uint32_t address, length;
 
             address = v;
-            size = dpl->width * dpl->height;
-
-            /* TODO: speed-up this copy (also in storage device) */
-            for (i = 0; i < size; i++) {
-                if (!(address < qvm->memsize)) break;
-                dpl->buffer[i] = quivm_read_byte(qvm, address++);
+            length = dpl->width * dpl->height;
+            if (address < qvm->memsize) {
+                if (length > (qvm->memsize - address))
+                    length = qvm->memsize - address;
+            } else {
+                length = 0;
             }
+
+            memcpy(dpl->buffer, &qvm->mem[address], length);
         }
         break;
     }
