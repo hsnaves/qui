@@ -138,6 +138,13 @@ void do_operation(struct storage *stg, struct quivm *qvm)
     switch (stg->op) {
     case STORAGE_OP_READ:
         fp = fopen(filename, "r");
+        if (!fp) {
+            fprintf(stderr, "dev/storage: do_operation: "
+                    "cannot open `%s` for reading\n", filename);
+            stg->len = 0;
+            break;
+        }
+
         if (stg->offset != 0) {
             if (fseek(fp, (long) stg->offset, SEEK_SET)) {
                 stg->len = 0;
@@ -162,6 +169,12 @@ void do_operation(struct storage *stg, struct quivm *qvm)
             fp = fopen(filename, "a");
         } else {
             fp = fopen(filename, "w");
+        }
+        if (!fp) {
+            fprintf(stderr, "dev/storage: do_operation: "
+                    "cannot open `%s` for writing\n", filename);
+            stg->len = 0;
+            break;
         }
 
         stg->len = (uint32_t)

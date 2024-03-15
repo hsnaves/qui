@@ -26,8 +26,7 @@ private
 public
 
 \ set the name of the file to operate on
-: file-setname ( c-str n -- )
-   drop
+: file-setname ( c-str -- )
    IO_STORAGE_NAME !
    ;
 
