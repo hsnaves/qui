@@ -1,5 +1,4 @@
-
-( *** reset trampoline *** )
+\ kernel code
 
 m:scope{
 
@@ -1048,9 +1047,6 @@ m:: boot ( status -- )
 
 m:}scope
 
-\ set the right size of the word buffer
-40000 m:wordbuf m:buf>end m:!
-
 \ zero the tmpbuffer
 0 m:tmpbuf m:buf>here m:!
 0 m:tmpbuf m:buf>start m:!
@@ -1065,7 +1061,7 @@ m:}scope
 
 ( place the initial jump )
 m:here m:@                      \ d: vhere
-0 m:here m:!                  \ d: vhere
+0 m:here m:!                    \ d: vhere
 m:' boot
 3 m:insn_jmp m:jumpn,           \ write the jump
 m:here m:!

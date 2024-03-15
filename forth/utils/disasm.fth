@@ -1,10 +1,12 @@
+\ module for disassembling the QUI opcodes
+
 hex
 
 scope{
 private
 
 \ dumps a single row of hexadecimal numbers
-: dumphex_row ( addr n  -- addr' )
+: dump_hex ( addr n  -- addr' )
    over w. space                \ d: addr n
    begin
       dup if                    \ d: addr n
@@ -17,12 +19,12 @@ private
    ;
 
 \ prints a sequence of 3*n spaces
-: dumpspaces_row ( n -- )
+: dump_spaces ( n -- )
    3 * spaces tail
    ; noexit
 
 \ dumps the printable characters
-: dumpprint_row ( addr n  -- addr' )
+: dump_print ( addr n  -- addr' )
    begin
       dup if                    \ d: addr n
         over c@                 \ d: addr n c
@@ -49,9 +51,9 @@ public
          10 over u<             \ d: addr n m large?
          if drop 10 then        \ d: addr n m'
          >r                     \ d: addr n | r: m
-         over r@ dumphex_row    \ d: addr n | r: m
-         10 r@ - dumpspaces_row \ d: addr n | r: m
-         over r@ dumpprint_row  \ d: addr n | r: m
+         over r@ dump_hex       \ d: addr n | r: m
+         10 r@ - dump_spaces    \ d: addr n | r: m
+         over r@ dump_print     \ d: addr n | r: m
          r@ - swap r> + swap    \ d: addr' n'
          nl again
       then
@@ -94,6 +96,7 @@ define_opcodes
 
 auxiliary
 
+\ opcodes points to the table defined above
 : opcodes ( -- addr )
    [ lit, ]
    ; inl
@@ -148,6 +151,7 @@ private
 public
 
 \ disassembles many instructions at a given address
+\ returns the address after the last decoded instruction
 : disasm ( addr n -- addr' )
    begin
       dup if

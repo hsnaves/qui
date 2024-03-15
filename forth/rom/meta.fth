@@ -1,14 +1,19 @@
+\ meta-compiler used to build the kernel
+
 hex
 
-
+\ the meta compilation words go into the meta dictionary
 dictionary meta
-context @ meta dict>next !
+meta use
+
+\ set the meta as the current dictionary
 meta current !
-meta context !
 
 scope{
 public
 
+\ moffset is an offset converting between the meta address space
+\ and the host address space
 align
 4 var moffset
 
@@ -37,6 +42,8 @@ align
 : m:insn_jsr C1 ; inl
 : m:insn_jmp C2 ; inl
 : m:insn_jz  C3 ; inl
+
+\ now the words in the meta vocabulary
 
 ( conversion to meta and host words )
 \ host address to meta address
@@ -814,7 +821,7 @@ F_IMM swap setflag
    4 - m:!
    ;
 
-( code for the ROM )
+( initialize variables before the kernel code )
 here @ moffset !
 
 \ initialize global variables
