@@ -33,10 +33,10 @@ uint32_t rtclock_read_callback(struct rtclock *rtc,
 
     switch (address) {
     case IO_RTCLOCK_YEAR:
-        v = t->tm_year;
+        v = t->tm_year + 1900;
         break;
     case IO_RTCLOCK_MONTH:
-        v = t->tm_mon;
+        v = t->tm_mon + 1;
         break;
     case IO_RTCLOCK_MDAY:
         v = t->tm_mday;
