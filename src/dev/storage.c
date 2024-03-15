@@ -69,6 +69,7 @@ int get_filename(struct storage *stg, struct quivm *qvm,
                  char *filename, uint32_t size)
 {
     uint32_t i, len, address;
+    char c;
 
     address = stg->name;
     for (i = 0; i < size - 1; i++) {
@@ -82,14 +83,26 @@ int get_filename(struct storage *stg, struct quivm *qvm,
     filename[len] = '\0'; /* make sure it is null terminated */
 
     /* now validate the filename
-     * It must contain only alphanumeric characters or the dot '.'
-     * character. And it must not start with a dot.
+     * It must contain only alphanumeric characters, dot '.',
+     * or the forward slash character '/'. It must not start with
+     * a forward slash, and it must not contain a dot immediately
+     * followed by another dot.
      */
     if (len == 0) return -1;
-    if (!isalnum(filename[0])) return -2;
-    for (i = 1; i < len; i++) {
-        if (filename[i] != '.' && !isalnum(filename[i]))
+
+    for (i = 0; i < len; i++) {
+        c = filename[i];
+        if (c != '.' && c != '/' && !isalnum(c))
             return -3;
+
+        if (i == 0) {
+            if (c == '/') return -3;
+        } else {
+            if (c == '.') {
+                if (filename[i - 1] == '.')
+                    return -3;
+            }
+        }
     }
 
     return 0;

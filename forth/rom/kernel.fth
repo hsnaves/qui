@@ -1,6 +1,24 @@
 \ kernel code
 
+hex
+
 m:scope{
+
+m:auxiliary
+
+( *** constants for the QUI vm *** )
+m:: IO_SYS_SCELL       FFFFFFF8 m:; m:inl
+m:: IO_SYS_DSTACK      FFFFFFF4 m:; m:inl
+m:: IO_SYS_RSTACK      FFFFFFF0 m:; m:inl
+m:: IO_SYS_TERMINATE   FFFFFFE8 m:; m:inl
+m:: IO_SYS_STACKSIZE   FFFFFFE4 m:; m:inl
+m:: IO_SYS_MEMSIZE     FFFFFFE0 m:; m:inl
+m:: CELL_STACK_POINTER FFFFFFFF m:; m:inl
+
+( *** constants for the console *** )
+m:: IO_CONSOLE_IN      FFFFFFBC m:; m:inl
+m:: IO_CONSOLE_OUT     FFFFFFB8 m:; m:inl
+m:: IO_CONSOLE_ERR     FFFFFFB4 m:; m:inl
 
 ( *** forth dictionary *** )
 m:public
@@ -325,14 +343,16 @@ m:private
 
 \ Obtains the address to the data stack pointer
 m:: dsp ( -- addr )
-   -1 FFFFFFF8 !                \ set the SCELL to -1
-   -C                           \ return the address of DSTACK
+   CELL_STACK_POINTER
+   IO_SYS_SCELL !               \ set the SCELL to -1
+   IO_SYS_DSTACK                \ return the address of DSTACK
    m:;
 
 \ Obtains the address to the return stack pointer
 m:: rsp ( -- addr )
-   -1 FFFFFFF8 !                \ set the SCELL to -1
-   -10                          \ return the address of RSTACK
+   CELL_STACK_POINTER
+   IO_SYS_SCELL !               \ set the SCELL to -1
+   IO_SYS_RSTACK                \ return the address of DSTACK
    m:;
 
 m:public
@@ -361,12 +381,12 @@ m:: rsp! ( u -- )
 
 \ obtains the memory size
 m:: stacksize ( -- u )
-   FFFFFFE4 @
+   IO_SYS_STACKSIZE @
    m:;
 
 \ obtains the memory size
 m:: memsize ( -- u )
-   FFFFFFE0 @
+   IO_SYS_MEMSIZE @
    m:;
 
 ( auxiliary words )
@@ -391,7 +411,7 @@ m:: within ( v min max -- t )
 
 \ terminate the program
 m:: bye ( n -- )
-   FFFFFFE8 !
+   IO_SYS_TERMINATE !
    m:;
 
 
@@ -407,7 +427,7 @@ m:private
 
 \ emits one character to the standard output
 m:: default_emit ( c -- )
-   FFFFFFB8
+   IO_CONSOLE_OUT
    channel c@                   \ select based on the channel
    m:if 4 - m:then
    !
@@ -415,7 +435,7 @@ m:: default_emit ( c -- )
 
 \ obtains an input character from standard input
 m:: default_getc ( -- c )
-   FFFFFFBC @
+   IO_CONSOLE_IN @
    m:;
 
 m:' default_emit m:is emit
