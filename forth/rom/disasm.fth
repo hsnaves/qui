@@ -113,7 +113,9 @@ private
 : disasm_lit ( opc -- )
    [ swap lit, lit, ]
    type                         \ d: opc
-   80 - b. tail
+   80 -                         \ d: num
+   6 sge                        \ d: num'
+   w. tail
    ; noexit
 
 \ disassemble a regular instruction
