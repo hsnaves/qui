@@ -42,7 +42,7 @@
 #define INSN_INVL                     0xFF
 
 /* Some special addresses */
-#define INITIAL_PC              0x00000100
+#define INITIAL_PC              0x00000000
 
 /* Cell with stack pointer */
 #define CELL_STACK_POINTER      0xFFFFFFFF

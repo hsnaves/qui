@@ -251,20 +251,20 @@ forth current !
 ( implementation of the private / public framework )
 
 \ initialize the tempbuf and temp
-60 buf>start @ 60 buf>here !
-00 50 dict>last !
-60 50 dict>code !
-60 50 dict>data !
-compiler 70 !
+70 buf>start @ 70 buf>here !
+00 60 dict>last !
+70 60 dict>code !
+70 60 dict>data !
+compiler 1C !
 
 \ set the current to temp
-50 use
-50 current !
+60 use
+60 current !
 
 ( define the location of temporary buffer and temporary dictionary )
-: temp ( -- addr )     50 ; inl
-: tmpbuf ( -- addr )   60 ; inl
-: tempref ( -- addr )  70 ; inl
+: temp ( -- addr )     60 ; inl
+: tmpbuf ( -- addr )   70 ; inl
+: tempref ( -- addr )  1C ; inl
 
 forth current !
 

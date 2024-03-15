@@ -1,26 +1,23 @@
 
 ( *** reset trampoline *** )
 
-\ placeholder for the jump
-0 5 m:insn_jmp m:jumpn,
-
 m:scope{
 
 ( *** forth dictionary *** )
 m:public
 
 ( global variables )
-m:: current ( -- addr )  00 m:; m:inl
-m:: context ( -- addr )  04 m:; m:inl
-m:: this ( -- addr )     08 m:; m:inl
-m:: flags ( -- addr )    0C m:; m:inl
-m:: state ( -- addr )    0D m:; m:inl
-m:: base ( -- addr )     0E m:; m:inl
-m:: channel ( -- addr)   0F m:; m:inl
-m:: forth ( -- addr )    10 m:; m:inl
-m:: compiler ( -- addr ) 20 m:; m:inl
-m:: wordbuf ( -- addr )  30 m:; m:inl
-m:: tib ( -- addr )      40 m:; m:inl
+m:: current ( -- addr )  04 m:; m:inl
+m:: context ( -- addr )  08 m:; m:inl
+m:: this ( -- addr )     0C m:; m:inl
+m:: flags ( -- addr )    10 m:; m:inl
+m:: state ( -- addr )    11 m:; m:inl
+m:: base ( -- addr )     12 m:; m:inl
+m:: channel ( -- addr)   13 m:; m:inl
+m:: forth ( -- addr )    20 m:; m:inl
+m:: compiler ( -- addr ) 30 m:; m:inl
+m:: wordbuf ( -- addr )  40 m:; m:inl
+m:: tib ( -- addr )      50 m:; m:inl
 
 m:public
 
@@ -70,8 +67,6 @@ m:: pc ( -- pc )
 
 \ executes a given function
 m:: exec ( addr -- ... )
-   dup =0                       \ d: addr zero?
-   m:if drop [ m:exit, ] m:then
    pc                           \ d: addr pc
    4 + -                        \ d: rel_addr
    [ m:insn_jmp m:c, ]
@@ -331,13 +326,13 @@ m:private
 
 \ Obtains the address to the data stack pointer
 m:: dsp ( -- addr )
-   -1 -8 !                      \ set the SCELL to -1
+   -1 FFFFFFF8 !                \ set the SCELL to -1
    -C                           \ return the address of DSTACK
    m:;
 
 \ Obtains the address to the return stack pointer
 m:: rsp ( -- addr )
-   -1 -8 !                      \ set the SCELL to -1
+   -1 FFFFFFF8 !                \ set the SCELL to -1
    -10                          \ return the address of RSTACK
    m:;
 
@@ -367,12 +362,12 @@ m:: rsp! ( u -- )
 
 \ obtains the memory size
 m:: stacksize ( -- u )
-   -1C @
+   FFFFFFE4 @
    m:;
 
 \ obtains the memory size
 m:: memsize ( -- u )
-   -20 @
+   FFFFFFE0 @
    m:;
 
 ( auxiliary words )
@@ -397,7 +392,7 @@ m:: within ( v min max -- t )
 
 \ terminate the program
 m:: bye ( n -- )
-   -18 !
+   FFFFFFE8 !
    m:;
 
 
@@ -413,7 +408,7 @@ m:private
 
 \ emits one character to the standard output
 m:: default_emit ( c -- )
-   -48
+   FFFFFFB8
    channel c@                   \ select based on the channel
    m:if 4 - m:then
    !
@@ -421,7 +416,7 @@ m:: default_emit ( c -- )
 
 \ obtains an input character from standard input
 m:: default_getc ( -- c )
-   -44 @
+   FFFFFFBC @
    m:;
 
 m:' default_emit m:is emit
@@ -1068,11 +1063,11 @@ m:}scope
 0 m:tib m:buf>end m:!
 0 m:tib m:buf>off m:!
 
-( resolve the initial jump )
+( place the initial jump )
 m:here m:@                      \ d: vhere
-100 m:here m:!                  \ d: vhere
+0 m:here m:!                  \ d: vhere
 m:' boot
-5 m:insn_jmp m:jumpn,           \ write the jump
+3 m:insn_jmp m:jumpn,           \ write the jump
 m:here m:!
 
 ( dump rom file to standard output )

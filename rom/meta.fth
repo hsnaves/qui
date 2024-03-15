@@ -19,19 +19,19 @@ align
 : m:F_LINK   10 ; inl
 : m:F_XT     08 ; inl
 
-: m:current  00 ; inl
-: m:context  04 ; inl
-: m:this     08 ; inl
-: m:flags    0C ; inl
-: m:state    0D ; inl
-: m:base     0E ; inl
-: m:forth    10 ; inl
-: m:compiler 20 ; inl
-: m:wordbuf  30 ; inl
-: m:tib      40 ; inl
-: m:temp     50 ; inl
-: m:tmpbuf   60 ; inl
-: m:tempref  70 ; inl
+: m:current  04 ; inl
+: m:context  08 ; inl
+: m:this     0C ; inl
+: m:flags    10 ; inl
+: m:state    11 ; inl
+: m:base     12 ; inl
+: m:forth    20 ; inl
+: m:compiler 30 ; inl
+: m:wordbuf  40 ; inl
+: m:tib      50 ; inl
+: m:temp     60 ; inl
+: m:tmpbuf   70 ; inl
+: m:tempref  1C ; inl
 
 : m:insn_ret C0 ; inl
 : m:insn_jsr C1 ; inl
@@ -839,8 +839,8 @@ m:wordbuf m:compiler m:dict>data m:!
 
 \ initialize the wordbuffer
 \ use smaller size here
-100 m:wordbuf m:buf>here m:!
-100 m:wordbuf m:buf>start m:!
+80 m:wordbuf m:buf>here m:!
+80 m:wordbuf m:buf>start m:!
 10000 m:wordbuf m:buf>end m:!
 100 m:wordbuf m:buf>off m:!
 
