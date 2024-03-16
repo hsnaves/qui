@@ -23,6 +23,7 @@ int devio_init(struct devio *io)
     io->dpl = NULL;
     io->aud = NULL;
     io->kbd = NULL;
+    io->qvm = NULL;
 
     /* initialize the console device */
     io->cns = (struct console *) malloc(sizeof(struct console));
@@ -189,20 +190,20 @@ void devio_destroy(struct devio *io)
         free(io->kbd);
     }
     io->kbd = NULL;
+
+    /* remove the configuration from the QUI vm */
+    devio_configure(io, NULL);
 }
 
-void devio_update(struct quivm *qvm)
+/* Implementation of the QUI read callback.
+ * Returns the value read.
+ */
+static
+uint32_t devio_read_callback(struct quivm *qvm, void *arg,
+                             uint32_t address)
 {
     struct devio *io;
-    io = (struct devio *) qvm->arg;
-
-    display_update(io->dpl, qvm);
-}
-
-uint32_t devio_read_callback(struct quivm *qvm, uint32_t address)
-{
-    struct devio *io;
-    io = (struct devio *) qvm->arg;
+    io = (struct devio *) arg;
 
     if ((address >= IO_CONSOLE_BASE) && (address < IO_CONSOLE_END)) {
         return console_read_callback(io->cns, qvm, address);
@@ -229,10 +230,13 @@ uint32_t devio_read_callback(struct quivm *qvm, uint32_t address)
     return -1;
 }
 
-void devio_write_callback(struct quivm *qvm, uint32_t address, uint32_t v)
+/* Implementation of the QUI write callback. */
+static
+void devio_write_callback(struct quivm *qvm, void *arg,
+                          uint32_t address, uint32_t v)
 {
     struct devio *io;
-    io = (struct devio *) qvm->arg;
+    io = (struct devio *) arg;
 
     if ((address >= IO_CONSOLE_BASE) && (address < IO_CONSOLE_END)) {
         console_write_callback(io->cns, qvm, address, v);
@@ -262,5 +266,41 @@ void devio_write_callback(struct quivm *qvm, uint32_t address, uint32_t v)
         keyboard_write_callback(io->kbd, qvm, address, v);
         return;
     }
+}
+
+/* Implementation of the QUI interrupt callback. */
+static
+void devio_interrupt_callback(struct quivm *qvm, void *arg)
+{
+    struct devio *io;
+    io = (struct devio *) arg;
+
+    (void)(qvm); /* UNUSED */
+    (void)(io); /* UNUSED */
+}
+
+void devio_configure(struct devio *io, struct quivm *qvm)
+{
+    if (io->qvm) {
+        /* if it was previously configured, remove the
+         * configuration from the older VM
+         */
+        quivm_configure(io->qvm, NULL, NULL, NULL, NULL);
+    }
+    io->qvm = NULL;
+
+    io->qvm = qvm;
+    if (qvm) {
+        quivm_configure(qvm, (void *) io,
+                        &devio_read_callback,
+                        &devio_write_callback,
+                        &devio_interrupt_callback);
+    }
+}
+
+void devio_update(struct devio *io)
+{
+    if (!io->qvm) return;
+    display_update(io->dpl, io->qvm);
 }
 

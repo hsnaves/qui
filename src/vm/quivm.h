@@ -78,24 +78,33 @@
 #define IO_SYS_MEMSIZE          0xFFFFFFE0
 #define IO_SYS_CELLSIZE         0xFFFFFFDC
 #define IO_SYS_ID               0xFFFFFFD8
+#define IO_SYS_CYCLECOUNT       0xFFFFFFD4
 
 /* Data structures and types */
 
 struct quivm;                       /* forward pre-declaration */
 
 /* Callback for read calls (on the external I/O region).
+ * The `arg` parameter is the extra parameter passed in quivm_configure().
  * The parameter `address` is the address to read from.
  * The `address` is guaranteed to be aligned to 4-bytes.
  * Returns the value read.
  */
-typedef uint32_t (*quivm_read_cb)(struct quivm *qvm, uint32_t address);
+typedef uint32_t (*quivm_read_cb)(struct quivm *qvm, void *arg,
+                                  uint32_t address);
 
 /* Callback for write calls (on the external I/O region).
+ * The `arg` parameter is the extra parameter passed in quivm_configure().
  * The parameter `address` is the address to write, and `v` is the value.
  * The `address` is guaranteed to be aligned to 4-bytes.
  */
-typedef void (*quivm_write_cb)(struct quivm *qvm,
+typedef void (*quivm_write_cb)(struct quivm *qvm, void *arg,
                                uint32_t address, uint32_t v);
+
+/* Callback for interrupts (from external devices).
+ * The `arg` parameter is the extra parameter passed in quivm_configure().
+ */
+typedef void (*quivm_interrupt_cb)(struct quivm *qvm, void *arg);
 
 /* Structure for a QUI virtual machine */
 struct quivm {
@@ -114,25 +123,35 @@ struct quivm {
     uint32_t scell;                 /* The cell for the stack read/write */
     uint32_t status;                /* The status of the VM */
     int termvalue;                  /* termination value */
+    uint32_t cyclecount;            /* counter for cycles */
+    int32_t remaining;              /* remaining cycles before next
+                                     * interrupt. if negative, no interrupt
+                                     * is pending */
 
+    void *arg;                      /* extra argument for callbacks */
     quivm_read_cb read_cb;          /* read callback function */
     quivm_write_cb write_cb;        /* write callback function */
-    void *arg;                      /* extra argument for callbacks */
+    quivm_interrupt_cb intr_cb;     /* interrupt callback */
 };
 
 /* Functions */
 
 /* Creates and initializes the QUI vm.
- * The `read_cb` is the callback for I/O, and the
- * `write_cb` is the callback for I/O writes. The parameter
- * `arg` is an extra argument for the callbacks.
  * Returns zero on success.
  */
-int quivm_init(struct quivm *qvm, quivm_read_cb read_cb,
-               quivm_write_cb write_cb, void *arg);
+int quivm_init(struct quivm *qvm);
 
 /* Destroys the QUI vm and release the resources. */
 void quivm_destroy(struct quivm *qvm);
+
+/* Configures the VM callbacks.
+ * This included the extra argument `arg` passed to the callbacks,
+ * and the callbacks themselves: `read_cb` (for reading), `write_cb`
+ * (for writing), and `intr_cb` (for interrupts).
+ */
+void quivm_configure(struct quivm *qvm, void *arg,
+                     quivm_read_cb read_cb, quivm_write_cb write_cb,
+                     quivm_interrupt_cb intr_cb);
 
 /* Resets the QUI vm. */
 void quivm_reset(struct quivm *qvm);
@@ -148,16 +167,18 @@ int quivm_load(struct quivm *qvm, const char *filename,
                uint32_t address, uint32_t *length);
 
 /* Runs one step of the virtual machine.
- * Returns true if a step was executed.
+ * Returns positive number if the machine has not yet terminated
+ * or halted. Returns zero if it has halted, and a negative number
+ * if it has terminated.
  */
 int quivm_step(struct quivm *qvm);
 
-/* Runs the virtual machine for `max_steps` (or until halted).
- * If `max_steps` is zero, this function runs until the
- * virtual machine is halted.
- * Returns true if the machine has not yet halted.
+/* Runs the virtual machine for `max_steps`.
+ * If `max_steps` is zero, this function runs until the virtual
+ * machine is halted or terminated.
+ * Returns nonzero if the machine has not yet terminated.
  */
-int quivm_run(struct quivm *qvm, unsigned int max_steps);
+int quivm_run(struct quivm *qvm, uint32_t max_steps);
 
 /* Reads a value from one of the stack memories.
  * The appropriate stack is selected by the parameter `use_rstack`.

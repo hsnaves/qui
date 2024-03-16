@@ -12,6 +12,7 @@ int display_init(struct display *dpl)
     dpl->buffer = 0;
     dpl->stride = 0;
     dpl->waitsync = 0;
+    dpl->framecount = 0;
     dpl->initialized = 0;
     return 0;
 }
@@ -28,6 +29,7 @@ void display_update(struct display *dpl, struct quivm *qvm)
         qvm->status &= ~STS_HALTED;
     }
     dpl->waitsync = 0;
+    dpl->framecount++;
 }
 
 uint32_t display_read_callback(struct display *dpl,
@@ -48,6 +50,9 @@ uint32_t display_read_callback(struct display *dpl,
         break;
     case IO_DISPLAY_STRIDE:
         v = dpl->stride;
+        break;
+    case IO_DISPLAY_FRAMECOUNT:
+        v = dpl->framecount;
         break;
     default:
         v = -1;

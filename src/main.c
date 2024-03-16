@@ -291,7 +291,7 @@ int run(struct quivm *qvm)
     dpl = io->dpl;
 
     while (quivm_run(qvm, NUM_INSN_PER_FRAME)) {
-        devio_update(qvm);
+        devio_update(io);
 #ifdef USE_SDL
         if (dpl->initialized && !window) {
             create_window(dpl->width, dpl->height);
@@ -412,17 +412,18 @@ int main(int argc, char **argv, char **envp)
     argc -= i;
     argv = &argv[i];
 
-    if (devio_init(&io)) {
-        fprintf(stderr, "main: could not initialize I/O\n");
+    if (quivm_init(&qvm)) {
+        fprintf(stderr, "main: could not initialize the VM\n");
         return 1;
     }
 
-    if (quivm_init(&qvm, &devio_read_callback,
-                   &devio_write_callback, &io)) {
-        fprintf(stderr, "main: could not initialize the VM\n");
-        devio_destroy(&io);
+    if (devio_init(&io)) {
+        fprintf(stderr, "main: could not initialize I/O\n");
+        quivm_destroy(&qvm);
         return 1;
     }
+
+    devio_configure(&io, &qvm);
 
     length = 0;
     if (quivm_load(&qvm, filename, 0, &length)) {

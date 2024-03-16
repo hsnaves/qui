@@ -25,8 +25,7 @@
 
 /* Functions */
 
-int quivm_init(struct quivm *qvm, quivm_read_cb read_cb,
-               quivm_write_cb write_cb, void *arg)
+int quivm_init(struct quivm *qvm)
 {
     qvm->stacksize = DEFAULT_STACKSIZE;
     qvm->memsize = DEFAULT_MEMSIZE;
@@ -42,9 +41,10 @@ int quivm_init(struct quivm *qvm, quivm_read_cb read_cb,
         return 1;
     }
 
-    qvm->read_cb = read_cb;
-    qvm->write_cb = write_cb;
-    qvm->arg = arg;
+    qvm->arg = NULL;
+    qvm->read_cb = NULL;
+    qvm->write_cb = NULL;
+    qvm->intr_cb = NULL;
 
     /* zero the memory, the stack and the device memory */
     memset(qvm->dstack, 0, qvm->stacksize * sizeof(uint32_t));
@@ -66,6 +66,16 @@ void quivm_destroy(struct quivm *qvm)
     qvm->mem = NULL;
 }
 
+void quivm_configure(struct quivm *qvm, void *arg,
+                     quivm_read_cb read_cb, quivm_write_cb write_cb,
+                     quivm_interrupt_cb intr_cb)
+{
+    qvm->arg = arg;
+    qvm->read_cb = read_cb;
+    qvm->write_cb = write_cb;
+    qvm->intr_cb = intr_cb;
+}
+
 void quivm_reset(struct quivm *qvm)
 {
     qvm->pc = INITIAL_PC;
@@ -75,6 +85,9 @@ void quivm_reset(struct quivm *qvm)
     qvm->scell = CELL_STACK_POINTER;
     qvm->status = 0;
     qvm->termvalue = 0;
+
+    qvm->cyclecount = 0;
+    qvm->remaining = -1;
 }
 
 int quivm_load(struct quivm *qvm, const char *filename,
@@ -157,13 +170,25 @@ int quivm_step(struct quivm *qvm)
     uint32_t old_pc;
     uint8_t insn;
 
-    /* check if it is terminated */
+    /* check if it has terminated */
     if (qvm->status & STS_TERMINATED)
-        return 0;
+        return -1;
 
-    /* check if it is halted */
+    /* check for interrupts */
+    while (qvm->remaining == 0) {
+        qvm->remaining = -1;
+        if (qvm->intr_cb)
+            (qvm->intr_cb)(qvm, qvm->arg);
+    }
+
+    /* update cycle count */
+    qvm->cyclecount++;
+    if (qvm->remaining > 0)
+        qvm->remaining--;
+
+    /* check if it has halted */
     if (qvm->status & STS_HALTED)
-        return 1;
+        return 0;
 
     old_pc = qvm->pc;
     insn = quivm_read_byte(qvm, qvm->pc++);
@@ -345,12 +370,43 @@ int quivm_step(struct quivm *qvm)
     return 1;
 }
 
-int quivm_run(struct quivm *qvm, unsigned int max_steps)
+int quivm_run(struct quivm *qvm, uint32_t max_steps)
 {
-    unsigned int step = 0;
+    uint32_t step, num_steps;
+    int ret;
+
+    step = 0;
     while ((step++ < max_steps) || (max_steps == 0)) {
-        if (!quivm_step(qvm))
-            return 0;
+        ret = quivm_step(qvm);
+        /* check if terminated */
+        if (ret < 0) return 0;
+
+        if (ret == 0) { /* halted */
+            if (max_steps > 0) {
+                num_steps = max_steps - step;
+                if (qvm->remaining >= 0) {
+                    if (num_steps > (uint32_t) qvm->remaining)
+                        num_steps = qvm->remaining;
+                }
+            } else {
+                if (qvm->remaining < 0) {
+                    /* no interrupts pending, halted, and
+                     * max_steps == 0, this means that the
+                     * machine has frozen
+                     */
+                    qvm->status |= STS_TERMINATED;
+                    qvm->termvalue = 1000;
+                    return 0;
+                }
+                num_steps = qvm->remaining;
+            }
+
+            step += num_steps;
+            qvm->cyclecount += num_steps;
+            if (qvm->remaining >= 0) {
+                qvm->remaining -= num_steps;
+            }
+        }
     }
     return 1;
 }
@@ -422,7 +478,10 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
             v = 4;
             break;
         case IO_SYS_ID:
-            v = 0;
+            v = 0; /* TODO: add some meaning to this */
+            break;
+        case IO_SYS_CYCLECOUNT:
+            v = qvm->cyclecount;
             break;
         default:
             v = -1;
@@ -432,7 +491,7 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
     }
 
     if (qvm->read_cb)
-        return (qvm->read_cb)(qvm, address);
+        return (qvm->read_cb)(qvm, qvm->arg, address);
 
     return -1;
 }
@@ -484,9 +543,8 @@ void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
     }
 
     if (qvm->write_cb)
-        (qvm->write_cb)(qvm, address, v);
+        (qvm->write_cb)(qvm, qvm->arg, address, v);
 }
-
 
 uint32_t quivm_read(struct quivm *qvm, uint32_t address)
 {

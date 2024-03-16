@@ -22,6 +22,7 @@ struct devio {
     struct display *dpl;        /* A reference to the display device */
     struct audio *aud;          /* A reference to the audio device */
     struct keyboard *kbd;       /* A reference to the keyboard device */
+    struct quivm *qvm;          /* A reference to the QUI vm. */
 };
 
 /* Functions */
@@ -37,21 +38,13 @@ int devio_init(struct devio *io);
  */
 void devio_destroy(struct devio *io);
 
+/* Configures the callbacks for a given QUI vm `qvm`. */
+void devio_configure(struct devio *io, struct quivm *qvm);
+
 /* Updates the state of the I/O.
  * This function should be called periodically at each screen
  * refresh.
  */
-void devio_update(struct quivm *qvm);
-
-/* Main implementation of the QUI read callback.
- * The parameter `address` is the address to read.
- * Returns the value read.
- */
-uint32_t devio_read_callback(struct quivm *qvm, uint32_t address);
-
-/* Main implementation of the QUI write callback.
- * The parameter `address` is the address to write, and `v` is the value.
- */
-void devio_write_callback(struct quivm *qvm, uint32_t address, uint32_t v);
+void devio_update(struct devio *io);
 
 #endif /* __DEV_DEVIO_H */

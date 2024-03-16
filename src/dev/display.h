@@ -16,6 +16,7 @@
 #define IO_DISPLAY_BUFFER       0xFFFFFEB4
 #define IO_DISPLAY_STRIDE       0xFFFFFEB0
 #define IO_DISPLAY_WAITSYNC     0xFFFFFEAC
+#define IO_DISPLAY_FRAMECOUNT   0xFFFFFFA8
 
 /* Data structures and types */
 /* A structure representing the display device */
@@ -25,6 +26,7 @@ struct display {
     uint32_t buffer;            /* address of the framebuffer in memory */
     uint32_t stride;            /* the row stride for the framebuffer */
     int waitsync;               /* the vm is waiting for a sync */
+    uint32_t framecount;        /* counter for frames */
     int initialized;            /* device was initialized */
 };
 
