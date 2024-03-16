@@ -148,6 +148,8 @@ static
 void on_exception(struct quivm *qvm, uint32_t err_cond)
 {
     if (qvm->status & STS_EXCEPTION) {
+        fprintf(stderr, "vm/quivm: on_exception: "
+                "unhandled exception\n");
         qvm->status |= STS_TERMINATED;
         qvm->termvalue = 1;
         return;
@@ -394,8 +396,10 @@ int quivm_run(struct quivm *qvm, uint32_t max_steps)
                      * max_steps == 0, this means that the
                      * machine has frozen
                      */
+                    fprintf(stderr, "vm/quivm: run: "
+                            "halted forever\n");
                     qvm->status |= STS_TERMINATED;
-                    qvm->termvalue = 1000;
+                    qvm->termvalue = 1;
                     return 0;
                 }
                 num_steps = qvm->remaining;
