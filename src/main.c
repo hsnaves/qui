@@ -17,9 +17,10 @@
 #include "dev/display.h"
 #include "dev/audio.h"
 #include "dev/keyboard.h"
+#include "dev/timer.h"
 
 /* Constants */
-#define NUM_INSN_PER_FRAME      2000000
+#define NUM_INSN_PER_TICK       100000
 
 /* Global variables */
 #ifdef USE_SDL
@@ -280,6 +281,7 @@ int run(struct quivm *qvm)
 {
     struct devio *io;
     struct display *dpl;
+    unsigned int i;
 #ifdef USE_SDL
     uint32_t time0, delta;
 
@@ -290,8 +292,15 @@ int run(struct quivm *qvm)
     io = (struct devio *) qvm->arg;
     dpl = io->dpl;
 
-    while (quivm_run(qvm, NUM_INSN_PER_FRAME)) {
-        devio_update(io);
+    while (1) {
+        for (i = 0; i < NUM_TICKS_PER_FRAME; i++) {
+            if (!quivm_run(qvm, NUM_INSN_PER_TICK))
+                break;
+            devio_update(io);
+        }
+        if (qvm->status & STS_TERMINATED)
+            break;
+
 #ifdef USE_SDL
         if (dpl->initialized && !window) {
             create_window(dpl->width, dpl->height);

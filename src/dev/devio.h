@@ -11,6 +11,8 @@
 #include "dev/display.h"
 #include "dev/audio.h"
 #include "dev/keyboard.h"
+#include "dev/timer.h"
+
 
 /* Data structures and types */
 /* A structure for the VM I/O devices */
@@ -22,6 +24,8 @@ struct devio {
     struct display *dpl;        /* A reference to the display device */
     struct audio *aud;          /* A reference to the audio device */
     struct keyboard *kbd;       /* A reference to the keyboard device */
+    struct timer *tmr;          /* A reference to the timer device */
+
     struct quivm *qvm;          /* A reference to the QUI vm. */
 };
 
@@ -42,8 +46,7 @@ void devio_destroy(struct devio *io);
 void devio_configure(struct devio *io, struct quivm *qvm);
 
 /* Updates the state of the I/O.
- * This function should be called periodically at each screen
- * refresh.
+ * This function should be called periodically at each new tick.
  */
 void devio_update(struct devio *io);
 

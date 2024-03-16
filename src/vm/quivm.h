@@ -101,11 +101,6 @@ typedef uint32_t (*quivm_read_cb)(struct quivm *qvm, void *arg,
 typedef void (*quivm_write_cb)(struct quivm *qvm, void *arg,
                                uint32_t address, uint32_t v);
 
-/* Callback for interrupts (from external devices).
- * The `arg` parameter is the extra parameter passed in quivm_configure().
- */
-typedef void (*quivm_interrupt_cb)(struct quivm *qvm, void *arg);
-
 /* Structure for a QUI virtual machine */
 struct quivm {
     uint32_t *dstack;               /* data stack */
@@ -124,14 +119,10 @@ struct quivm {
     uint32_t status;                /* The status of the VM */
     int termvalue;                  /* termination value */
     uint32_t cyclecount;            /* counter for cycles */
-    int32_t remaining;              /* remaining cycles before next
-                                     * interrupt. if negative, no interrupt
-                                     * is pending */
 
     void *arg;                      /* extra argument for callbacks */
     quivm_read_cb read_cb;          /* read callback function */
     quivm_write_cb write_cb;        /* write callback function */
-    quivm_interrupt_cb intr_cb;     /* interrupt callback */
 };
 
 /* Functions */
@@ -146,12 +137,11 @@ void quivm_destroy(struct quivm *qvm);
 
 /* Configures the VM callbacks.
  * This included the extra argument `arg` passed to the callbacks,
- * and the callbacks themselves: `read_cb` (for reading), `write_cb`
- * (for writing), and `intr_cb` (for interrupts).
+ * and the callbacks themselves: `read_cb` (for reading), and
+ * `write_cb` (for writing).
  */
 void quivm_configure(struct quivm *qvm, void *arg,
-                     quivm_read_cb read_cb, quivm_write_cb write_cb,
-                     quivm_interrupt_cb intr_cb);
+                     quivm_read_cb read_cb, quivm_write_cb write_cb);
 
 /* Resets the QUI vm. */
 void quivm_reset(struct quivm *qvm);
@@ -211,6 +201,14 @@ uint8_t quivm_read_byte(struct quivm *qvm, uint32_t address);
 
 /* Writes a byte `v` to  memory at `address`. */
 void quivm_write_byte(struct quivm *qvm, uint32_t address, uint8_t b);
+
+/* Pushes a value `v` onto a stack selected by `use_rstack`. */
+void quivm_stack_push(struct quivm *qvm, int use_rstack, uint32_t v);
+
+/* Pops a value from the selected by `use_rstack`.
+ * Returns the popped value.
+ */
+uint32_t quivm_stack_pop(struct quivm *qvm, int use_rstack);
 
 
 #endif /* __VM_QUIVM_H */

@@ -436,54 +436,38 @@ private
 
 ( words for handling exceptions )
 
-\ clears the exception bit
-: clearexception ( -- )
-   0 -14 !
-   ;
-
-\ handles general exceptios
+\ handles general exceptions
 : general_exception ( status c-str n -- )
-   1 channel c!                 \ d: status c-str n
-   type                         \ d: status
-   drop r>                      \ d: pc
-   dup w. space                 \ d: pc
-   c@ b. nl                     \ d:
-   0 channel c!
-   clearexception
+   1 channel c!                 \ d: status c-str n | r: pc
+   type                         \ d: status | r: pc
+   r>                           \ d: status pc
+   dup w. space                 \ d: status pc
+   c@ b. nl                     \ d: status
+   0 channel c!                 \ d: status
+   0 -14 !                      \ clears the exception bit
+   3 = if 1 dsp! then          \ reset stack if stack exception
    quit tail
    ; noexit
 
-," invalid instruction at "
-
 \ handles invalid instructions
+," invalid instruction at "
 : invalid_insn ( status -- )
    [ swap lit, lit, ]
    general_exception tail
    ; noexit
 
-," divide by zero at "
-
 \ handles divide by zero errors
+," divide by zero at "
 : divide_by_zero ( status -- )
    [ swap lit, lit, ]
    general_exception tail
    ; noexit
 
 ," stack overflow at "
-: stack_overflow ( pc status -- )
-   1 channel c!                 \ d: pc status | r: newpc
-   [ swap lit, lit, ]           \ d: pc status c-str n | r: newpc
-   type                         \ d: pc status | r: newpc
-   drop                         \ d: pc | r: newpc
-   dup w. space                 \ d: pc | r: newpc
-   c@ b. space                  \ d: | r: newpc
-   r>                           \ d: newpc
-   w. nl                        \ d:
-   0 channel c!
-   1 dsp! 0 rsp!
-   clearexception
-   quit tail
-   ;
+: stack_overflow ( status -- )
+   [ swap lit, lit, ]
+   general_exception tail
+   ; noexit
 
 \ current implementation of onexception
 : my_onexception ( status -- )

@@ -23,6 +23,7 @@ int devio_init(struct devio *io)
     io->dpl = NULL;
     io->aud = NULL;
     io->kbd = NULL;
+    io->tmr = NULL;
     io->qvm = NULL;
 
     /* initialize the console device */
@@ -137,6 +138,22 @@ int devio_init(struct devio *io)
         return 1;
     }
 
+    /* initialize the timer device */
+    io->tmr = (struct timer *) malloc(sizeof(struct timer));
+    if (!io->tmr) {
+        fprintf(stderr, "dev/devio: init: "
+                "memory exhausted\n");
+        devio_destroy(io);
+        return 1;
+    }
+
+    if (timer_init(io->tmr)) {
+        fprintf(stderr, "dev/devio: init: "
+                "error while initializing the timer device\n");
+        devio_destroy(io);
+        return 1;
+    }
+
     return 0;
 }
 
@@ -191,11 +208,18 @@ void devio_destroy(struct devio *io)
     }
     io->kbd = NULL;
 
+    /* destroy the timer device */
+    if (io->tmr) {
+        timer_destroy(io->tmr);
+        free(io->tmr);
+    }
+    io->tmr = NULL;
+
     /* remove the configuration from the QUI vm */
     devio_configure(io, NULL);
 }
 
-/* Implementation of the QUI read callback.
+/* Implementation of the main QUI read callback.
  * Returns the value read.
  */
 static
@@ -225,6 +249,9 @@ uint32_t devio_read_callback(struct quivm *qvm, void *arg,
     }
     if ((address >= IO_KEYBOARD_BASE) && (address < IO_KEYBOARD_END)) {
         return keyboard_read_callback(io->kbd, qvm, address);
+    }
+    if ((address >= IO_TIMER_BASE) && (address < IO_TIMER_END)) {
+        return timer_read_callback(io->tmr, qvm, address);
     }
 
     return -1;
@@ -266,17 +293,10 @@ void devio_write_callback(struct quivm *qvm, void *arg,
         keyboard_write_callback(io->kbd, qvm, address, v);
         return;
     }
-}
-
-/* Implementation of the QUI interrupt callback. */
-static
-void devio_interrupt_callback(struct quivm *qvm, void *arg)
-{
-    struct devio *io;
-    io = (struct devio *) arg;
-
-    (void)(qvm); /* UNUSED */
-    (void)(io); /* UNUSED */
+    if ((address >= IO_TIMER_BASE) && (address < IO_TIMER_END)) {
+        timer_write_callback(io->tmr, qvm, address, v);
+        return;
+    }
 }
 
 void devio_configure(struct devio *io, struct quivm *qvm)
@@ -285,7 +305,7 @@ void devio_configure(struct devio *io, struct quivm *qvm)
         /* if it was previously configured, remove the
          * configuration from the older VM
          */
-        quivm_configure(io->qvm, NULL, NULL, NULL, NULL);
+        quivm_configure(io->qvm, NULL, NULL, NULL);
     }
     io->qvm = NULL;
 
@@ -293,14 +313,16 @@ void devio_configure(struct devio *io, struct quivm *qvm)
     if (qvm) {
         quivm_configure(qvm, (void *) io,
                         &devio_read_callback,
-                        &devio_write_callback,
-                        &devio_interrupt_callback);
+                        &devio_write_callback);
     }
 }
 
 void devio_update(struct devio *io)
 {
     if (!io->qvm) return;
-    display_update(io->dpl, io->qvm);
+    if ((io->tmr->tickcount % NUM_TICKS_PER_FRAME) == 0) {
+        display_update(io->dpl, io->qvm);
+    }
+    timer_update(io->tmr, io->qvm);
 }
 
