@@ -81,7 +81,7 @@ void display_write_callback(struct display *dpl,  struct quivm *qvm,
         dpl->waitsync = !!v;
 
         /* halts the VM */
-        qvm->status |= STS_HALTED;
+        if (dpl->waitsync) qvm->status |= STS_HALTED;
         break;
     }
 }

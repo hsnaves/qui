@@ -82,6 +82,11 @@
 #define KEYBOARD_KEY1_BACKQUOTE 0x10000000
 #define KEYBOARD_KEY1_ESC       0x20000000
 
+/* mouse buttons */
+#define KEYBOARD_BTN_LEFT       0x00000001
+#define KEYBOARD_BTN_MIDDLE     0x00000002
+#define KEYBOARD_BTN_RIGHT      0x00000004
+
 
 /* Data structures and types */
 /* A structure representing the keyboard device */

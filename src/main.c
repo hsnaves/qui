@@ -19,13 +19,15 @@
 #include "dev/keyboard.h"
 
 /* Constants */
-#define NUM_INSN_PER_FRAME      6000000
+#define NUM_INSN_PER_FRAME      2000000
 
 /* Global variables */
 #ifdef USE_SDL
-SDL_Window *window;             /* the interface window */
-SDL_Renderer *renderer;         /* the renderer for the window */
-SDL_Texture *texture;           /* the texture for drawing */
+static SDL_Window *window;      /* the interface window */
+static SDL_Renderer *renderer;  /* the renderer for the window */
+static SDL_Texture *texture;    /* the texture for drawing */
+static int mouse_captured;      /* the mouse was captured */
+static int skip_mouse_move;     /* skip the next mouse move event */
 #endif
 
 /* Functions */
@@ -97,6 +99,9 @@ void create_window(uint32_t width, uint32_t height)
         destroy_window();
         return;
     }
+
+    mouse_captured = 0;
+    skip_mouse_move = 0;
 }
 
 /* Auxiliary function to update the screen.
@@ -150,34 +155,116 @@ void update_screen(struct quivm *qvm)
     SDL_RenderPresent(renderer);
 }
 
+/* To capture the mouse movements (and keyboard).
+ * The `capture` indicates whether we should capture or release
+ * the mouse movements.
+ */
+static
+void capture_mouse(int capture)
+{
+    if (capture) {
+        SDL_ShowCursor(0);
+        SDL_SetWindowGrab(window, SDL_TRUE);
+        SDL_SetWindowTitle(window,
+                           "QUIVM - Mouse captured. "
+                           "Press 'Alt' to release.");
+    } else {
+        SDL_ShowCursor(1);
+        SDL_SetWindowGrab(window, SDL_FALSE);
+        SDL_SetWindowTitle(window, "QUIVM");
+    }
+
+    mouse_captured = capture;
+}
+
 /* Auxiliary function to process events.
  * The QUI virtual machine is given by parameter `qvm`.
  */
 static
 void process_events(struct quivm *qvm)
 {
+    struct devio *io;
+    struct keyboard *kbd;
+    struct display *dpl;
+    uint32_t button;
     SDL_Event e;
-    (void)(qvm); /* UNUSED */
+    int x, y, mx, my;
 
     if (!window) return;
+
+    io = (struct devio *) qvm->arg;
+    kbd = io->kbd;
+    dpl = io->dpl;
+
+
+    /* for warping the mouse */
+    mx = dpl->width / 2;
+    my = dpl->height / 2;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
             break;
 
         case SDL_MOUSEMOTION:
+            if (!mouse_captured) break;
+
+            if (skip_mouse_move) {
+                /* skip this event */
+                skip_mouse_move = 0;
+                break;
+            }
+
+            x = kbd->x;
+            x += (e.motion.x - mx);
+            if (x < 0) x = 0;
+            if (x >= ((int) dpl->width))
+                x = dpl->width - 1;
+            kbd->x = x;
+
+            y = kbd->y;
+            y += (e.motion.y - my);
+            if (y < 0) y = 0;
+            if (y >= ((int) dpl->height))
+                y = dpl->height - 1;
+            kbd->y = y;
+
+            SDL_WarpMouseInWindow(window, mx, my);
+            skip_mouse_move = 1;
             break;
 
         case SDL_MOUSEBUTTONDOWN:
-            break;
-
+            if (!mouse_captured)
+                capture_mouse(1);
+            /* fall through */
         case SDL_MOUSEBUTTONUP:
-            break;
+            if (!mouse_captured) break;
 
-        case SDL_KEYDOWN:
+            if (e.button.button == SDL_BUTTON_LEFT) {
+                button = KEYBOARD_BTN_LEFT;
+            } else if (e.button.button == SDL_BUTTON_RIGHT) {
+                button = KEYBOARD_BTN_RIGHT;
+            } else if (e.button.button == SDL_BUTTON_MIDDLE) {
+                button = KEYBOARD_BTN_MIDDLE;
+            } else {
+                button = 0;
+            }
+
+            if (e.type == SDL_MOUSEBUTTONDOWN) {
+                kbd->button |= button;
+            } else {
+                kbd->button &= ~button;
+            }
             break;
 
         case SDL_KEYUP:
+            if (e.key.keysym.sym == SDLK_LALT
+                || e.key.keysym.sym == SDLK_RALT) {
+                capture_mouse(0);
+            }
+            /* fall through */
+
+        case SDL_KEYDOWN:
+            if (!mouse_captured) break;
             break;
         }
     }
@@ -194,15 +281,14 @@ int run(struct quivm *qvm)
     struct devio *io;
     struct display *dpl;
 #ifdef USE_SDL
-    uint32_t time0_3x, time_3x, delta_3x;
+    uint32_t time0, delta;
+
+    /* multiply time by 3 for higher resolution */
+    time0 = 3 * SDL_GetTicks();
 #endif
 
     io = (struct devio *) qvm->arg;
     dpl = io->dpl;
-
-#ifdef USE_SDL
-    time0_3x = 3 * SDL_GetTicks();
-#endif
 
     while (quivm_run(qvm, NUM_INSN_PER_FRAME)) {
         devio_update(qvm);
@@ -218,14 +304,14 @@ int run(struct quivm *qvm)
         process_events(qvm);
         update_screen(qvm);
 
-        time_3x = 3 * SDL_GetTicks();
-        delta_3x = time_3x - time0_3x;
-        time0_3x = time_3x;
+        delta = (3 * SDL_GetTicks()) - time0;
+        time0 += delta;
 
-        /* For 30 FPS, 100 / 3 = 33.3333ms */
-        if (delta_3x < 100) {
-            SDL_Delay((100 - delta_3x + 2) / 3);
-            time0_3x += (100 - delta_3x);
+        /* For 60 FPS, 50 / 3 = 16.666ms */
+        if (delta < 50) {
+            /* round up the delay */
+            SDL_Delay((50 - delta + 2) / 3);
+            time0 += (50 - delta);
         }
 #else
         /* No support for display here */
