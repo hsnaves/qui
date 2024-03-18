@@ -641,30 +641,30 @@ m:: number ( c-str n -- num rem )
    str>unum m:tail              \ tail call
    m:; m:noexit                 \ drop the final ret
 
-\ compare two counted strings lexicographically
-m:: compare ( c-str1 n1 c-str2 n2 -- cmp )
-   rot                          \ d: c-str1 c-str2 n2 n1
-   m:begin
-      over =0 over =0 or        \ d: c-str1 c-str2 n2 n1 zero?
-      m:if
-         2dup swap -            \ d: c-str1 c-str2 n2 n1 cmp
-      m:else
-         1- [ m:>r, ]
-         1- [ m:>r, ]           \ d: c-str1 c-str2 | r: n1' n2'
-         over c@ over c@ -      \ d: c-str1 c-str2 cmp | r: n1 n2
-         [ m:>r, ]              \ d: c-str1 c-str2 | r: n1 n2 cmp
-         1+ swap 1+ swap        \ d: c-str1' c-str2' | r: n1 n2 cmp
-         [ m:r>, m:r>, m:r>, ]  \ d: c-str1 c-str2 cmp n2 n1
-         rot                    \ d: c-str1 c-str2 n2 n1 cmp
-         dup =0                 \ d: c-str1 c-str2 n2 n1 cmp eq?
+\ compare two counted strings
+\ returns true when not equal
+m:: compare ( c-str1 n1 c-str2 n2 -- neq? )
+   swap [ m:>r, ]               \ d: c-str1 n1 n2 | r: c-str2
+   over =                       \ d: c-str1 n1 eq? | r: c-str2
+   =0 m:if
+      2drop [ m:r>, ]           \ d: c-str2
+      drop 1 [ m:exit, ]        \ d: 1
+   m:then
+
+  m:begin
+      dup m:if                  \ d: c-str1 n1 | r: c-str2
+         over c@                \ d: c-str1 n1 c1 | r: c-str2
+         [ m:r@, ] c@           \ d: c-str1 n1 c1 c2 | r: c-str2
+         =                      \ d: c-str1 n1 eq? | r: c-str2
          m:if
-            drop m:again        \ d: c-str1 c-str2 n2 n1
+            str1+               \ d: c-str1' n1' | r: c-str2
+            [ m:r>, ] 1+        \ d: c-str1 n1 c-str2'
+            [ m:>r, ]           \ d: c-str1 n1 | r: c-str2
+            m:again
          m:then
       m:then
-   m:end                        \ d: c-str1 c-str2 n2 n1 cmp
-   [ m:>r, ]                    \ d: c-str1 c-str2 n2 n1 | r: cmp
-   2drop 2drop                  \ d: | r: cmp
-   [ m:r>, ]                    \ d: cmp
+   m:end
+   swap [ m:r>, ] 2drop         \ d: n1
    m:;
 
 ( words for accessing parts of a word in the dictionary )

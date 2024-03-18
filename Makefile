@@ -17,7 +17,7 @@ build:
 rom.bin: forth/rom/extra.fth
 	$(CAT) $^ | $(QUI) -r kernel.bin > rom.bin
 
-kernel.bin: forth/rom/meta.fth forth/rom/kernel.fth
+kernel.bin: forth/kernel/meta.fth forth/kernel/kernel.fth
 	$(CAT) $^ | $(QUI) -r rom.bin > kernel.bin
 
 install:
