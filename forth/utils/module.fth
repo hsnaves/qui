@@ -5,11 +5,8 @@ hex
 scope{
 auxiliary
 
-\ the maximum recursive depth of included files
-: max-depth                           4 ; inl
-
 \ offsets within the structure
-: module-buffer ( addr -- addr' )       ; inl
+: mod-buffer ( addr -- addr' )          ; inl
 : file-name   ( addr -- addr' )    10 + ; inl
 : file-offset ( addr -- addr' )    14 + ; inl
 : next-module ( addr -- addr' )    18 + ; inl
@@ -17,58 +14,33 @@ auxiliary
 : buffer-start  ( addr -- addr' )  20 + ; inl
 
 \ sizes of the buffer and of the structure
-: buffer-size                      1000 ; inl
+: buffer-size                       100 ; inl
 : struct-size
    [ buffer-size buffer-start lit, ]
    ; inl
+
+\ size of the global buffer
+: global-buffer-size               1000 ; inl
 
 private
 
 \ variable for the last struct created
 align 4 var module-current
-
 0 module-current ! \ set it to zero
 
-\ get the depth of recursive inclusion
-: get-depth ( -- n )
-   0 module-current @           \ d: depth addr
-   begin
-      dup if
-         swap 1+ swap           \ d: depth' addr
-         next-module @          \ d: depth addr'
-         again
-      then
-   end
-   drop
+align 10 var global-buffer
+
+\ initializes the tib
+: module_initialize ( -- )
+   defer-chain onboot
+   global-buffer-size alloc     \ d: addr
+   dup [ global-buffer buf>here ] lit !
+   dup [ global-buffer buf>start ] lit !
+   dup [ global-buffer buf>off ] lit !
+   global-buffer-size +
+   [ global-buffer buf>end ] lit !
    ;
 
-\ computes the length of a zero terminated string
-: cstr-length ( c-str -- n )
-   0                            \ d: c-str n
-   begin
-      over c@                   \ d: c-str n c
-      if
-         1+ swap 1+ swap        \ d: c-str' n'
-         again
-      then
-   end
-   nip
-   ;
-
-\ performs the memory copy from source to destination
-: memory-copy ( src n dst -- )
-   >r                           \ d: src n | r: dst
-   begin
-      dup if
-         over c@                \ d: str n c | r: dst
-         r@ c!                  \ d: str n | r: dst
-         r> 1+ >r               \ d: str n | r: dst'
-         str1+                  \ d: str' n' | r: dst
-         again
-      then
-   end
-   r> 2drop drop                \ d:
-   ;
 
 \ allocate space at the end of wordbuf
 : allocate-space ( size -- addr )
@@ -89,7 +61,7 @@ align 4 var module-current
 
    dup                          \ d: vend addr addr
    [ wordbuf buf>end lit, ] !   \ d: vend addr
-   tuck module-buffer buf>end ! \ d: addr
+   tuck mod-buffer buf>end !    \ d: addr
    ;
 
 \ install the module
@@ -110,27 +82,27 @@ align 4 var module-current
 \ reads the file and fills the buffer
 \ returns the number of bytes red
 : fill-buffer ( addr -- n )
-   dup file-name @ file-setname \ d: addr
+   dup file-name @ file-name!   \ d: addr
    dup file-offset @
-   file-setoffset               \ d: addr
+   file-offset!                 \ d: addr
    dup buffer-start >r          \ d: addr | r: start
    r@ over                      \ d: addr start addr | r: start
-   module-buffer buf>off !      \ d: addr | r: start
+   mod-buffer buf>off !         \ d: addr | r: start
    r@ buffer-size
-   file-setbuffer               \ d: addr | r: start
+   file-buffer!                 \ d: addr | r: start
    file-read >r                 \ d: addr | r: start n
    dup file-offset              \ d: addr fileoffset | r: start n
    dup @ r@ + swap !            \ d: addr | start n
    r> r> over +                 \ d: addr n vhere
-   rot module-buffer buf>here   \ d: n vhere here
+   rot mod-buffer buf>here      \ d: n vhere here
    !                            \ d: n
    ;
 
 \ implementation of getc for the module
 : module-getc ( -- c )
    module-current @             \ d: addr
-   dup module-buffer buf>off @  \ d: addr voff
-   over module-buffer buf>here @ \ d: addr voff vhere
+   dup mod-buffer buf>off @     \ d: addr voff
+   over mod-buffer buf>here @   \ d: addr voff vhere
    over swap u<                 \ d: addr voff rem?
    =0 if
       drop                      \ d: addr
@@ -139,12 +111,12 @@ align 4 var module-current
          uninstall-module       \ d:
          getc tail
       then
-      dup module-buffer buf>off @ \ d: addr voff
+      dup mod-buffer buf>off @  \ d: addr voff
    then
 
    dup c@                       \ d: addr voff c
    swap 1+                      \ d: addr c voff'
-   rot module-buffer buf>off    \ d: c voff' off
+   rot mod-buffer buf>off       \ d: c voff' off
    !
    ;
 
@@ -172,7 +144,7 @@ align 4 var module-current
 \ except for the filename
 : init-struct ( addr -- )
   \ initialize the structure
-   dup module-buffer            \ d: addr buf
+   dup mod-buffer               \ d: addr buf
    dup buffer-start swap        \ d: addr start buf
    2dup buf>start !             \ d: addr start buf
    2dup buf>here !              \ d: addr start buf
@@ -186,13 +158,10 @@ align 4 var module-current
 
 public
 
-: module-include ( c-str -- okay? )
-   \ check depth first
-   max-depth get-depth u<       \ d: c-str deep?
-   if drop 0 exit then
-
+: include ( c-str -- okay? )
+   dup 0 char-find              \ d: c-str n
    \ add 1 for the null character
-   dup cstr-length 1+           \ d: c-str n
+   1+                           \ d: c-str n'
    dup struct-size +            \ d: c-str n size
 
    allocate-space               \ d: c-str n addr
@@ -202,10 +171,15 @@ public
    dup struct-size +            \ d: c-str n addr dst
    swap over swap               \ d: c-str n dst dst addr
    file-name !                  \ d: c-str n dst
-   memory-copy 1                \ d: 1
+   str-copy 1                   \ d: 1
    ;
 
+: include" ( -- )
+   ," drop                      \ d: addr
+   0 c,                         \ d: addr
+   dup include                  \ d: addr okay?
+   swap here !                  \ d: okay?
+   =0 if 0 bye then
+   ;
 
 }scope
-
-decimal

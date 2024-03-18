@@ -26,17 +26,27 @@ private
 public
 
 \ set the name of the file to operate on
-: file-setname ( c-str -- )
+: file-name! ( c-str -- )
    IO_STORAGE_NAME !
    ;
 
+\ set the name of the file to operate on
+\ based on a string
+: file-name" ( -- )
+   ,"                           \ d: c-str n
+   0 c,                         \ d: c-str n
+   drop dup                     \ d: c-str c-str
+   file-name!                   \ d: c-str
+   here !                       \ d:
+   ;
+
 \ set the offset for reading (or for appending when writing)
-: file-setoffset ( offset -- )
+: file-offset! ( offset -- )
    IO_STORAGE_OFFSET !
    ;
 
 \ set the buffer to be used for the file operations
-: file-setbuffer ( addr n -- )
+: file-buffer! ( addr n -- )
    IO_STORAGE_LEN !
    IO_STORAGE_DATA !
    ;
@@ -55,4 +65,3 @@ public
 
 }scope
 
-decimal

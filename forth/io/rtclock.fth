@@ -21,7 +21,7 @@ private
 ," SunMonTueWedThuFriSat"
 
 \ string with the weekdays
-: weekdays [ drop lit, ] ; inl
+: weekdays [ drop ] lit ; inl
 
 : print-weekday ( n -- )
    3 * weekdays + 3 type tail
@@ -34,18 +34,18 @@ private
 
 \ prints the dash character
 : print-dash ( -- )
-   [ char - lit, ] emit tail
+   [ char - ] lit emit tail
    ; noexit
 
 \ prints the colon character
 : print-colon ( -- )
-   [ char : lit, ] emit tail
+   [ char : ] lit emit tail
    ; noexit
 
 ,"  DST"
 \ print the DST string
 : print-dst ( -- )
-   [ swap lit, lit, ] type tail
+   [ swap ] lit lit type tail
    ; noexit
 
 public
@@ -108,5 +108,3 @@ public
    ;
 
 }scope
-
-decimal

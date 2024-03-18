@@ -3,118 +3,37 @@
 hex
 
 scope{
-private
-
-\ dumps a single row of hexadecimal numbers
-: dump_hex ( addr n  -- addr' )
-   over w. space                \ d: addr n
-   begin
-      dup if                    \ d: addr n
-        over c@ b. space        \ d: addr n
-        str1+                   \ d: addr' n'
-        again
-      then
-   end
-   2drop
-   ;
-
-\ prints a sequence of 3*n spaces
-: dump_spaces ( n -- )
-   3 * spaces tail
-   ; noexit
-
-\ dumps the printable characters
-: dump_print ( addr n  -- addr' )
-   begin
-      dup if                    \ d: addr n
-        over c@                 \ d: addr n c
-        dup                     \ d: addr n c c
-        20 7E within =0         \ d: addr n c notprint?
-        if
-           drop [ char . lit, ] \ d: addr n c'
-        then
-        emit
-        str1+                   \ d: addr' n'
-        again
-      then
-   end
-   2drop
-   ;
-
 public
-
-\ dumps the contents of memory at given address
-: dump ( addr n -- )
-   begin                        \ d: addr n
-      dup if
-         dup                    \ d: addr n n
-         10 over u<             \ d: addr n m large?
-         if drop 10 then        \ d: addr n m'
-         >r                     \ d: addr n | r: m
-         over r@ dump_hex       \ d: addr n | r: m
-         10 r@ - dump_spaces    \ d: addr n | r: m
-         over r@ dump_print     \ d: addr n | r: m
-         r@ - swap r> + swap    \ d: addr' n'
-         nl again
-      then
-   end
-   2drop
-   ;
-
-auxiliary
-
-\ auxiliary function to create the table of opcodes
-: define_opcodes ( -- )
-   21                           \ d: num
-   begin
-      word                      \ d: num c-str n
-      tuck                      \ d: num n c-str n
-      str,                      \ d: num n
-      5 swap -                  \ d: num rem
-      begin
-         dup if                 \ d: num rem
-            20 c, 1-            \ d: num rem'
-            again
-         then
-      end
-      drop 1-                   \ d: num'
-      dup =0 until
-   end
-   drop
-   ;
-
-private
 
 ( the opcode table )
 here @
-define_opcodes
-   RET    JSR    JMP    JZ     EQ0    EQ     ULT    LT
-   NOP    AND    OR     XOR    ADD    SUB    UMUL   UDIV
-   RD     WRT    RDB    WRTB   SGE8   SHL    SHR    SAR
-   DUP    DROP   SWAP   OVER   ROT    RTO    RFROM  RPEEK
-   INVL
+," RET  JSR  JMP  JZ   EQ0  EQ   ULT  LT   " 2drop
+," NOP  AND  OR   XOR  ADD  SUB  UMUL UDIV " 2drop
+," RD   WRT  RDB  WRTB SGE8 SHL  SHR  SAR  " 2drop
+," DUP  DROP SWAP OVER ROT  RTO  RFROMRPEEK" 2drop
+," INVL " 2drop
 
 auxiliary
 
 \ opcodes points to the table defined above
 : opcodes ( -- addr )
-   [ lit, ]
+   lit
    ; inl
 
 private
 
-," LITS "
 \ disassemble a literal shift instruction
+," LITS "
 : disasm_lits ( opc -- )
-   [ swap lit, lit, ]
+   [ swap ] lit lit
    type                         \ d: opc
    b. tail
    ; noexit
 
-," LIT  "
 \ disassemble a literal instruction
+," LIT  "
 : disasm_lit ( opc -- )
-   [ swap lit, lit, ]
+   [ swap ] lit lit             \ get the string
    type                         \ d: opc
    80 -                         \ d: num
    6 sge                        \ d: num'
@@ -165,5 +84,3 @@ public
    ;
 
 }scope
-
-decimal
