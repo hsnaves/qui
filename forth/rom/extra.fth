@@ -205,6 +205,21 @@ forth current !
    inl
    ;
 
+\ shrinks wordbuf and returns the address of the
+\ reserved memory following the shrunk buffer
+\ returns zero when it fails
+: allocate ( size -- addr )
+   [ wordbuf buf>end lit, ] @   \ d: size wb_end
+   tuck                         \ d: wb_end size
+   [ wordbuf buf>here lit, ] @  \ d: wb_end size wb_end wb_here
+   -                            \ d: wb_end size wb_size
+   over u<                      \ d: wb_end size large?
+   if 2drop 0 then              \ return 0
+   -                            \ d: addr
+   dup                          \ d: addr addr
+   [ wordbuf buf>end lit, ] !   \ d: addr
+   ;
+
 \ creates a deferred word
 : defer ( -- )
    here @                       \ d: addr
