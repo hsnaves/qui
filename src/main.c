@@ -27,8 +27,8 @@
 static SDL_Window *window;      /* the interface window */
 static SDL_Renderer *renderer;  /* the renderer for the window */
 static SDL_Texture *texture;    /* the texture for drawing */
+static int zoom = 1;            /* the zoom level */
 static int mouse_captured;      /* the mouse was captured */
-static int skip_mouse_move;     /* skip the next mouse move event */
 #endif
 
 /* Functions */
@@ -58,7 +58,7 @@ void create_window(uint32_t width, uint32_t height)
     window = SDL_CreateWindow("QUIVM",
                               SDL_WINDOWPOS_UNDEFINED,
                               SDL_WINDOWPOS_UNDEFINED,
-                              width, height,
+                              zoom * width, zoom * height,
                               SDL_WINDOW_SHOWN);
 
     if (!window) {
@@ -102,7 +102,6 @@ void create_window(uint32_t width, uint32_t height)
     }
 
     mouse_captured = 0;
-    skip_mouse_move = 0;
 }
 
 /* Auxiliary function to update the screen.
@@ -168,7 +167,7 @@ void capture_mouse(int capture)
         SDL_SetWindowGrab(window, SDL_TRUE);
         SDL_SetWindowTitle(window,
                            "QUIVM - Mouse captured. "
-                           "Press 'Alt' to release.");
+                           "Press 'Ctrl+Alt' to release.");
     } else {
         SDL_ShowCursor(1);
         SDL_SetWindowGrab(window, SDL_FALSE);
@@ -189,7 +188,8 @@ void process_events(struct quivm *qvm)
     struct display *dpl;
     uint32_t button;
     SDL_Event e;
-    int x, y, mx, my;
+    SDL_Keymod mod;
+    int x, y;
 
     if (!window) return;
 
@@ -197,10 +197,6 @@ void process_events(struct quivm *qvm)
     kbd = io->kbd;
     dpl = io->dpl;
 
-
-    /* for warping the mouse */
-    mx = dpl->width / 2;
-    my = dpl->height / 2;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
@@ -209,28 +205,17 @@ void process_events(struct quivm *qvm)
         case SDL_MOUSEMOTION:
             if (!mouse_captured) break;
 
-            if (skip_mouse_move) {
-                /* skip this event */
-                skip_mouse_move = 0;
-                break;
-            }
-
-            x = kbd->x;
-            x += (e.motion.x - mx);
+            x = e.motion.x;
             if (x < 0) x = 0;
             if (x >= ((int) dpl->width))
                 x = dpl->width - 1;
             kbd->x = x;
 
-            y = kbd->y;
-            y += (e.motion.y - my);
+            y = e.motion.y;
             if (y < 0) y = 0;
             if (y >= ((int) dpl->height))
                 y = dpl->height - 1;
             kbd->y = y;
-
-            SDL_WarpMouseInWindow(window, mx, my);
-            skip_mouse_move = 1;
             break;
 
         case SDL_MOUSEBUTTONDOWN:
@@ -257,14 +242,20 @@ void process_events(struct quivm *qvm)
             }
             break;
 
-        case SDL_KEYUP:
-            if (e.key.keysym.sym == SDLK_LALT
-                || e.key.keysym.sym == SDLK_RALT) {
+        case SDL_KEYDOWN:
+            mod = SDL_GetModState();
+            if ((mod & KMOD_CTRL) && (mod & KMOD_ALT)) {
                 capture_mouse(0);
+            }
+            if (e.key.keysym.sym == SDLK_F5) {
+                zoom = (zoom == 4) ? 1 : zoom + 1;
+                SDL_SetWindowSize(window,
+                                  dpl->width * zoom,
+                                  dpl->height * zoom);
             }
             /* fall through */
 
-        case SDL_KEYDOWN:
+        case SDL_KEYUP:
             if (!mouse_captured) break;
             break;
         }

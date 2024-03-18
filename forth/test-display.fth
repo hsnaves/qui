@@ -4,11 +4,12 @@ hex
 scope{
 
 auxiliary
-: IO_DISPLAY_WIDTH    FFFFFEBC ; inl
-: IO_DISPLAY_HEIGHT   FFFFFEB8 ; inl
-: IO_DISPLAY_BUFFER   FFFFFEB4 ; inl
-: IO_DISPLAY_STRIDE   FFFFFEB0 ; inl
-: IO_DISPLAY_WAITSYNC FFFFFEAC ; inl
+: IO_DISPLAY_MODE     FFFFFEBC ; inl
+: IO_DISPLAY_WIDTH    FFFFFEB8 ; inl
+: IO_DISPLAY_HEIGHT   FFFFFEB4 ; inl
+: IO_DISPLAY_BUFFER   FFFFFEB0 ; inl
+: IO_DISPLAY_STRIDE   FFFFFEAC ; inl
+: IO_DISPLAY_WAITSYNC FFFFFEA8 ; inl
 
 public
 
@@ -17,9 +18,9 @@ public
    IO_DISPLAY_BUFFER !
    ;
 
-: display-init ( width height -- )
-   swap
-   IO_DISPLAY_WIDTH !
+: display-init ( mode width height -- )
+   rot IO_DISPLAY_MODE !
+   swap IO_DISPLAY_WIDTH !
    IO_DISPLAY_HEIGHT !
    ;
 
@@ -58,15 +59,16 @@ public
 decimal
 
 \ screen dimensions
+: MODE 0 ; inl
 : WIDTH 320 ; inl
-: HEIGHT 320 ; inl
+: HEIGHT 200 ; inl
 
 \ allocate the framebuffer
 align WIDTH HEIGHT * var framebuffer
 
 \ initialize the display
 framebuffer WIDTH display-setbuffer
-WIDTH HEIGHT display-init
+MODE WIDTH HEIGHT display-init
 
 : render-loop
    begin

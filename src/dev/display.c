@@ -7,6 +7,7 @@
 
 int display_init(struct display *dpl)
 {
+    dpl->mode = 0;
     dpl->width = 0;
     dpl->height = 0;
     dpl->buffer = 0;
@@ -39,6 +40,9 @@ uint32_t display_read_callback(struct display *dpl,
     (void)(qvm); /* UNUSED */
 
     switch (address) {
+    case IO_DISPLAY_MODE:
+        v = dpl->mode;
+        break;
     case IO_DISPLAY_WIDTH:
         v = dpl->width;
         break;
@@ -65,6 +69,11 @@ void display_write_callback(struct display *dpl,  struct quivm *qvm,
                             uint32_t address, uint32_t v)
 {
     switch (address) {
+    case IO_DISPLAY_MODE:
+        if (!dpl->initialized) {
+            dpl->mode = v;
+        }
+        break;
     case IO_DISPLAY_WIDTH:
         if (!dpl->initialized) {
             dpl->width = v;

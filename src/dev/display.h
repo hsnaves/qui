@@ -13,16 +13,20 @@
 #define IO_DISPLAY_END          0xFFFFFEC0
 
 /* Addresses within the display device */
-#define IO_DISPLAY_WIDTH        0xFFFFFEBC
-#define IO_DISPLAY_HEIGHT       0xFFFFFEB8
-#define IO_DISPLAY_BUFFER       0xFFFFFEB4
-#define IO_DISPLAY_STRIDE       0xFFFFFEB0
-#define IO_DISPLAY_WAITSYNC     0xFFFFFEAC
-#define IO_DISPLAY_FRAMECOUNT   0xFFFFFFA8
+#define IO_DISPLAY_MODE         0xFFFFFEBC
+#define IO_DISPLAY_WIDTH        0xFFFFFEB8
+#define IO_DISPLAY_HEIGHT       0xFFFFFEB4
+#define IO_DISPLAY_BUFFER       0xFFFFFEB0
+#define IO_DISPLAY_STRIDE       0xFFFFFEAC
+#define IO_DISPLAY_WAITSYNC     0xFFFFFEA8
+#define IO_DISPLAY_FRAMECOUNT   0xFFFFFFA4
 
 /* Data structures and types */
 /* A structure representing the display device */
 struct display {
+    uint32_t mode;              /* display mode (specifies bpp, use of
+                                 * palette, etc.)
+                                 */
     uint32_t width;             /* display width */
     uint32_t height;            /* display height */
     uint32_t buffer;            /* address of the framebuffer in memory */
