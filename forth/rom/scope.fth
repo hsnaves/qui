@@ -7,9 +7,9 @@ hex
 00 60 dict>last !
 70 60 dict>code !
 70 60 dict>data !
-00 18 ! \ set zero to templink
-18 04 ! \ set currnext to templink
-current @ 1C ! \ set tempcurr to the current value
+00 80 ! \ set zero to templink
+80 04 ! \ set currnext to templink
+current @ 84 ! \ set tempcurr to the current value
 60 current ! \ set temp to current
 
 
@@ -20,8 +20,8 @@ current @ 1C ! \ set tempcurr to the current value
 : currnext ( -- addr ) 04 ; inl
 : temp ( -- addr )     60 ; inl
 : tmpbuf ( -- addr )   70 ; inl
-: templink ( -- addr ) 18 ; inl
-: tempcurr ( -- addr ) 1C ; inl
+: templink ( -- addr ) 80 ; inl
+: tempcurr ( -- addr ) 84 ; inl
 
 : tempnext    [ temp dict>next   ] lit ; inl
 : templast    [ temp dict>last   ] lit ; inl

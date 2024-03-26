@@ -30,31 +30,30 @@ public
 scope{
 private
 
-\ default implementation of onerror
-: default_onerror ( c-str n -- )
+\ default implementation of error
+: default_error ( c-str n -- )
    1 channel c!
    type nl                      \ d:
    0 channel c!
    line                         \ flush the current line
    quit tail
    ; noexit
+last @ >xt is error
 
-\ default implementation of onexception
-: default_onexception ( status -- )
+\ default implementation of onexcept
+: default_onexcept ( status -- )
    bye tail
    ; noexit
-
-' default_onerror is onerror
-' default_onexception is onexception
+last @ >xt onexcept !
 
 }scope
 
 : boot ( status -- )
    dup                          \ d: status status
-   if onexception tail then
+   if onexcept @ exec tail then
    drop                         \ d:
    0 rsp ! 1 dsp !              \ reset the data and return stack
-   onboot                       \ assumes onboot is non-zero
+   onboot @ exec                \ assumes onboot is non-zero
    quit tail
    ; noexit
 

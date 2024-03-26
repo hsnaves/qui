@@ -64,7 +64,7 @@ private
 ," buffer overflow"             \ d: c-str n
 : overflow ( -- )
    [ swap ] lit lit             \ compile the string
-   onerror tail
+   error tail
    ; noexit
 
 public

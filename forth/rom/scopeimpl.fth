@@ -24,20 +24,6 @@ hex
    defer-ptr !
    ;
 
-\ chain the deferred function
-: defer-chain ( -- )
-   defer-ptr                    \ d: addr
-   dup @                        \ d: addr fn
-   dup if                       \ d: addr fn
-      dup lit,                  \ d: addr fn
-      exec-xt                   \ d: addr fn xt
-      I_JSR jump,               \ d: addr fn
-   then
-   drop                         \ d: addr
-   this @ >xt                   \ d: addr xt
-   swap !                       \ d:
-   ; imm
-
 \ start the scope
 : scope{ ( -- )
    \ set here to start
@@ -106,7 +92,7 @@ private
 
 \ initializes the tmpbuf
 : scope_initialize ( -- )
-   defer-chain onboot
+   [ onboot @ ] lit exec
    TMPBUF_SIZE alloc            \ d: addr
    dup tmpbufhere !             \ d: addr
    dup tmpbufstart !            \ d: addr
@@ -114,5 +100,6 @@ private
    TMPBUF_SIZE +                \ d: vend
    tmpbufend !                  \ d:
    ;
+last @ >xt onboot !
 
 }scope

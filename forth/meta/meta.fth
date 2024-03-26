@@ -41,8 +41,8 @@ wordbuf compiler dict>data !
 
 \ initialize the wordbuffer
 \ use smaller size here
-80 wordbuf buf>here !
-80 wordbuf buf>start !
+88 wordbuf buf>here !
+88 wordbuf buf>start !
 10000 wordbuf buf>end !
 100 wordbuf buf>off !
 

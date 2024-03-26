@@ -10,6 +10,8 @@ hex
 : state ( -- addr )    15 ; inl
 : base ( -- addr )     16 ; inl
 : channel ( -- addr )  17 ; inl
+: onexcept ( -- addr ) 18 ; inl
+: onboot ( -- addr )   1C ; inl
 : forth ( -- addr )    20 ; inl
 : compiler ( -- addr ) 30 ; inl
 : wordbuf ( -- addr )  40 ; inl

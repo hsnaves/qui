@@ -6,8 +6,8 @@ hex
 : currnext    04 ; inl
 : temp        60 ; inl
 : tmpbuf      70 ; inl
-: templink    18 ; inl
-: tempcurr    1C ; inl
+: templink    80 ; inl
+: tempcurr    84 ; inl
 
 meta use
 tmpbuf buf>end

@@ -80,8 +80,8 @@ private
    general_exception tail
    ; noexit
 
-\ current implementation of onexception
-: my_onexception ( status -- )
+\ current implementation of onexcept
+: my_onexcept ( status -- )
    dup 1 = if
       invalid_insn tail
    then
@@ -93,8 +93,7 @@ private
    then
    bye tail
    ; noexit
-
-' my_onexception is onexception
+last @ >xt onexcept !
 
 }scope
 

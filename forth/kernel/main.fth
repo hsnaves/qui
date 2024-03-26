@@ -128,15 +128,6 @@ public
 
 ( *** deferred words *** )
 
-\ word to be called when there is an error
-align defer onerror ( c-str n -- )
-
-\ word to be called when an exception is raised
-align defer onexception ( status -- )
-
-\ word to be called when the system boots
-align defer onboot ( -- )
-
 \ obtains an input character from standard input
 align defer getc ( -- c)
 
@@ -145,6 +136,9 @@ align defer emit ( c -- )
 
 \ types a counted string to the standard output
 align defer type ( c-str n -- )
+
+\ prints an error message and restarts the interpreter
+align defer error ( c-str n  -- )
 
 ( *** memory allocation words *** )
 
@@ -228,6 +222,16 @@ align defer type ( c-str n -- )
    0A emit tail
    ; noexit
 
+\ prints an error message of an unknown word
+," ? "                          \ d: c-str n
+: unknown ( c-str n -- )
+   [ swap ] lit lit             \ d: c-str n c-str' n'
+   1 channel c!                 \ set the channel to stderr
+   type
+   0 channel c!                 \ revert back to stdout
+   error tail
+   ; noexit
+
 \ types a counted string to the standard output
 : (type) ( c-str n -- )
    begin
@@ -243,16 +247,6 @@ align defer type ( c-str n -- )
    ; noexit
 ' (type) is type
 
-\ prints an error message of an unknown word
-," ? "                          \ d: c-str n
-: unknown ( c-str n -- )
-   [ swap ] lit lit             \ d: c-str n c-str' n'
-   1 channel c!                 \ set the channel to stderr
-   type
-   0 channel c!                 \ revert back to stdout
-   onerror tail
-   ; noexit
-
 ( *** initializes the wordbuf *** )
 
 scope{
@@ -260,9 +254,9 @@ private
 
 \ initializes the wordbuf
 : wordbuf_initialize ( -- )
-   defer-chain onboot
    memsize                      \ d: vend
    [ wordbuf buf>end ] lit !    \ d:
    ;
+last @ >xt onboot !
 
 }scope

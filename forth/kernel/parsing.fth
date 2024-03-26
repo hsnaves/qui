@@ -14,7 +14,7 @@ private
 
 \ initializes the tib
 : tib_initialize ( -- )
-   defer-chain onboot
+   [ onboot @ ] lit exec
    TIB_SIZE alloc               \ d: addr
    dup [ tib buf>here ] lit !   \ d: addr
    dup [ tib buf>start ] lit !  \ d: addr
@@ -22,6 +22,8 @@ private
    TIB_SIZE +                   \ d: vend
    [ tib buf>end ] lit !        \ d:
    ;
+last @ >xt onboot !
+
 }scope
 
 
@@ -39,7 +41,7 @@ private
 ," TIB overflow"
 : tiboverflow ( -- )
    [ swap ] lit lit             \ d: c-str n
-   onerror tail
+   error tail
    ; noexit
 
 public

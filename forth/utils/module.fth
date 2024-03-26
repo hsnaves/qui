@@ -32,7 +32,7 @@ align 10 var global-buffer
 
 \ initializes the tib
 : module_initialize ( -- )
-   defer-chain onboot
+   [ onboot @ ] lit exec
    global-buffer-size alloc     \ d: addr
    dup [ global-buffer buf>here ] lit !
    dup [ global-buffer buf>start ] lit !
@@ -40,6 +40,7 @@ align 10 var global-buffer
    global-buffer-size +
    [ global-buffer buf>end ] lit !
    ;
+last @ >xt onboot !
 
 
 \ allocate space at the end of wordbuf

@@ -24,7 +24,7 @@ auxiliary
    META_BUFFER_SIZE alloc
    dup =0 if
       error-string
-      onerror tail
+      error tail
    then
    ;
 
@@ -75,7 +75,7 @@ private
    META_BUFFER_SIZE swap u<     \ d: outside?
    if
       error-string
-      onerror tail
+      error tail
    then
    ;
 
