@@ -271,20 +271,25 @@ int quivm_step(struct quivm *qvm)
             quivm_write_byte(qvm, qvm->acc, v);
             qvm->acc = quivm_stack_pop(qvm, 0);
             break;
-        case INSN_SGE8:
-            qvm->acc &= 0xFF;
-            if (qvm->acc & 0x80)
-                qvm->acc |= ~0xFF;
+        case INSN_SIGNE:
+            v = quivm_stack_pop(qvm, 0);
+            if (qvm->acc < 32) {
+                qvm->acc = 32 - qvm->acc;
+                v <<= qvm->acc;
+                qvm->acc = (((int32_t) v) >> qvm->acc);
+            } else {
+                qvm->acc = v;
+            }
             break;
         case INSN_SHL:
             v = quivm_stack_pop(qvm, 0);
             qvm->acc = (v << (qvm->acc & 0x1F));
             break;
-        case INSN_SHR:
+        case INSN_USHR:
             v = quivm_stack_pop(qvm, 0);
             qvm->acc = (v >> (qvm->acc & 0x1F));
             break;
-        case INSN_SAR:
+        case INSN_SHR:
             v = quivm_stack_pop(qvm, 0);
             qvm->acc = (((int32_t) v) >> (qvm->acc & 0x1F));
             break;

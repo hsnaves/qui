@@ -32,7 +32,7 @@ hex
 : litn? ( v n -- b )
    7 * 1-                       \ d: v bits
    over swap                    \ d: v v bits
-   sge =                        \ d: b
+   signe =                      \ d: b
    ;
 
 \ checks if the jump fits the given size of literal

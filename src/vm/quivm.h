@@ -27,10 +27,10 @@
 #define INSN_WRT                      0xD1
 #define INSN_RDB                      0xD2
 #define INSN_WRTB                     0xD3
-#define INSN_SGE8                     0xD4
+#define INSN_SIGNE                    0xD4
 #define INSN_SHL                      0xD5
-#define INSN_SHR                      0xD6
-#define INSN_SAR                      0xD7
+#define INSN_USHR                     0xD6
+#define INSN_SHR                      0xD7
 #define INSN_DUP                      0xD8
 #define INSN_DROP                     0xD9
 #define INSN_SWAP                     0xDA

@@ -9,7 +9,7 @@ public
 here @
 ," RET  JSR  JMP  JZ   EQ0  EQ   ULT  LT   " 2drop
 ," NOP  AND  OR   XOR  ADD  SUB  UMUL UDIV " 2drop
-," RD   WRT  RDB  WRTB SGE8 SHL  SHR  SAR  " 2drop
+," RD   WRT  RDB  WRTB SIGNESHL  USHR SHR  " 2drop
 ," DUP  DROP SWAP OVER ROT  RTO  RFROMRPEEK" 2drop
 ," INVL " 2drop
 
@@ -36,7 +36,7 @@ private
    [ swap ] lit lit             \ get the string
    type                         \ d: opc
    80 -                         \ d: num
-   6 sge                        \ d: num'
+   6 signe                      \ d: num'
    w. tail
    ; noexit
 

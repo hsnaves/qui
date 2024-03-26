@@ -10,8 +10,9 @@ hex
    dup F_EXT and                \ d: fl ext?
    =0 if
       [
-         F_EXT F_IMM or
-         F_INL or sge8
+         0 F_EXT -
+         F_IMM or
+         F_INL or
       ]
       lit and                   \ d: fl'
    then
@@ -26,7 +27,7 @@ hex
    if 1+ then                   \ d: addr fl addr'
 
    swap F_LINK and              \ d: addr addr' link?
-   if @ else c@ sge8 then       \ d: addr diff
+   if @ else c@ 8 signe then    \ d: addr diff
 
    dup =0                       \ d: addr diff zero?
    if nip exit then
@@ -189,7 +190,7 @@ private
    \ check for large link
    r> @                         \ d: fl vhere | r: n
    link                         \ d: fl diff | r: n
-   dup sge8 =                   \ d: fl short? | r: n
+   dup 8 signe =                \ d: fl short? | r: n
    =0 if F_LINK or then         \ d: fl' | r: n
 
    \ ensure that F_EXT is present when extra flags are set

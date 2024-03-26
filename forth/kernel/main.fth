@@ -19,7 +19,7 @@ hex
 : !     ( n addr -- )              [ D1 c, ] ; inl
 : c@    ( addr -- c )              [ D2 c, ] ; inl
 : c!    ( c addr -- )              [ D3 c, ] ; inl
-: sge8  ( c -- n )                 [ D4 c, ] ; inl
+: signe ( c -- n )                 [ D4 c, ] ; inl
 : shl   ( n1 n2 -- {n1<<n2} )      [ D5 c, ] ; inl
 : ushr  ( u1 u2 -- {u1>>u2} )      [ D6 c, ] ; inl
 : shr   ( n1 n2 -- {n1>>n2} )      [ D7 c, ] ; inl
@@ -159,15 +159,6 @@ align defer error ( c-str n  -- )
 
 
 ( *** helper words *** )
-
-\ sign-extend n-bit value
-: sge ( v bits -- v' )
-   dup 20 u>=                   \ d: v bits overflow?
-   if drop exit then
-   20 swap -                    \ d: v bits'
-   tuck                         \ d: bits v bits
-   shl swap shr                 \ d: v
-   ;
 
 \ returns true if min <= v <= max
 : within ( v min max -- t )
