@@ -37,8 +37,8 @@ public
 
 \ exit the meta-compilation dictionary
 : meta-exit ( -- )
-   forth use-first compiler use
-   ;
+   abandon-last tail
+   ; noexit
 
 ( conversion to meta and host words )
 \ host address to meta address

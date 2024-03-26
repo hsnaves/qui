@@ -3,7 +3,6 @@
 hex
 
 ( *** variables for scope implementation *** )
-: currnext    04 ; inl
 : temp        60 ; inl
 : tmpbuf      70 ; inl
 : templink    80 ; inl

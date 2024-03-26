@@ -8,7 +8,7 @@ hex
 70 60 dict>code !
 70 60 dict>data !
 00 80 ! \ set zero to templink
-80 04 ! \ set currnext to templink
+80 currnext ! \ set currnext to templink
 current @ 84 ! \ set tempcurr to the current value
 60 current ! \ set temp to current
 
@@ -17,7 +17,6 @@ current @ 84 ! \ set tempcurr to the current value
 60 use
 
 ( define the location of temporary buffer and temporary dictionary )
-: currnext ( -- addr ) 04 ; inl
 : temp ( -- addr )     60 ; inl
 : tmpbuf ( -- addr )   70 ; inl
 : templink ( -- addr ) 80 ; inl

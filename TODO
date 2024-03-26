@@ -1,7 +1,8 @@
-- The >link can be negative only and 9-bits when using a single byte;
+- Replace sge8 with general sge;
+- Better solution than using channel variable;
+- Create variable for length of jumps for if/then/else;
 - Allocate big buffer for the implementation of module;
-- Allow change of offset for dump word (relative address);
-- Improve the dict module (allow removal of first dictionary in context and
-  arbitrary dictionary from context);
 - Maybe dict>next should become universal >next;
+
 - Add floating point support to the VM;
+- Allow change of offset for dump word (relative address);

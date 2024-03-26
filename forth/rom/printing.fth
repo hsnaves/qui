@@ -119,21 +119,27 @@ private
    2drop
    ;
 
+\ dumps a single row
+: dump_row ( addr n -- addr' n' )
+    dup                         \ d: addr n m
+    10 over u<                  \ d: addr n m large?
+    if drop 10 then             \ d: addr n m'
+    >r                          \ d: addr n | r: m
+    over r@ dump_hex            \ d: addr n | r: m
+    10 r@ - dump_spaces         \ d: addr n | r: m
+    over r@ dump_print          \ d: addr n | r: m
+    r@ - swap r> + swap         \ d: addr' n'
+    nl tail
+   ; noexit
+
 public
 
 \ dumps the contents of memory at given address
 : dump ( addr n -- )
    begin                        \ d: addr n
       dup if
-         dup                    \ d: addr n n
-         10 over u<             \ d: addr n m large?
-         if drop 10 then        \ d: addr n m'
-         >r                     \ d: addr n | r: m
-         over r@ dump_hex       \ d: addr n | r: m
-         10 r@ - dump_spaces    \ d: addr n | r: m
-         over r@ dump_print     \ d: addr n | r: m
-         r@ - swap r> + swap    \ d: addr' n'
-         nl again
+         dump_row               \ d: addr' n'
+         again
       then
    end
    2drop

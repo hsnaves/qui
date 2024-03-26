@@ -3,14 +3,14 @@ hex
 \ build the meta dictionary first
 include" forth/meta/basic.fth"
 include" forth/kernel/globals.fth"
-include" forth/kernel/compbasic.fth"
+include" forth/kernel/ibasic.fth"
 include" forth/kernel/herelast.fth"
-include" forth/kernel/compmain.fth"
-include" forth/kernel/compextra.fth"
+include" forth/kernel/imain.fth"
+include" forth/kernel/iextra.fth"
 include" forth/kernel/wordmain.fth"
 include" forth/meta/interp.fth"
 include" forth/kernel/colon.fth"
-include" forth/rom/control.fth"
+include" forth/rom/main.fth"
 include" forth/meta/scope.fth"
 include" forth/rom/scopeimpl.fth"
 
@@ -21,7 +21,7 @@ meta use
 
 \ initialize global variables
 forth current !
-compiler context !
+internal context !
 00 this !
 00 flags c!
 00 state c!
@@ -33,11 +33,11 @@ compiler context !
 wordbuf forth dict>code !
 wordbuf forth dict>data !
 
-\ initialize the compiler dictionary
-00 compiler dict>last !
-forth compiler dict>next !
-wordbuf compiler dict>code !
-wordbuf compiler dict>data !
+\ initialize the internal dictionary
+00 internal dict>last !
+forth internal dict>next !
+wordbuf internal dict>code !
+wordbuf internal dict>data !
 
 \ initialize the wordbuffer
 \ use smaller size here

@@ -8,7 +8,13 @@ hex
 : >flags ( addr -- fl )
    c@                           \ d: fl
    dup F_EXT and                \ d: fl ext?
-   =0 if -20 and then           \ d: fl'
+   =0 if
+      [
+         F_EXT F_IMM or
+         F_INL or sge8
+      ]
+      lit and                   \ d: fl'
+   then
    ;
 
 \ obtains the link to the next word
@@ -58,9 +64,6 @@ hex
 ( *** implementation of the lookup word *** )
 
 scope{
-auxiliary
-: currnext 04 ; inl
-
 private
 
 \ finds a word in the dictionary at given address

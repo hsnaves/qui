@@ -14,7 +14,7 @@ private
    r> swap >r >r
    ;
 last @ >xt find >r tuck >name + !
-F_IMM swap setflag
+F_IMM F_INL or swap toggleflag
 
 : r>_impl ( r: n -- n )
    state c@
@@ -22,7 +22,7 @@ F_IMM swap setflag
    r> r> swap >r
    ;
 last @ >xt find r> tuck >name + !
-F_IMM swap setflag
+F_IMM F_INL or swap toggleflag
 
 : r@_impl ( r: n -- n | r: n )
    state c@
@@ -30,7 +30,7 @@ F_IMM swap setflag
    r> r@ swap >r
    ;
 last @ >xt find r@ tuck >name + !
-F_IMM swap setflag
+F_IMM F_INL or swap toggleflag
 
 : rdrop_impl ( r: n -- n | r: n )
    state c@
@@ -38,7 +38,7 @@ F_IMM swap setflag
    r> rdrop >r
    ;
 last @ >xt find rdrop tuck >name + !
-F_IMM swap setflag
+F_IMM F_INL or swap toggleflag
 
 }scope
 

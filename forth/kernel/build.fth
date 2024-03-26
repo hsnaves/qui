@@ -6,16 +6,16 @@ include" forth/meta/meta.fth"
 include" forth/kernel/globals.fth"
 include" forth/kernel/main.fth"
 include" forth/io/console.fth"
-compiler current !
-include" forth/kernel/compbasic.fth"
+internal current !
+include" forth/kernel/ibasic.fth"
 forth current !
 include" forth/kernel/herelast.fth"
-compiler current !
-include" forth/kernel/compmain.fth"
+internal current !
+include" forth/kernel/imain.fth"
 forth current !
 include" forth/kernel/parsing.fth"
-compiler current !
-include" forth/kernel/compextra.fth"
+internal current !
+include" forth/kernel/iextra.fth"
 forth current !
 include" forth/kernel/wordmain.fth"
 include" forth/kernel/interp.fth"

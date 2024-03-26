@@ -76,8 +76,7 @@ hex
 \ stop the scope
 : }scope ( -- )
    public
-   tempnext @ context !
-   0 tempnext !
+   abandon-last
 
 \ set the currnext to the old value
    templink @ currnext !
@@ -103,3 +102,4 @@ private
 last @ >xt onboot !
 
 }scope
+
