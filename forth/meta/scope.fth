@@ -16,7 +16,7 @@ tmpbuf buf>here
 temp dict>data
 temp dict>code
 temp dict>last
-temp dict>next
+temp node>next
 meta-exit
 
 : tempnext    lit ; inl

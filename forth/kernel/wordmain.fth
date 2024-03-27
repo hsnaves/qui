@@ -87,7 +87,7 @@ private
    currnext >r                  \ d: c-str n | r: chain
    begin
       2dup                      \ d: c-str n c-str n | r: chain
-      r@  4 + @                 \ d: c-str n c-str n dict | r: chain
+      r@ node>val @             \ d: c-str n c-str n dict | r: chain
       lookup1                   \ d: c-str n addr | r: chain
       dup if
          dup >flags             \ d: c-str n addr vflags | r: chain
@@ -99,7 +99,7 @@ private
          then
       then
       drop                      \ d: c-str n | r: chain
-      r> @                      \ d: c-str n chain'
+      r> node>next @            \ d: c-str n chain'
       dup =0                    \ d: c-str n chain zero?
       if
          nip nip exit           \ return zero
@@ -121,7 +121,7 @@ private
             rdrop exit          \ d: addr
          then
          drop r>                \ d: c-str n dict
-         dict>next @            \ d: c-str n dict
+         node>next @            \ d: c-str n dict
          again
       then
    end

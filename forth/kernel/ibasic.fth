@@ -4,8 +4,13 @@ hex
 
 ( *** definition words for working with dictionaries *** )
 
-\ dictionary sibling
-: dict>next ( addr -- addr )
+\ node sibling
+: node>next ( addr -- addr' )
+   ; inl
+
+\ the value of the node
+: node>val ( addr -- addr' )
+   04 +
    ; inl
 
 \ last word of dictionary

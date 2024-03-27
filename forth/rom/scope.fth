@@ -22,7 +22,7 @@ current @ 84 ! \ set tempcurr to the current value
 : templink ( -- addr ) 80 ; inl
 : tempcurr ( -- addr ) 84 ; inl
 
-: tempnext    [ temp dict>next   ] lit ; inl
+: tempnext    [ temp node>next   ] lit ; inl
 : templast    [ temp dict>last   ] lit ; inl
 : tempcode    [ temp dict>code   ] lit ; inl
 : tempdata    [ temp dict>data   ] lit ; inl

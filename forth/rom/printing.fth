@@ -181,7 +181,7 @@ public
    begin
       dup if                    \ d: dict
          dup words1 nl nl       \ d: dict
-         dict>next @            \ d: dict'
+         node>next @            \ d: dict'
          again
       then
    end

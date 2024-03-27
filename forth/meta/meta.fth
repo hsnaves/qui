@@ -30,13 +30,13 @@ forth context !
 
 \ initialize the forth dictionary
 0 forth dict>last !
-internal forth dict>next !
+internal forth node>next !
 wordbuf forth dict>code !
 wordbuf forth dict>data !
 
 \ initialize the internal dictionary
 0 internal dict>last !
-0 internal dict>next !
+0 internal node>next !
 wordbuf internal dict>code !
 wordbuf internal dict>data !
 
@@ -49,7 +49,7 @@ wordbuf internal dict>data !
 
 \ initialize the temp dictionary
 0 temp dict>last !
-0 temp dict>next !
+0 temp node>next !
 tmpbuf temp dict>code !
 tmpbuf temp dict>data !
 

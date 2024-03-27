@@ -1,4 +1,6 @@
+- Re-factor the scope implementation (temp and tmpbuf) ;
+- Implement allocate word (with error message) ;
+- Better ways to implement string contants ;
 - Allocate big buffer for the implementation of module;
-- Maybe dict>next should become universal >next;
 
 - Add floating point support to the VM;

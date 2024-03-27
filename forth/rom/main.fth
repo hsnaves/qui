@@ -89,6 +89,38 @@ F_IMM swap toggleflags \ set then to immediate
 
 ( *** miscellaneous words *** )
 
+\ links the previous node to a given node node
+: node-link ( prev node -- )
+   over node>next @             \ d: prev node prevnext
+   over node>next !             \ d: prev node
+   swap node>next !             \ d:
+   ;
+
+\ unlinks a node from the linked list
+\ the previous node is passed to this word
+: node-unlink ( prev -- )
+   dup node>next @              \ d: prev curr
+   tuck node>next @             \ d: curr prev next
+   swap node>next !             \ d: curr
+   0 swap node>next !           \ d:
+   ;
+
+\ finds a node in the linked list
+\ returns pointer to the previous node ( or zero if not found )
+: node-find ( first node -- prev )
+   begin
+      over if
+         over node>next @       \ d: curr node next
+         2dup =                 \ d: curr node next eq?
+         if 2drop exit then     \ return curr
+
+         swap rot drop          \ d: curr' node
+         again
+      then
+   end
+   drop
+   ;
+
 \ word to create a variable
 : var ( size -- )
    here @                       \ d: size vhere
@@ -103,50 +135,34 @@ F_IMM swap toggleflags \ set then to immediate
 : dictionary ( -- )
    align here @ 10 var          \ d: addr
    0 over dict>last !           \ d: addr
-   0 over dict>next !           \ d: addr
+   0 over node>next !           \ d: addr
    wordbuf over dict>code !     \ d: addr
    wordbuf swap dict>data !     \ d: addr
    ;
 
 \ uses a dictionary (appends to context)
 : use ( addr -- )
-   context @                    \ d: addr vcontext
-   over dict>next !             \ d: addr
-   context !                    \ d:
-   ;
+   context swap                 \ d: context addr
+   node-link tail
+   ; noexit
 
 \ use of the first dictionary (set the context)
 : use-first ( addr -- )
-   0 over dict>next !           \ d: addr
-   context !                    \ d:
-   ;
+   0 context ! use tail
+   ; noexit
 
 \ no longer uses a given dictionary
 : abandon ( addr -- )
-   context                      \ d: addr ptr
-   begin
-      dup if
-         2dup @ =               \ d: addr ptr eq?
-         if
-            over dict>next @    \ d: addr ptr vnext
-            swap !              \ d: addr
-            0 swap dict>next !  \ d:
-            exit
-         then
-         dict>next @            \ d: addr ptr'
-         again
-      then
-   end
-   2drop
+   context swap                 \ d: context addr
+   node-find dup                \ d: prev prev
+   if node-unlink tail then
+   drop
    ;
 
 \ drops the last dictionary from the context
 : abandon-last ( -- )
-   context @                    \ d: vcontext
-   dup dict>next @              \ d: vcontext vnext
-   context !                    \ d: vcontext
-   0 swap dict>next !           \
-   ;
+   context node-unlink tail
+   ; noexit
 
 \ obtains the execution token of the next word
 : ' ( -- xt )
