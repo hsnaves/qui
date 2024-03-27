@@ -14,17 +14,11 @@ dictionary meta
 scope{
 auxiliary
 : META_BUFFER_SIZE 20000 ; inl
-
-," memory exhausted"
-: error-string ( -- c-str n )
-   [ swap ] lit lit
-   ; inl
-
+," memory exhausted" embed-str MEMORYERROR_STR
 : allocate-buffer ( -- addr )
    META_BUFFER_SIZE alloc
    dup =0 if
-      error-string
-      error tail
+      MEMORYERROR_STR error tail
    then
    ;
 
@@ -64,17 +58,14 @@ auxiliary
 
 private
 
-," invalid write outside meta-buffer"
-: error-string ( -- c-str n )
-   [ swap ] lit lit
-   ; inl
+," invalid write outside meta-buffer" embed-str INVALIDWRITE_STR
 
 \ checks for write outside the buffer
 : check-write ( addr n -- )
    +                            \ d: addr'
    META_BUFFER_SIZE swap u<     \ d: outside?
    if
-      error-string
+      INVALIDWRITE_STR
       error tail
    then
    ;

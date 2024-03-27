@@ -228,10 +228,11 @@ public
 }scope
 
 \ prints an error message of an unknown word
-," ? "                          \ d: c-str n
+," ? "
 : unknown ( c-str n -- )
-   [ swap ] lit lit             \ d: c-str n c-str' n'
+   [ swap ] lit lit             \ compile the string
    1 channel !                  \ set the channel to stderr
-   type
-   error tail
+   type                         \ d: c-str n
+   error tail                   \ d:
    ; noexit
+

@@ -66,7 +66,9 @@ hex
 
 scope{
 private
-," buffer overflow"             \ d: c-str n
+
+\ shows the buffer overflow error
+," buffer overflow"
 : overflow ( -- )
    [ swap ] lit lit             \ compile the string
    error tail

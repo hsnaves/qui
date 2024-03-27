@@ -20,8 +20,12 @@ private
 
 ," SunMonTueWedThuFriSat"
 
+auxiliary
+
 \ string with the weekdays
 : weekdays [ drop ] lit ; inl
+
+private
 
 : print-weekday ( n -- )
    3 * weekdays + 3 type tail

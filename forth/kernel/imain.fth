@@ -61,7 +61,9 @@ hex
 
 scope{
 private
-," large literal"               \ d: c-str n
+
+\ shows an error for large literal string
+," large literal"
 : literror ( -- )
    [ swap ] lit lit             \ compile the string
    error tail

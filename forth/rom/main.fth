@@ -45,7 +45,6 @@ last @ \ keep address of then on the stack
    swap                         \ d: else_addr if_addr
    then tail                    \ d: else_addr
    ; noexit imm
-
 F_IMM swap toggleflags \ set then to immediate
 
 \ places the current address on the return stack
@@ -121,15 +120,43 @@ F_IMM swap toggleflags \ set then to immediate
    drop
    ;
 
+\ obtains the execution token of the next word
+: ' ( -- xt )
+   find >xt tail                \ d: xt
+   ; noexit
+
+\ postpone the execution of an immediate word
+: postpone ( -- )
+   ' I_JSR jump, tail
+   ; noexit imm
+
+\ compiles a literal (immediate word)
+: lit ( n -- )
+   lit, tail                    \ d:
+   ; noexit imm
+
+\ word to create a word for a literal
+: embed ( n -- )
+   create                       \ d: n
+   lit,                         \ d:
+   wrapup
+   inl tail
+   ; noexit
+
+\ word to create a word for a string
+: embed-str ( c-str n -- )
+   create                       \ d: c-str n
+   swap lit, lit,               \ d:
+   wrapup
+   inl tail
+   ; noexit
+
 \ word to create a variable
 : var ( size -- )
    here @                       \ d: size vhere
    swap allot                   \ d: vhere
-   create                       \ d: vhere
-   lit,                         \ d:
-   wrapup
-   inl
-   ;
+   embed tail
+   ; noexit
 
 \ word to create a dictionary
 : dictionary ( -- )
@@ -164,19 +191,8 @@ F_IMM swap toggleflags \ set then to immediate
    context node-unlink tail
    ; noexit
 
-\ obtains the execution token of the next word
-: ' ( -- xt )
-   find >xt tail               \ d: xt
-   ; noexit
-
 \ obtains the first character of the next word
 : char ( -- c )
    word                         \ d: c-str n
    drop c@                      \ d: c
    ;
-
-\ compiles a literal (immediate word)
-: lit ( n -- )
-   lit, tail                    \ d:
-   ; noexit imm
-
