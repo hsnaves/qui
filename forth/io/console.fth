@@ -12,9 +12,6 @@ auxiliary
 
 public
 
-\ selects the channel for output
-: channel ( -- addr ) IO_CONSOLE_CHANNEL ; inl
-
 \ emits one character to the standard output
 : (emit) ( c -- )
    IO_CONSOLE_OUT !
@@ -26,6 +23,9 @@ public
    IO_CONSOLE_IN @
    ;
 ' (getc) is getc
+
+\ selects the channel for output
+: channel ( -- addr ) IO_CONSOLE_CHANNEL ; inl
 
 }scope
 

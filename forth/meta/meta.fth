@@ -22,21 +22,21 @@ meta use
 \ initialize global variables
 forth current !
 forth context !
-00 this !
-00 flags c!
-00 state c!
+0 this !
+0 flags c!
+0 state c!
 0A base c!
 01 janum c!
 
 \ initialize the forth dictionary
-00 forth dict>last !
+0 forth dict>last !
 internal forth dict>next !
 wordbuf forth dict>code !
 wordbuf forth dict>data !
 
 \ initialize the internal dictionary
-00 internal dict>last !
-00 internal dict>next !
+0 internal dict>last !
+0 internal dict>next !
 wordbuf internal dict>code !
 wordbuf internal dict>data !
 
@@ -45,7 +45,7 @@ wordbuf internal dict>data !
 88 wordbuf buf>here !
 88 wordbuf buf>start !
 10000 wordbuf buf>end !
-100 wordbuf buf>off !
+0 wordbuf buf>off !
 
 \ initialize the temp dictionary
 0 temp dict>last !
@@ -59,7 +59,7 @@ tmpbuf temp dict>data !
 10000 tmpbuf buf>here !
 10000 tmpbuf buf>start !
 20000 tmpbuf buf>end !
-10000 tmpbuf buf>off !
+0 tmpbuf buf>off !
 
 \ initialize the tib
 0 tib buf>here !

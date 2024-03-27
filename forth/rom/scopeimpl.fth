@@ -95,7 +95,7 @@ private
    TMPBUF_SIZE alloc            \ d: addr
    dup tmpbufhere !             \ d: addr
    dup tmpbufstart !            \ d: addr
-   dup tmpbufoff !              \ d: addr
+   0 tmpbufoff !                \ d: addr
    TMPBUF_SIZE +                \ d: vend
    tmpbufend !                  \ d:
    ;

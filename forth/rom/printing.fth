@@ -85,7 +85,10 @@ private
 
 \ dumps a single row of hexadecimal numbers
 : dump_hex ( addr n  -- addr' )
-   over w. space                \ d: addr n
+   over                         \ d: addr n addr
+   [ wordbuf buf>off ] lit      \ d: addr n addr off
+   @ -                          \ d: addr n addr'
+   w. 2 spaces                  \ d: addr n
    begin
       dup if                    \ d: addr n
         over c@ b. space        \ d: addr n
@@ -96,13 +99,14 @@ private
    2drop
    ;
 
-\ prints a sequence of 3*n spaces
+\ prints a sequence of 3*n+1 spaces
 : dump_spaces ( n -- )
-   3 * spaces tail
+   3 * 1+ spaces tail
    ; noexit
 
 \ dumps the printable characters
 : dump_print ( addr n  -- addr' )
+   [ char | ] lit emit
    begin
       dup if                    \ d: addr n
         over c@                 \ d: addr n c
@@ -116,6 +120,7 @@ private
         again
       then
    end
+   [ char | ] lit emit
    2drop
    ;
 

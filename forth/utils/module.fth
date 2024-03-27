@@ -36,7 +36,7 @@ align 10 var global-buffer
    global-buffer-size alloc     \ d: addr
    dup [ global-buffer buf>here ] lit !
    dup [ global-buffer buf>start ] lit !
-   dup [ global-buffer buf>off ] lit !
+   0 [ global-buffer buf>off ] lit !
    global-buffer-size +
    [ global-buffer buf>end ] lit !
    ;

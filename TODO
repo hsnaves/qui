@@ -2,4 +2,3 @@
 - Maybe dict>next should become universal >next;
 
 - Add floating point support to the VM;
-- Allow change of offset for dump word (relative address);

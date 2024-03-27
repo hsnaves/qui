@@ -60,7 +60,10 @@ private
 
 \ fully disassemble a single instruction at given address
 : disasm1 ( addr -- )
-   dup w. space                \ d: addr
+   dup                         \ d: addr addr
+   [ wordbuf buf>off ] lit     \ d: addr addr off
+   @ -                         \ d: addr addr'
+   w. space                    \ d: addr
    c@ dup b.                   \ d: insn
    5 spaces                    \ d: insn
    disasm_insn                 \ d:

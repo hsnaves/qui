@@ -2,8 +2,8 @@
 
 hex
 
-\ sets a flag of the word
-: toggleflag ( fl addr -- )
+\ flips the flags of the word
+: toggleflags ( fl addr -- )
    dup c@                       \ d: fl addr vflags
    rot xor                      \ d: addr vflags'
    swap c!                      \ d:
@@ -12,13 +12,13 @@ hex
 \ marks a word as immediate in the dictionary
 : imm ( -- )
    F_IMM last @                 \ d: F_IMM vlast
-   toggleflag tail
+   toggleflags tail
    ; noexit
 
 \ marks a word as inline in the dictionary
 : inl ( -- )
    F_INL last @                 \ d: F_INL vlast
-   toggleflag tail
+   toggleflags tail
    ; noexit
 
 ( *** basic control structures *** )
@@ -46,7 +46,7 @@ last @ \ keep address of then on the stack
    then tail                    \ d: else_addr
    ; noexit imm
 
-F_IMM swap toggleflag \ set then to immediate
+F_IMM swap toggleflags \ set then to immediate
 
 \ places the current address on the return stack
 \ to later be used by words such as while, until, again, etc.
