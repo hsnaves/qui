@@ -22,38 +22,110 @@ auxiliary
 
 private
 
+\ checks if the address contains a literal
+\ returns the address of the first opcode and a boolean
+\ indicating that it is a literal
+: literal? ( addr -- addr' b )
+   begin
+      dup c@                    \ d: addr opc
+      80 u<                     \ d: addr lits?
+      if 1- again then
+   end
+   dup c@ 80 BF within tail     \ check for lit
+   ; noexit
+
+\ checks if this is the last literal in a sequence
+: lastliteral? ( addr -- addr' b )
+   1+                           \ d: addr'
+   dup c@                       \ d: addr opc
+   80 u<                        \ d: addr lits?
+   if 0 exit then               \ return addr 0
+   1- literal? tail
+   ; noexit
+
+\ checks if this is a jump with known address
+: jumpliteral? ( addr -- addr b )
+   dup c@                       \ d: addr opc
+   I_JSR I_JZ within            \ d: addr jump?
+   =0 if 0 exit then            \ return addr 0
+   1- literal? tail
+   ; noexit
+
+\ opbtains the literal value from an opcode
+: litval ( opc -- n )
+   80 - 6 signe
+   ;
+
+\ obtains the value of the literal starting at address
+: literal ( start end -- n )
+   >r                           \ d: start | r: end
+   dup c@ litval                \ d: start n | r: end
+   begin
+      swap 1+                   \ d: n pos' | r: end
+      tuck                      \ d: pos n pos | r: end
+      r@ u<=                    \ d: pos n remain? | r: end
+      if
+         7 shl                  \ d: pos n' | r: end
+         over c@ or             \ d: pos n' | r: end
+         again
+      then
+   end
+   swap r> 2drop                \ d: n
+   ;
+
+: print-literal ( addr -- )
+   dup lastliteral?             \ d: end start lit?
+   =0 if 2drop exit then
+   swap literal                 \ d: num
+   [ char ( ] lit emit          \ d: num
+   . [ char ) ] lit emit tail   \ d:
+   ; noexit
+
+: print-jump ( addr -- )
+   dup                          \ d: addr endp1
+   dup jumpliteral?             \ d: addr endp1 start lit?
+   =0 if 2drop drop exit then
+   swap 1- literal              \ d: addr num
+   + 1+                         \ d: target
+   w. tail                      \ d:
+   ; noexit
+
 \ disassemble a literal shift instruction
 ," LITS "
-: disasm_lits ( opc -- )
+: disasm_lits ( addr opc -- )
    [ swap ] lit lit
-   type                         \ d: opc
-   b. tail
+   type                         \ d: addr opc
+   b.                           \ d: addr
+   space
+   print-literal tail
    ; noexit
 
 \ disassemble a literal instruction
 ," LIT  "
-: disasm_lit ( opc -- )
+: disasm_lit ( addr opc -- )
    [ swap ] lit lit             \ get the string
    type                         \ d: opc
-   80 -                         \ d: num
-   6 signe                      \ d: num'
-   w. tail
+   litval                       \ d: addr n
+   b.                           \ d: addr
+   space
+   print-literal tail
    ; noexit
 
 \ disassemble a regular instruction
-: disasm_reg ( opc -- )
-   C0 -                         \ d: opc'
-   20 over u<                   \ d: opc large?
-   if drop 20 then              \ d: opc'
-   5 * opcodes + 5              \ d: c-str n
-   type tail
+: disasm_reg ( addr opc -- )
+   C0 -                         \ d: addr opc'
+   20 over u<                   \ d: addr opc large?
+   if drop 20 then              \ d: addr opc'
+   5 * opcodes + 5              \ d: addr c-str n
+   type                         \ d: addr
+   print-jump tail
    ; noexit
 
 \ disassemble a single instruction
-: disasm_insn ( opc -- )
-   dup 80 u<                    \ d: opc litshift?
-   if disasm_lits tail then     \ d: opc
-   dup C0 u<                    \ d: opc lit?
+: disasm_insn ( addr opc -- )
+   dup 80 u<                    \ d: addr opc litshift?
+   if disasm_lits tail then     \ d: addr opc
+   dup C0 u<                    \ d: addr opc lit?
    if disasm_lit tail then
    disasm_reg tail
    ;
@@ -63,9 +135,9 @@ private
    dup                         \ d: addr addr
    [ wordbuf buf>off ] lit     \ d: addr addr off
    @ -                         \ d: addr addr'
-   w. space                    \ d: addr
-   c@ dup b.                   \ d: insn
-   5 spaces                    \ d: insn
+   w. 2 spaces                 \ d: addr
+   dup c@ dup b.               \ d: addr opc
+   5 spaces                    \ d: addr opc
    disasm_insn                 \ d:
    nl tail                     \ d:
    ; noexit
@@ -77,9 +149,8 @@ public
 : disasm ( addr n -- addr' )
    begin
       dup if
-         1- swap               \ d: n' addr
-         dup disasm1           \ d: n addr
-         1+ swap               \ d: addr' n
+         over disasm1
+         1 /str                \ d: addr' n'
          again
       then
    end
