@@ -32,32 +32,20 @@ uint32_t rtclock_read_callback(struct rtclock *rtc,
     if (!t) t = &zt;
 
     switch (address) {
-    case IO_RTCLOCK_YEAR:
-        v = t->tm_year + 1900;
+    case IO_RTCLOCK_DATE:
+        v = (t->tm_year + 1900) * 10000;
+        v += (t->tm_mon + 1) * 100;
+        v += t->tm_mday;
         break;
-    case IO_RTCLOCK_MONTH:
-        v = t->tm_mon + 1;
+    case IO_RTCLOCK_TIME:
+        v = t->tm_hour * 10000;
+        v += t->tm_min * 100;
+        v += t->tm_sec;
         break;
-    case IO_RTCLOCK_MDAY:
-        v = t->tm_mday;
-        break;
-    case IO_RTCLOCK_HOUR:
-        v = t->tm_hour;
-        break;
-    case IO_RTCLOCK_MIN:
-        v = t->tm_min;
-        break;
-    case IO_RTCLOCK_SEC:
-        v = t->tm_sec;
-        break;
-    case IO_RTCLOCK_WDAY:
-        v = t->tm_wday;
-        break;
-    case IO_RTCLOCK_YDAY:
-        v = t->tm_yday;
-        break;
-    case IO_RTCLOCK_ISDST:
-        v = t->tm_isdst ? -1 : 0;
+    case IO_RTCLOCK_OTHER:
+        v = t->tm_yday * 10000;
+        v += t->tm_wday * 100;
+        v += (t->tm_isdst) ? 1 : 0;
         break;
     default:
         v = -1;
