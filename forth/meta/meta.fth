@@ -21,21 +21,22 @@ meta use
 
 \ initialize global variables
 forth current !
-internal context !
+forth context !
 00 this !
 00 flags c!
 00 state c!
 0A base c!
+01 janum c!
 
 \ initialize the forth dictionary
 00 forth dict>last !
-00 forth dict>next !
+internal forth dict>next !
 wordbuf forth dict>code !
 wordbuf forth dict>data !
 
 \ initialize the internal dictionary
 00 internal dict>last !
-forth internal dict>next !
+00 internal dict>next !
 wordbuf internal dict>code !
 wordbuf internal dict>data !
 

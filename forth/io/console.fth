@@ -8,16 +8,16 @@ auxiliary
 ( *** constants for the console *** )
 : IO_CONSOLE_IN      FFFFFFBC ; inl
 : IO_CONSOLE_OUT     FFFFFFB8 ; inl
-: IO_CONSOLE_ERR     FFFFFFB4 ; inl
+: IO_CONSOLE_CHANNEL FFFFFFB4 ; inl
 
 public
 
+\ selects the channel for output
+: channel ( -- addr ) IO_CONSOLE_CHANNEL ; inl
+
 \ emits one character to the standard output
 : (emit) ( c -- )
-   IO_CONSOLE_OUT
-   channel c@                   \ select based on the channel
-   if 4 - then
-   !
+   IO_CONSOLE_OUT !
    ;
 ' (emit) is emit
 

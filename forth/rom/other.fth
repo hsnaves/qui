@@ -49,15 +49,12 @@ private
 
 \ handles general exceptions
 : general_exception ( status c-str n -- )
-   1 channel c!                 \ d: status c-str n | r: pc
+   1 channel !                  \ d: status c-str n | r: pc
    type                         \ d: status | r: pc
    r>                           \ d: status pc
    dup w. space                 \ d: status pc
    c@ b. nl                     \ d: status
-   0 channel c!                 \ d: status
-   0 -14 !                      \ clears the exception bit
-   3 = if 1 dsp ! then          \ reset stack if stack exception
-   quit tail
+   0 bye
    ; noexit
 
 \ handles invalid instructions

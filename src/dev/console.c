@@ -13,6 +13,7 @@ int console_init(struct console *cns)
     cns->argv = NULL;
     cns->envp = NULL;
 
+    cns->channel = 0;
     cns->argi = cns->argii = 0;
     cns->envi = cns->envii = 0;
     return 0;
@@ -34,6 +35,9 @@ uint32_t console_read_callback(struct console *cns,
     switch (address) {
     case IO_CONSOLE_IN:
         v = fgetc(stdin);
+        break;
+    case IO_CONSOLE_CHANNEL:
+        v = cns->channel;
         break;
     case IO_CONSOLE_ARGIN:
         if (cns->argi < cns->argc) {
@@ -72,17 +76,17 @@ void console_write_callback(struct console *cns,  struct quivm *qvm,
                             uint32_t address, uint32_t v)
 {
     FILE *fp;
-    (void)(cns); /* UNUSED */
     (void)(qvm); /* UNUSED */
 
     fp = stderr;
     switch (address) {
     case IO_CONSOLE_OUT:
-        fp = stdout;
-        /* fall through */
-    case IO_CONSOLE_ERR:
+        fp = (cns->channel) ? stderr : stdout;
         fputc(v, fp);
         fflush(fp);
+        break;
+    case IO_CONSOLE_CHANNEL:
+        cns->channel = v;
         break;
     }
 }

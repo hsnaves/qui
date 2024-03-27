@@ -213,16 +213,6 @@ align defer error ( c-str n  -- )
    0A emit tail
    ; noexit
 
-\ prints an error message of an unknown word
-," ? "                          \ d: c-str n
-: unknown ( c-str n -- )
-   [ swap ] lit lit             \ d: c-str n c-str' n'
-   1 channel c!                 \ set the channel to stderr
-   type
-   0 channel c!                 \ revert back to stdout
-   error tail
-   ; noexit
-
 \ types a counted string to the standard output
 : (type) ( c-str n -- )
    begin

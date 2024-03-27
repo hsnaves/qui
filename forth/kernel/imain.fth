@@ -113,7 +113,7 @@ public
 
 \ compiles a literal for jump of automatic size
 : litja, ( target -- )
-   2 litjn, tail
+   janum c@ litjn, tail
    ; noexit
 
 ( words defining some useful instructions )

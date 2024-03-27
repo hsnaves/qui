@@ -13,7 +13,7 @@
 /* Addresses within the console device */
 #define IO_CONSOLE_IN           0xFFFFFFBC
 #define IO_CONSOLE_OUT          0xFFFFFFB8
-#define IO_CONSOLE_ERR          0xFFFFFFB4
+#define IO_CONSOLE_CHANNEL      0xFFFFFFB4
 #define IO_CONSOLE_ARGIN        0xFFFFFFAC
 #define IO_CONSOLE_ENVIN        0xFFFFFFA8
 
@@ -24,6 +24,7 @@ struct console {
     char **argv;                /* arguments passed to the program */
     char **envp;                /* pointer to enviroment variables */
 
+    int channel;                /* which channel to use (stderr or stdout) */
     int argi, argii;            /* indices to traverse the arguments */
     int envi, envii;            /* indices to traverse the env vars */
 };

@@ -12,7 +12,7 @@ hex
 : flags ( -- addr )    1C ; inl
 : state ( -- addr )    1D ; inl
 : base ( -- addr )     1E ; inl
-: channel ( -- addr )  1F ; inl
+: janum ( -- addr )    1F ; inl
 : forth ( -- addr )    20 ; inl
 : internal ( -- addr ) 30 ; inl
 : wordbuf ( -- addr )  40 ; inl

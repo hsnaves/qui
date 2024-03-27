@@ -2,6 +2,8 @@
 
 hex
 
+2 janum c! \ to compile large if
+
 \ interprets a single word ( given as counted string )
 : interpret ( c-str n -- )
    2dup state c@ lookup         \ d: c-str n addr
@@ -47,6 +49,8 @@ hex
    state c@
    if lit, then
    ;
+
+1 janum c!
 
 \ meta Forth interpreter
 \ it interprets all the words in an infinite loop

@@ -5,6 +5,7 @@ hex
 \ goes back to the interpreter
 : quit ( -- )
    0 rsp !
+   0 channel !
    interpreter
    ;
 
@@ -32,9 +33,8 @@ private
 
 \ default implementation of error
 : default_error ( c-str n -- )
-   1 channel c!
-   type nl                      \ d:
-   0 channel c!
+   1 channel !
+   type nl
    line                         \ flush the current line
    quit tail
    ; noexit
