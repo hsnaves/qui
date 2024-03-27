@@ -231,7 +231,7 @@ public
 ," ? "                          \ d: c-str n
 : unknown ( c-str n -- )
    [ swap ] lit lit             \ d: c-str n c-str' n'
-   \ 1 channel !                  \ set the channel to stderr
+   1 channel !                  \ set the channel to stderr
    type
    error tail
    ; noexit
