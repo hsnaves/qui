@@ -15,7 +15,7 @@ public
    alloc                        \ d: addr
    dup if exit then             \ d: addr
    drop                         \ d:
-   1 channel !                  \ set channel to stderr
+   1 channel c!                 \ set channel to stderr
    [ swap ] lit lit             \ embed the string
    type nl                      \ d:
    1 terminate tail
@@ -248,7 +248,7 @@ public
 ," ? "
 : unknown ( c-str n -- )
    [ swap ] lit lit             \ compile the string
-   1 channel !                  \ set the channel to stderr
+   1 channel c!                 \ set the channel to stderr
    type                         \ d: c-str n
    error tail                   \ d:
    ; noexit

@@ -55,7 +55,7 @@ private
 
 \ handles general exceptions
 : general_exception ( status c-str n -- )
-   1 channel !                  \ d: status c-str n | r: pc
+   1 channel c!                 \ d: status c-str n | r: pc
    type                         \ d: status | r: pc
    r>                           \ d: status pc
    dup w. space                 \ d: status pc

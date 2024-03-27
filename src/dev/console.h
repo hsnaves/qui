@@ -14,8 +14,14 @@
 #define IO_CONSOLE_IN           0xFFFFFFBC
 #define IO_CONSOLE_OUT          0xFFFFFFB8
 #define IO_CONSOLE_CHANNEL      0xFFFFFFB4
-#define IO_CONSOLE_ARGIN        0xFFFFFFAC
-#define IO_CONSOLE_ENVIN        0xFFFFFFA8
+
+/* Possible channels */
+#define CONSOLE_ICHANNEL_STDIN          00
+#define CONSOLE_ICHANNEL_ARGS           01
+#define CONSOLE_ICHANNEL_ENV            02
+#define CONSOLE_OCHANNEL_STDOUT         00
+#define CONSOLE_OCHANNEL_STDERR         01
+
 
 /* Data structures and types */
 /* A structure representing the console device */

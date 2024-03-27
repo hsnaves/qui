@@ -34,36 +34,45 @@ uint32_t console_read_callback(struct console *cns,
 
     switch (address) {
     case IO_CONSOLE_IN:
-        v = fgetc(stdin);
+        switch ((cns->channel >> 8) & 0xFF) {
+        case CONSOLE_ICHANNEL_STDIN:
+            v = fgetc(stdin);
+            break;
+        case CONSOLE_ICHANNEL_ARGS:
+            if (cns->argi < cns->argc) {
+                v = (uint32_t) cns->argv[cns->argi][cns->argii++];
+                if (v == 0) {
+                    cns->argi++;
+                    cns->argii = 0;
+                    v = (cns->argi < cns->argc) ? ' ' : '\n';
+                }
+            } else {
+                /* end of arguments */
+                v = '\0';
+                cns->channel &= 0xFFFF00FF;
+            }
+            break;
+        case CONSOLE_ICHANNEL_ENV:
+            if (cns->envp[cns->envi]) {
+                v = (uint32_t) cns->envp[cns->envi][cns->envii++];
+                if (v == 0) {
+                    cns->envi++;
+                    cns->envii = 0;
+                    v = '\n';
+                }
+            } else {
+                /* end of enviroment variables */
+                v = '\0';
+                cns->channel &= 0xFFFF00FF;
+            }
+            break;
+        default:
+            v = -1;
+            break;
+        }
         break;
     case IO_CONSOLE_CHANNEL:
         v = cns->channel;
-        break;
-    case IO_CONSOLE_ARGIN:
-        if (cns->argi < cns->argc) {
-            v = (uint32_t) cns->argv[cns->argi][cns->argii++];
-            if (v == 0) {
-                cns->argi++;
-                cns->argii = 0;
-            }
-        } else {
-            /* end of arguments */
-            v = -1;
-        }
-        break;
-    case IO_CONSOLE_ENVIN:
-        if (cns->envp[cns->envi]) {
-            v = (uint32_t) cns->envp[cns->envi][cns->envii];
-            if (v == 0) {
-                cns->envi++;
-                cns->envii = 0;
-            } else {
-                cns->envii++;
-            }
-        } else {
-            /* end of enviroment variables */
-            v = -1;
-        }
         break;
     default:
         v = -1;
@@ -78,12 +87,18 @@ void console_write_callback(struct console *cns,  struct quivm *qvm,
     FILE *fp;
     (void)(qvm); /* UNUSED */
 
-    fp = stderr;
     switch (address) {
     case IO_CONSOLE_OUT:
-        fp = (cns->channel) ? stderr : stdout;
-        fputc(v, fp);
-        fflush(fp);
+        switch ((cns->channel & 0xFF)) {
+        case CONSOLE_OCHANNEL_STDOUT: fp = stdout; break;
+        case CONSOLE_OCHANNEL_STDERR: fp = stderr; break;
+        default: fp = NULL; break;
+        }
+
+        if (fp) {
+            fputc(v, fp);
+            fflush(fp);
+        }
         break;
     case IO_CONSOLE_CHANNEL:
         cns->channel = v;
