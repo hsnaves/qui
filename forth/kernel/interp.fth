@@ -35,7 +35,7 @@ hex
    then
    nip nip                      \ d: num
    state c@
-   if lit, then
+   if lit, tail then
    ;
 
 1 janum c!

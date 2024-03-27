@@ -11,8 +11,8 @@ hex
    D0 c,                        \ compile "@"
    exec-xt                      \ d: xt
    I_JMP jump,                  \ compile jump to exec
-   wrapup                       \ terminates the word
-   ;
+   wrapup tail                  \ terminates the word
+   ; noexit
 
 \ finds the address of the pointer to the deferred word
 : defer-ptr ( -- addr )
@@ -26,26 +26,21 @@ hex
 
 \ start the scope
 : scope{ ( -- )
-   \ set here to start
+   \ clear the tmpbuf
    tmpbufstart @ tmpbufhere !
 
-   \ set zero to the last word of temp
+   \ initialize the temp dictionary
    0 templast !
-
-   \ clear the templink and tempcurr
-   currnext @ templink !
-   templink currnext !
-   temp tempcurr !
-
-   \ set temp code to tmpbuf
    tmpbuf tempcode !
-
-   \ set temp data to tmpbuf
    tmpbuf tempdata !
 
+   \ clear the templink and tempcurr
+   currnext templink node-link
+   temp tempcurr !
+
    \ set the context to the temp
-   temp use
-   ;
+   temp use tail
+   ; noexit
 
 \ the public declarations of the scope
 : public ( -- )
@@ -77,10 +72,8 @@ hex
 : }scope ( -- )
    public
    abandon-last
-
-\ set the currnext to the old value
-   templink @ currnext !
-   ;
+   currnext node-unlink tail
+   ; noexit
 
 auxiliary
 

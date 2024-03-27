@@ -79,10 +79,11 @@ public
          [ tib buf>here ] lit @ \ d: vhere
          [ tib buf>end ] lit @  \ d: vhere vend
          u< if again then
-         tiboverflow
+         tiboverflow tail
       then
    end
    ;
+
 }scope
 
 

@@ -4,8 +4,8 @@ hex
 
 \ current position of the code buffer
 : here ( -- addr )
-   code buf>here
-   ;
+   code buf>here tail
+   ; noexit
 
 \ position of last word in the current dictionary
 : last ( -- addr )

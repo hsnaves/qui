@@ -6,8 +6,8 @@ hex
 : quit ( -- )
    0 rsp !
    0 channel !
-   interpreter
-   ;
+   interpreter tail
+   ; noexit
 
 ( *** boot *** )
 

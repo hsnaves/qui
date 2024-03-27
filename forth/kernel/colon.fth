@@ -37,7 +37,7 @@ hex
 \ compiles an exit in place
 : exit ( -- )
    state c@
-   if exit, then
+   if exit, tail then
    ; imm
 
 \ drop the return at the end of the word
