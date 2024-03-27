@@ -80,7 +80,7 @@ public
 \ n bytes
 : %overflow? ( n buf -- )
    dup buf>end @                \ d: n buf vend
-   swap buf>start @             \ d: n vend vstart
+   swap buf>here @              \ d: n vend vstart
    - swap                       \ d: rem n
    u< if overflow tail then     \ check for overflow
    ;

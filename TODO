@@ -1,4 +1,2 @@
-- Allocate big buffer for the implementation of module;
-
 - Add floating point support to the VM;
 

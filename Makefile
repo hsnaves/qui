@@ -9,10 +9,9 @@ QUI := ./src/qui
 
 ROM_DEPS := forth/rom/main.fth forth/rom/scope.fth \
  forth/rom/scopeimpl.fth forth/io/storage.fth forth/rom/printing.fth \
- forth/rom/other.fth
+ forth/utils/module.fth forth/rom/other.fth
 
-KERNEL_COMPILE_FILES := forth/utils/module.fth forth/kernel/build.fth
-KERNEL_DEPS := $(KERNEL_COMPILE_FILES) \
+KERNEL_DEPS := forth/kernel/build.fth \
  forth/meta/meta.fth forth/meta/basic.fth forth/meta/interp.fth \
  forth/meta/scope.fth forth/kernel/globals.fth forth/kernel/ibasic.fth \
  forth/kernel/herelast.fth forth/kernel/imain.fth forth/kernel/iextra.fth \
@@ -29,7 +28,7 @@ rom.bin: $(ROM_DEPS)
 	$(CAT) $^ | $(QUI) -r kernel.bin
 
 kernel.bin: $(KERNEL_DEPS)
-	$(CAT) $(KERNEL_COMPILE_FILES) | $(QUI) -r rom.bin
+	$(CAT) forth/kernel/build.fth | $(QUI) -r rom.bin
 
 install:
 	$(MAKE) -C src install
