@@ -33,7 +33,7 @@ align 10 var global-buffer
 \ initializes the tib
 : module_initialize ( -- )
    [ onboot @ ] lit exec
-   global-buffer-size alloc     \ d: addr
+   global-buffer-size allocate
    dup [ global-buffer buf>here ] lit !
    dup [ global-buffer buf>start ] lit !
    0 [ global-buffer buf>off ] lit !
@@ -180,7 +180,7 @@ public
    0 c,                         \ d: addr
    dup include                  \ d: addr okay?
    swap here !                  \ d: okay?
-   =0 if 0 bye then
+   =0 if 1 terminate then       \ TODO: show error message
    ;
 
 }scope

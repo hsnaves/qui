@@ -92,7 +92,7 @@ private
    begin
       dup if                    \ d: addr n
         over c@ b. space        \ d: addr n
-        str1+                   \ d: addr' n'
+        1 /str                  \ d: addr' n'
         again
       then
    end
@@ -116,7 +116,7 @@ private
            drop [ char . ] lit  \ d: addr n c'
         then
         emit
-        str1+                   \ d: addr' n'
+        1 /str                  \ d: addr' n'
         again
       then
    end

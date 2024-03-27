@@ -88,6 +88,6 @@ MODE WIDTH HEIGHT display-init
    ;
 
 render-loop
-0 bye
+bye
 
 

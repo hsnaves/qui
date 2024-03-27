@@ -14,19 +14,12 @@ dictionary meta
 scope{
 auxiliary
 : META_BUFFER_SIZE 20000 ; inl
-," memory exhausted" embed-str MEMORYERROR_STR
-: allocate-buffer ( -- addr )
-   META_BUFFER_SIZE alloc
-   dup =0 if
-      MEMORYERROR_STR error tail
-   then
-   ;
 
 public
 
 \ address of the meta-buffer
 : meta-buffer ( -- addr )
-   [ allocate-buffer ] lit
+   [ META_BUFFER_SIZE allocate ] lit
    ; inl
 
 \ exit the meta-compilation dictionary
@@ -58,7 +51,7 @@ auxiliary
 
 private
 
-," invalid write outside meta-buffer" embed-str INVALIDWRITE_STR
+," write outside meta-buffer" embed-str INVALIDWRITE_STR
 
 \ checks for write outside the buffer
 : check-write ( addr n -- )

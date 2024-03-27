@@ -94,11 +94,22 @@ auxiliary
 : IO_SYS_SCELL       FFFFFFF8 ; inl
 : IO_SYS_DSTACK      FFFFFFF4 ; inl
 : IO_SYS_RSTACK      FFFFFFF0 ; inl
+: IO_SYS_TERMINATE   FFFFFFE8 ; inl
 : IO_SYS_STACKSIZE   FFFFFFE4 ; inl
 : IO_SYS_MEMSIZE     FFFFFFE0 ; inl
 : CELL_STACK_POINTER FFFFFFFF ; inl
 
 public
+
+\ terminate the program
+: terminate ( n -- )
+   IO_SYS_TERMINATE !
+   ;
+
+\ terminate the program successfully
+: bye ( -- )
+   0 terminate tail
+   ; noexit
 
 \ Obtains the address to the data stack pointer
 : dsp ( -- addr )
@@ -151,7 +162,7 @@ align defer error ( c-str n  -- )
    [ wordbuf buf>here ] lit @   \ d: wb_end size wb_end wb_here
    -                            \ d: wb_end size wb_size
    over u<                      \ d: wb_end size large?
-   if 2drop 0 then              \ return 0
+   if 2drop 0 exit then         \ return 0
    -                            \ d: addr
    dup                          \ d: addr addr
    [ wordbuf buf>end ] lit !    \ d: addr
@@ -167,9 +178,11 @@ align defer error ( c-str n  -- )
    swap u>=                     \ return (v >= min)
    ;
 
-\ advances the counted string by one character
-: str1+ ( c-str n -- {c-str+1} {n-1} )
-   1- swap 1+ swap              \ d: c-str' n'
+\ advances the counted string by a given number of characters
+: /str ( c-str n num -- c-str' n' )
+   rot                          \ d: n num c-str
+   over +                       \ d: n num c-str'
+   rrot -
    ;
 
 \ copies a given string into the destination buffer
@@ -180,7 +193,7 @@ align defer error ( c-str n  -- )
          over c@                \ d: c-str n c | r: dst
          r@ c!                  \ d: c-str n | r: dst
          r> 1+ >r               \ d: c-str n | r: dst'
-         str1+                  \ d: c-str' n' | r: dst'
+         1 /str                 \ d: c-str' n' | r: dst'
          again
       then
    end
@@ -222,7 +235,7 @@ align defer error ( c-str n  -- )
       then
       over c@                   \ d: c-str n c
       emit                      \ d: c-str n
-      str1+                     \ d: c-str' n'
+      1 /str                    \ d: c-str' n'
       again
    end
    ; noexit

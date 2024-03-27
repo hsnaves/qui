@@ -9,24 +9,7 @@ hex
    interpreter
    ;
 
-\ implementation of the system words
-
-hex
-
-scope{
-auxiliary
-
-( *** constants from the system *** )
-: IO_SYS_TERMINATE   FFFFFFE8 ; inl
-
-public
-
-\ terminate the program
-: bye ( n -- )
-   IO_SYS_TERMINATE !
-   ;
-
-}scope
+( *** boot *** )
 
 scope{
 private
@@ -42,7 +25,7 @@ last @ >xt is error
 
 \ default implementation of onexcept
 : default_onexcept ( status -- )
-   bye tail
+   terminate tail
    ; noexit
 last @ >xt onexcept !
 

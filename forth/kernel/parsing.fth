@@ -5,6 +5,22 @@ hex
 ( *** words related to the TIB *** )
 
 scope{
+public
+
+\ memory allocation function with validation
+\ if it returns, the address is guarateed to be non-zero
+\ otherwise it terminates the program
+," memory exhausted"
+: allocate ( size -- addr )
+   alloc                        \ d: addr
+   dup if exit then             \ d: addr
+   drop                         \ d:
+   1 channel !                  \ set channel to stderr
+   [ swap ] lit lit             \ embed the string
+   type nl                      \ d:
+   1 terminate tail
+   ; noexit
+
 auxiliary
 
 \ size of the tib
@@ -15,7 +31,7 @@ private
 \ initializes the tib
 : tib_initialize ( -- )
    [ onboot @ ] lit exec
-   TIB_SIZE alloc               \ d: addr
+   TIB_SIZE allocate            \ d: addr
    dup [ tib buf>here ] lit !   \ d: addr
    dup [ tib buf>start ] lit !  \ d: addr
    dup [ tib buf>off ] lit !    \ d: addr
@@ -150,7 +166,7 @@ public
       dup if                    \ d: c-str1 n1 | r: c-str2
          over c@ r@ c@ =        \ d: c-str1 n1 c1 eq? | r: c-str2
          if
-            str1+               \ d: c-str1' n1' | r: c-str2
+            1 /str              \ d: c-str1' n1' | r: c-str2
             r> 1+ >r            \ d: c-str1 n1 | r: c-str2'
             again
          then
@@ -215,7 +231,7 @@ public
       over c@                   \ d: c-str n c
       [ char - ] lit  =         \ d: c-str n is_eq?
       if                        \ d: c-str n
-         str1+                  \ d: c-str' n'
+         1 /str                 \ d: c-str' n'
          unumber                \ d: num rem
          0 rot                  \ d: rem 0 num
          - swap                 \ d: -num rem

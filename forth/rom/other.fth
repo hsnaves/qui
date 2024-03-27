@@ -60,7 +60,7 @@ private
    r>                           \ d: status pc
    dup w. space                 \ d: status pc
    c@ b. nl                     \ d: status
-   0 bye
+   terminate tail
    ; noexit
 
 \ handles invalid instructions
@@ -94,7 +94,7 @@ private
    dup 3 = if
       stack_overflow tail
    then
-   bye tail
+   terminate tail
    ; noexit
 last @ >xt onexcept !
 
@@ -106,4 +106,4 @@ decimal
 0 file-offset!
 file-name" rom.bin"
 file-write . nl
-0 bye
+bye
