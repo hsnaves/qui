@@ -1,4 +1,3 @@
-- Re-factor the scope implementation (temp and tmpbuf) ;
 - Allocate big buffer for the implementation of module;
 
 - Add floating point support to the VM;

@@ -22,15 +22,6 @@ current @ 84 ! \ set tempcurr to the current value
 : templink ( -- addr ) 80 ; inl
 : tempcurr ( -- addr ) 84 ; inl
 
-: tempnext    [ temp node>next   ] lit ; inl
-: templast    [ temp dict>last   ] lit ; inl
-: tempcode    [ temp dict>code   ] lit ; inl
-: tempdata    [ temp dict>data   ] lit ; inl
-: tmpbufhere  [ tmpbuf buf>here  ] lit ; inl
-: tmpbufstart [ tmpbuf buf>start ] lit ; inl
-: tmpbufoff   [ tmpbuf buf>off   ] lit ; inl
-: tmpbufend   [ tmpbuf buf>end   ] lit ; inl
-
 \ obtains the xt of the exec word
 : exec-xt ( -- xt)
    [ ' exec ] lit

@@ -2,37 +2,16 @@
 
 hex
 
-\ creates a deferred word
-: defer ( -- )
-   here @                       \ d: addr
-   0 ,                          \ d: addr
-   create                       \ d: addr
-   lit,                         \ d:
-   D0 c,                        \ compile "@"
-   exec-xt                      \ d: xt
-   I_JMP jump,                  \ compile jump to exec
-   wrapup tail                  \ terminates the word
-   ; noexit
-
-\ finds the address of the pointer to the deferred word
-: defer-ptr ( -- addr )
-   find 4 -
-   ;
-
-\ sets the xt of a deferred word
-: is ( xt -- )
-   defer-ptr !
-   ;
-
 \ start the scope
 : scope{ ( -- )
    \ clear the tmpbuf
-   tmpbufstart @ tmpbufhere !
+   [ tmpbuf buf>start ] lit @
+   [ tmpbuf buf>here ] lit !
 
    \ initialize the temp dictionary
-   0 templast !
-   tmpbuf tempcode !
-   tmpbuf tempdata !
+   0 [ temp dict>last ] lit !
+   tmpbuf [ temp dict>code ] lit !
+   tmpbuf [ temp dict>data ] lit !
 
    \ clear the templink and tempcurr
    currnext templink node-link
@@ -59,13 +38,14 @@ hex
    dup tempcurr !               \ d: vcurrent
    temp current !               \ d: vcurrent
    dict>code @                  \ d: currentbuf
-   tempcode !                   \ d:
+   [ temp dict>code ] lit !     \ d:
    ;
 
 \ auxiliary declarations in the scope
 : auxiliary ( -- )
    private
-   tmpbuf tempcode !
+   tmpbuf
+   [ temp dict>code ] lit !
    ;
 
 \ stop the scope
@@ -74,6 +54,28 @@ hex
    abandon-last
    currnext node-unlink tail
    ; noexit
+
+\ creates a deferred word
+: defer ( -- )
+   here @                       \ d: addr
+   0 ,                          \ d: addr
+   create                       \ d: addr
+   lit,                         \ d:
+   D0 c,                        \ compile "@"
+   exec-xt                      \ d: xt
+   I_JMP jump,                  \ compile jump to exec
+   wrapup tail                  \ terminates the word
+   ; noexit
+
+\ finds the address of the pointer to the deferred word
+: defer-ptr ( -- addr )
+   find 4 -
+   ;
+
+\ sets the xt of a deferred word
+: is ( xt -- )
+   defer-ptr !
+   ;
 
 auxiliary
 
@@ -86,11 +88,13 @@ private
 : scope_initialize ( -- )
    [ onboot @ ] lit exec
    TMPBUF_SIZE allocate         \ d: addr
-   dup tmpbufhere !             \ d: addr
-   dup tmpbufstart !            \ d: addr
-   0 tmpbufoff !                \ d: addr
+   dup
+   [ tmpbuf buf>here ] lit !    \ d: addr
+   dup
+   [ tmpbuf buf>start ] lit !   \ d: addr
+   0 [ tmpbuf buf>off ] lit !   \ d: addr
    TMPBUF_SIZE +                \ d: vend
-   tmpbufend !                  \ d:
+   [ tmpbuf buf>end ] lit !     \ d:
    ;
 last @ >xt onboot !
 

@@ -2,34 +2,15 @@
 
 hex
 
+scope{
+auxiliary
+
 ( *** variables for scope implementation *** )
 : temp        60 ; inl
 : tmpbuf      70 ; inl
 : templink    80 ; inl
 : tempcurr    84 ; inl
 
-meta use
-tmpbuf buf>end
-tmpbuf buf>off
-tmpbuf buf>start
-tmpbuf buf>here
-temp dict>data
-temp dict>code
-temp dict>last
-temp node>next
-meta-exit
-
-: tempnext    lit ; inl
-: templast    lit ; inl
-: tempcode    lit ; inl
-: tempdata    lit ; inl
-: tmpbufhere  lit ; inl
-: tmpbufstart lit ; inl
-: tmpbufoff   lit ; inl
-: tmpbufend   lit ; inl
-
-
-scope{
 private
 
 \ obtains the xt of the exec word
@@ -43,3 +24,8 @@ private
 
 public
 
+( *** redefine variables in meta scope *** )
+: temp        temp     ; inl
+: tmpbuf      tmpbuf   ; inl
+: templink    templink ; inl
+: tempcurr    tempcurr ; inl
