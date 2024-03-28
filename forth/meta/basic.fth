@@ -24,8 +24,9 @@ public
 
 \ exit the meta-compilation dictionary
 : meta-exit ( -- )
-   abandon-last tail
-   ; noexit
+   abandon-last
+   rdrop \ drops from the meta interpreter
+   ;
 
 ( conversion to meta and host words )
 \ host address to meta address
