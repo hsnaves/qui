@@ -97,6 +97,9 @@ auxiliary
 : IO_SYS_TERMINATE   FFFFFFE8 ; inl
 : IO_SYS_STACKSIZE   FFFFFFE4 ; inl
 : IO_SYS_MEMSIZE     FFFFFFE0 ; inl
+: IO_SYS_CELLSIZE    FFFFFFDC ; inl
+: IO_SYS_ID          FFFFFFD8 ; inl
+: IO_SYS_CYCLECOUNT  FFFFFFD4 ; inl
 : CELL_STACK_POINTER FFFFFFFF ; inl
 
 public
@@ -111,19 +114,29 @@ public
    0 terminate tail
    ; noexit
 
+\ obtains the address to access the data stack
+: dstack ( idx -- addr )
+   IO_SYS_SCELL !
+   IO_SYS_DSTACK
+   ;
+
+\ obtains the address to access the return stack
+: rstack ( idx -- addr )
+   IO_SYS_SCELL !
+   IO_SYS_RSTACK
+   ;
+
 \ Obtains the address to the data stack pointer
 : dsp ( -- addr )
    CELL_STACK_POINTER
-   IO_SYS_SCELL !               \ set the SCELL to -1
-   IO_SYS_DSTACK                \ return the address of DSTACK
-   ;
+   dstack tail
+   ; noexit
 
 \ Obtains the address to the return stack pointer
 : rsp ( -- addr )
    CELL_STACK_POINTER
-   IO_SYS_SCELL !               \ set the SCELL to -1
-   IO_SYS_RSTACK                \ return the address of DSTACK
-   ;
+   rstack tail
+   ; noexit
 
 \ obtains the memory size
 : stacksize ( -- u )
@@ -133,6 +146,21 @@ public
 \ obtains the memory size
 : memsize ( -- u )
    IO_SYS_MEMSIZE @
+   ;
+
+\ obtains the size of a cell
+: cellsize ( -- u )
+   IO_SYS_CELLSIZE @
+   ;
+
+\ obtains the ID of the VM
+: sysid ( -- u )
+   IO_SYS_ID @
+   ;
+
+\ obtains the number of cycles executed
+: cyclecount ( -- u )
+   IO_SYS_CYCLECOUNT @
    ;
 
 }scope

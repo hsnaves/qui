@@ -9,7 +9,8 @@ QUI := ./src/qui
 
 ROM_DEPS := forth/rom/main.fth forth/rom/scope.fth \
  forth/rom/scopeimpl.fth forth/io/storage.fth forth/io/rtclock.fth \
- forth/rom/printing.fth forth/utils/module.fth forth/rom/other.fth
+ forth/rom/printing.fth forth/utils/module.fth forth/utils/disasm.fth \
+ forth/rom/other.fth
 
 KERNEL_DEPS := forth/kernel/build.fth \
  forth/meta/meta.fth forth/meta/basic.fth forth/meta/interp.fth \

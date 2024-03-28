@@ -78,6 +78,40 @@ public
 
 }scope
 
+( *** implementation of the stack printing words *** )
+
+\ prints the contents of the data stack
+: ds. ( -- )
+   dsp @ 1- 0                   \ d: num idx
+   begin
+      2dup u>                   \ d: num idx rem?
+      if
+         dup dstack @           \ d: num idx val
+         . space                \ d: num idx
+         1+                     \ d: num idx'
+         again
+      then
+   end
+   2drop                        \ d:
+   dup . nl tail                \ print accumulator
+   ; noexit
+
+\ prints the contents of the return stack
+: rs. ( -- )
+   rsp @ 0                      \ d: num idx
+   begin
+      2dup u>                   \ d: num idx rem?
+      if
+         dup rstack @           \ d: num idx val
+         . space                \ d: num idx
+         1+                     \ d: num idx'
+         again
+      then
+   end
+   2drop                        \ d:
+   nl tail
+   ; noexit
+
 ( *** implementation of the dump word *** )
 
 scope{
