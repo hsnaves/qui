@@ -1,5 +1,4 @@
 \ implementation of the scope variables
-
 hex
 
 \ initialize the tempbuf and temp
@@ -12,7 +11,6 @@ hex
 current @ 84 ! \ set tempcurr to the current value
 60 current ! \ set temp to current
 
-
 \ set the current to temp
 60 use
 
@@ -24,8 +22,8 @@ current @ 84 ! \ set tempcurr to the current value
 
 \ obtains the xt of the exec word
 : exec-xt ( -- xt)
-   [ ' exec ] lit
-   ; inl
+  [ ' exec ] lit
+  ; inl
 
 \ go to public declarations
 tempcurr @ current !

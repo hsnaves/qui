@@ -1,5 +1,4 @@
 \ global variables
-
 hex
 
 ( define global variables )

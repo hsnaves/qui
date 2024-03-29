@@ -1,5 +1,4 @@
 \ basic words
-
 hex
 
 ( basic words )
@@ -61,35 +60,27 @@ F_XT flags c!
 ( *** words to change base *** )
 
 \ change the base to hexadecimal
-: hex ( -- )
-   10 base c!
-   ;
+: hex ( -- ) 10 base c!  ;
 
 \ change the base to decimal
-: decimal ( -- )
-   0A base c!
-   ;
+: decimal ( -- ) 0A base c!  ;
 
 ( *** exec trampoline *** )
 
 \ obtains the current value of the pc
-: pc ( -- pc )
-   [ DF c, ]                    \ d: pc | r: pc
-   ;
+: pc ( -- pc ) [ DF c, ] ;
 
 \ executes a given function
 : exec ( addr -- ... )
-   pc                           \ d: addr pc
-   4 + -                        \ d: rel_addr
-   [ I_JMP c, ]                 \ compile jump
-   ; noexit
+  pc 4 + -
+  [ I_JMP c, ]
+  ; noexit
 
 
 ( *** implementation of basic system words *** )
 
 scope{
 auxiliary
-
 ( *** constants for the QUI vm *** )
 : IO_SYS_SCELL       FFFFFFF8 ; inl
 : IO_SYS_DSTACK      FFFFFFF4 ; inl
@@ -103,66 +94,38 @@ auxiliary
 : CELL_STACK_POINTER FFFFFFFF ; inl
 
 public
-
 \ terminate the program
-: terminate ( n -- )
-   IO_SYS_TERMINATE !
-   ;
+: terminate ( n -- ) IO_SYS_TERMINATE ! ;
 
 \ terminate the program successfully
-: bye ( -- )
-   0 terminate tail
-   ; noexit
+: bye ( -- ) 0 terminate tail ; noexit
 
 \ obtains the address to access the data stack
-: dstack ( idx -- addr )
-   IO_SYS_SCELL !
-   IO_SYS_DSTACK
-   ;
+: dstack ( idx -- addr ) IO_SYS_SCELL ! IO_SYS_DSTACK ;
 
 \ obtains the address to access the return stack
-: rstack ( idx -- addr )
-   IO_SYS_SCELL !
-   IO_SYS_RSTACK
-   ;
+: rstack ( idx -- addr ) IO_SYS_SCELL ! IO_SYS_RSTACK ;
 
 \ Obtains the address to the data stack pointer
-: dsp ( -- addr )
-   CELL_STACK_POINTER
-   dstack tail
-   ; noexit
+: dsp ( -- addr ) CELL_STACK_POINTER dstack tail ; noexit
 
 \ Obtains the address to the return stack pointer
-: rsp ( -- addr )
-   CELL_STACK_POINTER
-   rstack tail
-   ; noexit
+: rsp ( -- addr ) CELL_STACK_POINTER rstack tail ; noexit
 
 \ obtains the memory size
-: stacksize ( -- u )
-   IO_SYS_STACKSIZE @
-   ;
+: stacksize ( -- u ) IO_SYS_STACKSIZE @ ;
 
 \ obtains the memory size
-: memsize ( -- u )
-   IO_SYS_MEMSIZE @
-   ;
+: memsize ( -- u ) IO_SYS_MEMSIZE @ ;
 
 \ obtains the size of a cell
-: cellsize ( -- u )
-   IO_SYS_CELLSIZE @
-   ;
+: cellsize ( -- u ) IO_SYS_CELLSIZE @ ;
 
 \ obtains the ID of the VM
-: sysid ( -- u )
-   IO_SYS_ID @
-   ;
+: sysid ( -- u ) IO_SYS_ID @ ;
 
 \ obtains the number of cycles executed
-: cyclecount ( -- u )
-   IO_SYS_CYCLECOUNT @
-   ;
-
+: cyclecount ( -- u ) IO_SYS_CYCLECOUNT @ ;
 }scope
 
 ( *** deferred words *** )
@@ -185,100 +148,83 @@ align defer error ( c-str n  -- )
 \ reserved memory following the shrunk buffer
 \ returns zero when it fails
 : alloc ( size -- addr )
-   [ wordbuf buf>end ] lit @    \ d: size wb_end
-   tuck                         \ d: wb_end size wb_end
-   [ wordbuf buf>here ] lit @   \ d: wb_end size wb_end wb_here
-   -                            \ d: wb_end size wb_size
-   over u<                      \ d: wb_end size large?
-   if 2drop 0 exit then         \ return 0
-   -                            \ d: addr
-   dup                          \ d: addr addr
-   [ wordbuf buf>end ] lit !    \ d: addr
-   ;
+  [ wordbuf buf>end ] lit @ tuck
+  [ wordbuf buf>here ] lit @ -
+  over u<
+  if 2drop 0 exit then
+  - dup [ wordbuf buf>end ] lit !
+  ;
 
 
 ( *** helper words *** )
 
 \ returns true if min <= v <= max
 : within ( v min max -- t )
-   rot tuck u<                  \ d: min v greater
-   if 2drop 0 exit then         \ check if (v > max)
-   swap u>=                     \ return (v >= min)
-   ;
+  rot tuck u<
+  if 2drop 0 exit then
+  swap u>=
+  ;
 
 \ advances the counted string by a given number of characters
-: /str ( c-str n num -- c-str' n' )
-   rot                          \ d: n num c-str
-   over +                       \ d: n num c-str'
-   rrot -
-   ;
+\ : /str ( c-str n num -- c-str' n' )
+\  rot over + rrot -
+\  ;
+
+\ advances the counted string by 1
+: 1/str ( c-str n -- c-str' n' )
+  1- swap 1+ swap
+  ;
 
 \ copies a given string into the destination buffer
 : str-copy ( c-str n dst -- )
-   >r                           \ d: c-str n | r: dst
-   begin
-      dup if                    \ d: c-str n | r: dst
-         over c@                \ d: c-str n c | r: dst
-         r@ c!                  \ d: c-str n | r: dst
-         r> 1+ >r               \ d: c-str n | r: dst'
-         1 /str                 \ d: c-str' n' | r: dst'
-         again
-      then
-   end
-   2drop                        \ d: | r: dst
-   rdrop                        \ d:
-   ;
+  >r
+  begin
+    dup if
+      over c@ r@ c!
+      r> 1+ >r 1/str
+      again
+    then
+  end
+  2drop rdrop
+  ;
 
 \ finds a given character in the string
 \ returns the index of the character
 : char-find ( c-str c -- idx )
-   over                         \ d: orig c c-str
-   begin
-      2dup                      \ d: orig c c-str c c-str
-      c@ <>                     \ d: orig c c-str new?
-      if 1+ again then          \ d: orig c c-str'
-   end
-   rot -                        \ d: c idx
-   nip                          \ d: idx
-   ;
+  over
+  begin
+    2dup c@ <>
+    if 1+ again then
+  end
+  rot - nip
+  ;
 
 ( *** words related to printing *** )
-
 \ prints space
-: space
-   20 emit tail
-   ; noexit
+: space ( -- )  20 emit tail  ; noexit
 
 \ prints a newline to the console
-: nl ( -- )
-   0A emit tail
-   ; noexit
+: nl ( -- ) 0A emit tail ; noexit
 
 \ types a counted string to the standard output
 : (type) ( c-str n -- )
-   begin
-      dup                       \ d: c-str n n
-      =0 if                     \ d: c-str n
-         2drop exit             \ terminate
-      then
-      over c@                   \ d: c-str n c
-      emit                      \ d: c-str n
-      1 /str                    \ d: c-str' n'
-      again
-   end
-   ; noexit
+  begin
+    dup =0
+    if 2drop exit then
+    over c@ emit
+    1/str
+    again
+  end
+  ; noexit
 ' (type) is type
 
 ( *** initializes the wordbuf *** )
-
 scope{
 private
-
 \ initializes the wordbuf
 : wordbuf_initialize ( -- )
-   memsize                      \ d: vend
-   [ wordbuf buf>end ] lit !    \ d:
-   ;
+  memsize [ wordbuf buf>end ] lit !
+  ;
 last @ >xt onboot !
 
 }scope

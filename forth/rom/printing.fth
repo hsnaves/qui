@@ -1,225 +1,196 @@
 \ implementation of the dot "."  and related words
-
 hex
 
 \ prints a given number of spaces
 : spaces ( n -- )
-   begin
-      dup if
-         space 1-
-         again
-      then
-   end
-   drop
-   ;
+  begin
+    dup if
+      space 1-
+      again
+    then
+  end
+  drop
+  ;
 
 scope{
 private
-
 \ digit to character word
 : d>c ( dig -- c )
-   dup 0A u<                    \ d: dig less10?
-   if                           \ d: dig
-      [ char 0 ] lit +          \ d: c
-      exit
-   then
-   [ char A 0A - ] lit +        \ d: c
-   ;
+  dup 0A u<
+  if [ char 0 ] lit + exit then
+  [ char A 0A - ] lit +
+  ;
 
 \ prints a digit to the output ( no space at end )
 : d. ( dig --)
-   d>c emit tail                \ d:
-   ; noexit
+  d>c emit tail
+  ; noexit
 
 public
-
 \ prints a byte to the output in hexadecimal (no space)
 : b. ( b -- )
-   dup 04 ushr                  \ d: b {b>>4}
-   0F and d.                    \ d: b
-   0F and d. tail               \ d:
-   ; noexit
+  dup 04 ushr
+  0F and d.
+  0F and d. tail
+  ; noexit
 
 \ prints a half-word to the output in hexadecimal (no space)
 : h. ( h -- )
-   dup 08 ushr                  \ d: h {h>>8}
-   b. b. tail                   \ d:
-   ; noexit
+  dup 08 ushr
+  b. b. tail
+  ; noexit
 
 \ prints a word to the output in hexadecimal (no space)
 : w. ( w -- )
-   dup 10 ushr                  \ d: w {w>>16}
-   h. h. tail                   \ d:
-   ; noexit
+  dup 10 ushr
+  h. h. tail
+  ; noexit
 
 \ prints an unsigned word to the output in the current
 \ base (no space at end)
 : u. ( u -- )
-   begin                        \ d: u
-      base c@ u/mod             \ d: rem quot
-      dup =0                    \ d: rem quot zero?
-      if drop d. tail then
-      recurse                   \ d: rem
-   end
-   d. tail                      \ d:
-   ; noexit
+  begin
+    base c@ u/mod
+    dup =0
+    if drop d. tail then
+    recurse
+  end
+  d. tail
+  ; noexit
 
 \ prints a signed integer to the output in the current
 \ base (no space at end)
 : . ( num -- )
-   dup                          \ d: num num
-   0 <                          \ d: num neg?
-   if
-      [ char - ] lit emit       \ print minus sign
-      0 swap -                  \ d: -num
-   then
-   u. tail                      \ d:
-   ; noexit
-
+  dup 0 <
+  if
+    [ char - ] lit emit
+    0 swap -
+  then
+  u. tail
+  ; noexit
 }scope
 
 ( *** implementation of the stack printing words *** )
-
 \ prints the contents of the data stack
 : ds. ( -- )
-   dsp @ 1- 0                   \ d: num idx
-   begin
-      2dup u>                   \ d: num idx rem?
-      if
-         dup dstack @           \ d: num idx val
-         . space                \ d: num idx
-         1+                     \ d: num idx'
-         again
-      then
-   end
-   2drop                        \ d:
-   dup . nl tail                \ print accumulator
-   ; noexit
+  dsp @ 1- 0
+  begin
+    2dup u>                     \ d: num idx rem?
+    if
+      dup dstack @
+      . space 1+
+      again
+    then
+  end
+  2drop
+  dup . nl tail                 \ print accumulator
+  ; noexit
 
 \ prints the contents of the return stack
 : rs. ( -- )
-   rsp @ 0                      \ d: num idx
-   begin
-      2dup u>                   \ d: num idx rem?
-      if
-         dup rstack @           \ d: num idx val
-         . space                \ d: num idx
-         1+                     \ d: num idx'
-         again
-      then
-   end
-   2drop                        \ d:
-   nl tail
-   ; noexit
+  rsp @ 0
+  begin
+    2dup u>                     \ d: num idx rem?
+    if
+      dup rstack @
+      . space 1+
+      again
+    then
+  end
+  2drop
+  nl tail
+  ; noexit
 
 ( *** implementation of the dump word *** )
 
 scope{
 private
-
 \ dumps a single row of hexadecimal numbers
 : dump_hex ( addr n  -- addr' )
-   over                         \ d: addr n addr
-   [ wordbuf buf>off ] lit      \ d: addr n addr off
-   @ -                          \ d: addr n addr'
-   w. 2 spaces                  \ d: addr n
-   begin
-      dup if                    \ d: addr n
-        over c@ b. space        \ d: addr n
-        1 /str                  \ d: addr' n'
-        again
-      then
-   end
-   2drop
-   ;
+  over
+  [ wordbuf buf>off ] lit @ -
+  w. 2 spaces
+  begin
+    dup if
+      over c@ b. space
+      1/str again
+    then
+  end
+  2drop
+  ;
 
 \ prints a sequence of 3*n+1 spaces
 : dump_spaces ( n -- )
-   3 * 1+ spaces tail
-   ; noexit
+  3 * 1+ spaces tail
+  ; noexit
 
 \ dumps the printable characters
 : dump_print ( addr n  -- addr' )
-   [ char | ] lit emit
-   begin
-      dup if                    \ d: addr n
-        over c@                 \ d: addr n c
-        dup                     \ d: addr n c c
-        20 7E within =0         \ d: addr n c notprint?
-        if
-           drop [ char . ] lit  \ d: addr n c'
-        then
-        emit
-        1 /str                  \ d: addr' n'
-        again
-      then
-   end
-   [ char | ] lit emit
-   2drop
-   ;
+  [ char | ] lit emit
+  begin
+    dup if
+      over c@
+      dup 20 7E within =0       \ d: addr n c notprint?
+      if drop [ char . ] lit then
+      emit 1/str
+      again
+    then
+  end
+  [ char | ] lit emit
+  2drop
+  ;
 
 \ dumps a single row
 : dump_row ( addr n -- addr' n' )
-    dup                         \ d: addr n m
-    10 over u<                  \ d: addr n m large?
-    if drop 10 then             \ d: addr n m'
-    >r                          \ d: addr n | r: m
-    over r@ dump_hex            \ d: addr n | r: m
-    10 r@ - dump_spaces         \ d: addr n | r: m
-    over r@ dump_print          \ d: addr n | r: m
-    r@ - swap r> + swap         \ d: addr' n'
-    nl tail
-   ; noexit
+  dup 10 over u<
+  if drop 10 then
+  >r
+  over r@ dump_hex
+  10 r@ - dump_spaces
+  over r@ dump_print
+  r@ - swap r> + swap
+  nl tail
+  ; noexit
 
 public
-
 \ dumps the contents of memory at given address
 : dump ( addr n -- )
-   begin                        \ d: addr n
-      dup if
-         dump_row               \ d: addr' n'
-         again
-      then
-   end
-   2drop
-   ;
-
+  begin
+    dup if dump_row again then
+  end
+  2drop
+  ;
 }scope
-
 
 ( *** implementation of the words word *** )
 
-
 scope{
 private
-
 \ prints the words in a given dictionary
 : words1 ( dict -- )
-   dict>last @                  \ d: addr
-   begin
-      dup if                    \ d: addr
-         dup >name              \ d: addr c-str n
-         type space             \ d: addr
-         >link                  \ d: addr'
-         again
-      then
-   end
-   drop                         \ d:
-   ;
+  dict>last @
+  begin
+    dup if
+      dup >name
+      type space
+      >link
+      again
+    then
+  end
+  drop
+  ;
 
 public
-
 \ prints the words in the context
 : words ( -- )
-   context @                    \ d: dict
-   begin
-      dup if                    \ d: dict
-         dup words1 nl nl       \ d: dict
-         node>next @            \ d: dict'
-         again
-      then
-   end
-   drop                         \ d:
-   ;
-
+  context @
+  begin
+    dup if
+      dup words1 nl nl
+      node>next @
+      again
+    then
+  end
+  drop
+  ;
 }scope

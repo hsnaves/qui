@@ -1,255 +1,196 @@
 \ implementation of parsing words
-
 hex
 
 ( *** words related to the TIB *** )
 
 scope{
 public
-
 \ memory allocation function with validation
 \ if it returns, the address is guarateed to be non-zero
 \ otherwise it terminates the program
 ," memory exhausted"
 : allocate ( size -- addr )
-   alloc                        \ d: addr
-   dup if exit then             \ d: addr
-   drop                         \ d:
-   1 channel c!                 \ set channel to stderr
-   [ swap ] lit lit             \ embed the string
-   type nl                      \ d:
-   1 terminate tail
-   ; noexit
+  alloc dup if exit then
+  drop 1 channel c!
+  [ swap ] lit lit type nl
+  type nl
+  1 terminate tail
+  ; noexit
 
 auxiliary
-
-\ size of the tib
 : TIB_SIZE 1000 ; inl
 
 private
-
 \ initializes the tib
 : tib_initialize ( -- )
-   [ onboot @ ] lit exec
-   TIB_SIZE allocate            \ d: addr
-   dup [ tib buf>here ] lit !   \ d: addr
-   dup [ tib buf>start ] lit !  \ d: addr
-   dup [ tib buf>off ] lit !    \ d: addr
-   TIB_SIZE +                   \ d: vend
-   [ tib buf>end ] lit !        \ d:
-   ;
+  [ onboot @ ] lit exec
+  TIB_SIZE allocate
+  dup [ tib buf>here ] lit !
+  dup [ tib buf>start ] lit !
+  dup [ tib buf>off ] lit !
+  TIB_SIZE + [ tib buf>end ] lit !
+  ;
 last @ >xt onboot !
-
 }scope
-
 
 scope{
 auxiliary
-
 \ checks for a newline
-: nl? ( c -- b )
-   0A =
-   ; inl
+: nl? ( c -- b ) 0A = ; inl
 
 private
-
 \ prints an error messages that the TIB overflowed
 ," TIB overflow"
 : tiboverflow ( -- )
-   [ swap ] lit lit             \ d: c-str n
-   error tail
-   ; noexit
+  [ swap ] lit lit error tail
+  ; noexit
 
 public
-
 \ Obtains one line from the input
 : line ( -- )
-   [ tib buf>start ] lit        \ d: start
-   @ dup                        \ d: vstart vstart
-   [ tib buf>here ] lit !       \ d: vstart
-   [ tib buf>off ] lit !        \ d:
-   begin                        \ d:
-      getc                      \ d: c
-      [ tib buf>here ] lit @    \ d: c vhere
-      2dup c!                   \ d: c vhere
-      1+                        \ d: c vhere'
-      [ tib buf>here ] lit !    \ d: c
-      nl? =0                    \ d: notnl?
-      if
-         [ tib buf>here ] lit @ \ d: vhere
-         [ tib buf>end ] lit @  \ d: vhere vend
-         u< if again then
-         tiboverflow tail
-      then
-   end
-   ;
-
+  \ reset the tib
+  [ tib buf>start ] lit @ dup
+  [ tib buf>here ] lit !
+  [ tib buf>off ] lit !
+  begin
+    getc [ tib buf>here ] lit @
+    2dup c!
+    1+ [ tib buf>here ] lit !
+    nl? =0
+    if
+      [ tib buf>here ] lit @
+      [ tib buf>end ] lit @
+      u< if again then
+      tiboverflow tail
+    then
+  end
+  ;
 }scope
-
 
 scope{
 private
-
 \ ensures that the TIB has some character
 : ensuretib ( -- )
-   begin
-      [ tib buf>off ] lit @     \ d: voffset
-      [ tib buf>here ] lit @    \ d: voffset vhere
-      u>=                       \ d: empty?
-      if line again then
-   end
-   ;
+  begin
+    [ tib buf>off ] lit @
+    [ tib buf>here ] lit @
+    u>= if line again then
+  end
+  ;
 
 public
 
 \ Obtains a character from the TIB
 : key ( -- c )
-   ensuretib
-   [ tib buf>off ] lit          \ d: offset
-   dup @                        \ d: offset voffset
-   tuck 1+                      \ d: voffset offset voffset'
-   swap !                       \ d: voffset
-   c@                           \ d: c
-   ;
+  ensuretib
+  [ tib buf>off ] lit
+  dup @ tuck 1+ swap !
+  c@
+  ;
 
 }scope
 
 scope{
 auxiliary
-
 \ checks if a character is blank
 : blank? ( c -- b )
-   \ all characters before ! are blanks
-   [ char ! ] lit u<
-   ; inl
+  [ char ! ] lit u<
+  ; inl
 
 public
-
 \ Obtains a word from the TIB
 : word ( -- c-str n )
-   begin
-      key blank?                \ d: blank?
-      if again then
-   end
-   [ tib buf>off ] lit          \ d: offset
-   @ dup 1- swap                \ d: c-str voffset
-   [ tib buf>here ] lit @       \ d: c-str voffset vhere
-   begin
-      2dup u<                   \ d: c-str voffset vhere rem?
-      if                        \ d: c-str voffset vhere
-         over c@ blank? =0      \ d: c-str voffset vhere nonblank?
-         if
-            swap 1+ swap again
-         then
-      then
-   end                          \ d: c-str voffset vhere
-   drop dup 1+                  \ d: c-str voffset voffset'
-   [ tib buf>off ] lit !        \ d: c-str voffset
-   over -                       \ d: c-str n
-   ;
-
+  \ skip blanks
+  begin
+    key blank?
+    if again then
+  end
+  [ tib buf>off ] lit @
+  dup 1- swap
+  [ tib buf>here ] lit @
+  begin                         \ d: c-str voffset vhere
+    2dup u<
+    if
+      over c@ blank? =0
+      if swap 1+ swap again then
+    then
+  end
+  drop dup 1+
+  [ tib buf>off ] lit !
+  over -
+  ;
 }scope
 
-
 ( *** implementation of the compare word *** )
-
 \ compare two counted strings
 \ returns true when not equal
 : compare ( c-str1 n1 c-str2 n2 -- neq? )
-   swap >r                      \ d: c-str1 n1 n2 | r: c-str2
-   over <>                      \ d: c-str1 n1 neq? | r: c-str2
-   if
-      2drop r>                  \ d: c-str2
-      drop 1 exit               \ d: 1
-   then
+  swap >r over <>
+  if 2drop r> drop 1 exit then
 
-   begin
-      dup if                    \ d: c-str1 n1 | r: c-str2
-         over c@ r@ c@ =        \ d: c-str1 n1 c1 eq? | r: c-str2
-         if
-            1 /str              \ d: c-str1' n1' | r: c-str2
-            r> 1+ >r            \ d: c-str1 n1 | r: c-str2'
-            again
-         then
-      then
-   end
-   nip rdrop                    \ d: n1
-   ;
-
+  begin \ d: c-str1 n1 | r: c-str2
+    dup if
+      over c@ r@ c@ =
+      if 1/str r> 1+ >r again then
+    then
+  end
+  nip rdrop
+  ;
 
 ( *** implementation of the number word *** )
-
 scope{
 private
-
 \ character to digit word
 : c>d ( c -- dig )
-   dup                          \ d: c c
-   [ char 9 char 0 ] lit lit    \ d: c c '0' '9'
-   within                       \ d: c digit?
-   if
-      [ char 0 ] lit -
-      exit                      \ return c - '0'
-   then
-   dup                          \ d: c c
-   [ char Z char A ] lit lit    \ d: c c 'A' 'Z'
-   within                       \ d: c letter?
-   =0 if drop -1 exit then      \ return -1
-   [ char A 0A - ] lit -        \ return c - 'A' + 10
-   ;
+  dup [ char 9 char 0 ] lit lit
+  within if [ char 0 ] lit - exit then
+  dup [ char Z char A ] lit lit
+  within =0 if drop -1 exit then
+  [ char A 0A - ] lit -
+  ;
 
 \ counted string to unsigned number
 \ returns the parsed number together with the number of
 \ remaining characters in the counted string
 : unumber ( c-str n -- u rem )
-   swap 0                       \ d: n c-str 0
-   begin                        \ d: n c-str u
-      over c@                   \ d: n c-str u c
-      c>d                       \ d: n c-str u dig
-      base c@                   \ d: n c-str u dig vbase
-      2dup u<                   \ d: n c-str u dig vbase okay
-      if                        \ d: n c-str u dig vbase
-         rot * +                \ d: n c-str u
-         rot 1-                 \ d: c-str u n-1
-         >r r@ rot              \ d: u n c-str | r: n
-         1+ rot r>              \ d: n c-str' u n
-         =0 until               \ d: n c-str u
-         2dup                   \ d: n c-str u bogus bogus
-      then                      \ d: n c-str u dig vbase
-      2drop                     \ d: n c-str u
-   end                          \ d: n c-str u
-   nip swap                     \ d: u n
-   ;
+  swap 0
+  begin  \ d: n c-str u
+    over c@ c>d
+    base c@ 2dup u<
+    if                          \ d: n c-str u dig vbase
+      rot * + rot 1-
+      >r r@ rot 1+ rot r>       \ d: n c-str' u n
+      =0 until
+      2dup
+    then
+    2drop
+  end
+  nip swap
+  ;
 
 public
-
 \ counted string to signed number
 \ returns the parsed number and the number of remaining
 \ characters in the counted string
 : number ( c-str n -- num rem )
-   1 over u<                    \ d: c-str n big_len?
-   if                           \ d: c-str n
-      over c@                   \ d: c-str n c
-      [ char - ] lit  =         \ d: c-str n is_eq?
-      if                        \ d: c-str n
-         1 /str                 \ d: c-str' n'
-         unumber                \ d: num rem
-         0 rot                  \ d: rem 0 num
-         - swap                 \ d: -num rem
-         exit                   \ return
-      then
-   then
-   unumber tail
-   ; noexit
-
+  1 over u<
+  if
+    over c@ [ char - ] lit  =
+    if
+      1/str unumber
+      0 rot - swap
+      exit
+    then
+  then
+  unumber tail
+  ; noexit
 }scope
 
 \ prints an error message of an unknown word
 ," ? "
 : unknown ( c-str n -- )
-   [ swap ] lit lit             \ compile the string
-   1 channel c!                 \ set the channel to stderr
-   type                         \ d: c-str n
-   error tail                   \ d:
-   ; noexit
+  [ swap ] lit lit
+  1 channel c! type
+  error tail
+  ; noexit
 
