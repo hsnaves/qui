@@ -11,11 +11,30 @@
 #define IO_AUDIO_END            0xFFFFFE80
 
 /* Addresses within the audio device */
+#define IO_AUDIO_COMMAND        0xFFFFFE7C
+#define IO_AUDIO_PARAM0         0xFFFFFE78
+#define IO_AUDIO_PARAM1         0xFFFFFE74
+#define IO_AUDIO_PARAM2         0xFFFFFE70
+#define IO_AUDIO_PARAM3         0xFFFFFE6C
+#define IO_AUDIO_PARAM4         0xFFFFFE68
+#define IO_AUDIO_PARAM5         0xFFFFFE64
+#define IO_AUDIO_PARAM6         0xFFFFFE60
+#define IO_AUDIO_PARAM7         0xFFFFFE5C
+
+/* Audio commands */
+#define AUDIO_CMD_INIT                   1
+
+/* Audio return values */
+#define AUDIO_SUCCESS                    0
+#define AUDIO_ERROR                     -1
 
 /* Data structures and types */
 /* A structure representing the audio device */
 struct audio {
     int initialized;            /* device was initialized */
+
+    uint32_t command;           /* the command */
+    uint32_t params[8];         /* the parameters for the command */
 };
 
 /* Functions */

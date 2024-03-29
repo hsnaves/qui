@@ -4,28 +4,39 @@ hex
 scope{
 
 auxiliary
-: IO_DISPLAY_MODE     FFFFFEBC ; inl
-: IO_DISPLAY_WIDTH    FFFFFEB8 ; inl
-: IO_DISPLAY_HEIGHT   FFFFFEB4 ; inl
-: IO_DISPLAY_BUFFER   FFFFFEB0 ; inl
-: IO_DISPLAY_STRIDE   FFFFFEAC ; inl
-: IO_DISPLAY_WAITSYNC FFFFFEA8 ; inl
+: IO_DISPLAY_COMMAND  FFFFFEBC ; inl
+: IO_DISPLAY_PARAM0   FFFFFEB8 ; inl
+: IO_DISPLAY_PARAM1   FFFFFEB4 ; inl
+: IO_DISPLAY_PARAM2   FFFFFEB0 ; inl
+: IO_DISPLAY_PARAM3   FFFFFEAC ; inl
+: IO_DISPLAY_PARAM4   FFFFFEA8 ; inl
+: IO_DISPLAY_PARAM5   FFFFFEA4 ; inl
+: IO_DISPLAY_PARAM6   FFFFFEA0 ; inl
+: IO_DISPLAY_PARAM7   FFFFFE9C ; inl
+
+: DISPLAY_CMD_INIT           1 ; inl
+: DISPLAY_CMD_SETBUF         2 ; inl
+: DISPLAY_CMD_WAITSYNC       3 ; inl
+: DISPLAY_CMD_FRAMECOUNT     4 ; inl
 
 public
 
-: display-setbuffer ( buffer stride -- )
-   IO_DISPLAY_STRIDE !
-   IO_DISPLAY_BUFFER !
+: display-init ( mode width height -- )
+   IO_DISPLAY_PARAM2 !
+   IO_DISPLAY_PARAM1 !
+   IO_DISPLAY_PARAM0 !
+   DISPLAY_CMD_INIT IO_DISPLAY_COMMAND !
    ;
 
-: display-init ( mode width height -- )
-   rot IO_DISPLAY_MODE !
-   swap IO_DISPLAY_WIDTH !
-   IO_DISPLAY_HEIGHT !
+: display-setbuffer ( buffer stride -- )
+   IO_DISPLAY_PARAM1 !
+   IO_DISPLAY_PARAM0 !
+   DISPLAY_CMD_SETBUF IO_DISPLAY_COMMAND !
    ;
 
 : display-waitsync ( -- )
-   1 IO_DISPLAY_WAITSYNC !
+   1 IO_DISPLAY_PARAM0 !
+   DISPLAY_CMD_WAITSYNC IO_DISPLAY_COMMAND !
    ;
 
 }scope

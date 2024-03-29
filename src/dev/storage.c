@@ -83,24 +83,22 @@ int get_filename(struct storage *stg, struct quivm *qvm,
     filename[len] = '\0'; /* make sure it is null terminated */
 
     /* now validate the filename
-     * It must contain only alphanumeric characters, dot '.',
-     * or the forward slash character '/'. It must not start with
+     * It must contain only printable characters. It must not start with
      * a forward slash, and it must not contain a dot immediately
      * followed by another dot.
      */
-    if (len == 0) return -1;
+    if (len == 0) return 1;
 
     for (i = 0; i < len; i++) {
         c = filename[i];
-        if (c != '.' && c != '/' && !isalnum(c))
-            return -3;
+        if (!isprint(c)) return 1;
 
         if (i == 0) {
-            if (c == '/') return -3;
+            if (c == '/') return 1;
         } else {
             if (c == '.') {
                 if (filename[i - 1] == '.')
-                    return -3;
+                    return 1;
             }
         }
     }
@@ -116,7 +114,7 @@ void do_operation(struct storage *stg, struct quivm *qvm)
     char filename[MAX_FILENAME_LENGTH];
 
     if ((stg->op != STORAGE_OP_READ) && (stg->op != STORAGE_OP_WRITE)) {
-        stg->len = 0;
+        stg->len = -1;
         return;
     }
 
@@ -125,13 +123,13 @@ void do_operation(struct storage *stg, struct quivm *qvm)
             stg->len = qvm->memsize - stg->data;
         if (stg->len == 0) return;
     } else {
-        stg->len = 0;
+        stg->len = -1;
         return;
     }
 
     if (get_filename(stg, qvm, filename, sizeof(filename))) {
-        /* Length 0 indicates an error */
-        stg->len = 0;
+        /* Length -1 indicates an error */
+        stg->len = -1;
         return;
     }
 
@@ -139,15 +137,13 @@ void do_operation(struct storage *stg, struct quivm *qvm)
     case STORAGE_OP_READ:
         fp = fopen(filename, "r");
         if (!fp) {
-            fprintf(stderr, "dev/storage: do_operation: "
-                    "cannot open `%s` for reading\n", filename);
-            stg->len = 0;
+            stg->len = -1;
             break;
         }
 
         if (stg->offset != 0) {
             if (fseek(fp, (long) stg->offset, SEEK_SET)) {
-                stg->len = 0;
+                stg->len = -1;
                 fclose(fp);
                 break;
             }
@@ -159,8 +155,8 @@ void do_operation(struct storage *stg, struct quivm *qvm)
 
     case STORAGE_OP_WRITE:
         if (stg->disable_write) {
-            /* Length 0 indicates an error */
-            stg->len = 0;
+            /* Length -1 indicates an error */
+            stg->len = -1;
             break;
         }
 
@@ -171,9 +167,7 @@ void do_operation(struct storage *stg, struct quivm *qvm)
             fp = fopen(filename, "w");
         }
         if (!fp) {
-            fprintf(stderr, "dev/storage: do_operation: "
-                    "cannot open `%s` for writing\n", filename);
-            stg->len = 0;
+            stg->len = -1;
             break;
         }
 

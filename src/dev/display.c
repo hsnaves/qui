@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <string.h>
 
 #include "vm/quivm.h"
 #include "dev/display.h"
@@ -7,14 +8,15 @@
 
 int display_init(struct display *dpl)
 {
-    dpl->mode = 0;
+    dpl->initialized = 0;
+    dpl->waitsync = 0;
     dpl->width = 0;
     dpl->height = 0;
     dpl->buffer = 0;
     dpl->stride = 0;
-    dpl->waitsync = 0;
     dpl->framecount = 0;
-    dpl->initialized = 0;
+    dpl->command = 0;
+    memset(dpl->params, 0, sizeof(dpl->params));
     return 0;
 }
 
@@ -40,62 +42,78 @@ uint32_t display_read_callback(struct display *dpl,
     (void)(qvm); /* UNUSED */
 
     switch (address) {
-    case IO_DISPLAY_MODE:
-        v = dpl->mode;
-        break;
-    case IO_DISPLAY_WIDTH:
-        v = dpl->width;
-        break;
-    case IO_DISPLAY_HEIGHT:
-        v = dpl->height;
-        break;
-    case IO_DISPLAY_BUFFER:
-        v = dpl->buffer;
-        break;
-    case IO_DISPLAY_STRIDE:
-        v = dpl->stride;
-        break;
-    case IO_DISPLAY_FRAMECOUNT:
-        v = dpl->framecount;
+    case IO_DISPLAY_COMMAND:
+        v = dpl->command;
         break;
     default:
-        v = -1;
+        if (((IO_DISPLAY_PARAM0 - address) % 4 == 0)
+            && (address >= IO_DISPLAY_PARAM7)
+            && (address <= IO_DISPLAY_PARAM0)) {
+
+            v = dpl->params[(IO_DISPLAY_PARAM0 - address) >> 2];
+        } else {
+            v = -1;
+        }
         break;
     }
     return v;
+}
+
+/* runs a command in dpl->command */
+static
+void do_command(struct display *dpl, struct quivm *qvm)
+{
+    switch (dpl->command) {
+    case DISPLAY_CMD_INIT:
+        if (!dpl->initialized) {
+            dpl->mode = dpl->params[0];
+            dpl->width = dpl->params[1];
+            dpl->height = dpl->params[2];
+            dpl->initialized = 1;
+
+            dpl->params[0] = DISPLAY_SUCCESS;
+        } else {
+            /* already initialized */
+            dpl->params[0] = DISPLAY_ERROR;
+        }
+        break;
+    case DISPLAY_CMD_SETBUF:
+        dpl->buffer = dpl->params[0];
+        dpl->stride = dpl->params[1];
+        dpl->params[0] = DISPLAY_SUCCESS;
+        break;
+    case DISPLAY_CMD_WAITSYNC:
+        dpl->waitsync = !!dpl->params[0];
+        dpl->params[0] = DISPLAY_SUCCESS;
+
+        /* halts the VM */
+        if (dpl->waitsync) qvm->status |= STS_HALTED;
+        break;
+    case DISPLAY_CMD_FRAMECOUNT:
+        dpl->params[1] = dpl->framecount;
+        dpl->params[0] = DISPLAY_SUCCESS;
+        break;
+    default:
+        dpl->params[0] = DISPLAY_ERROR;
+        break;
+    }
 }
 
 void display_write_callback(struct display *dpl,  struct quivm *qvm,
                             uint32_t address, uint32_t v)
 {
     switch (address) {
-    case IO_DISPLAY_MODE:
-        if (!dpl->initialized) {
-            dpl->mode = v;
-        }
+    case IO_DISPLAY_COMMAND:
+        dpl->command = v;
+        do_command(dpl, qvm);
         break;
-    case IO_DISPLAY_WIDTH:
-        if (!dpl->initialized) {
-            dpl->width = v;
-        }
-        break;
-    case IO_DISPLAY_HEIGHT:
-        if (!dpl->initialized) {
-            dpl->height = v;
-        }
-        break;
-    case IO_DISPLAY_BUFFER:
-        dpl->buffer = v;
-        break;
-    case IO_DISPLAY_STRIDE:
-        dpl->stride = v;
-        break;
-    case IO_DISPLAY_WAITSYNC:
-        dpl->initialized = 1;
-        dpl->waitsync = !!v;
+    default:
+        if (((IO_DISPLAY_PARAM0 - address) % 4 == 0)
+            && (address >= IO_DISPLAY_PARAM7)
+            && (address <= IO_DISPLAY_PARAM0)) {
 
-        /* halts the VM */
-        if (dpl->waitsync) qvm->status |= STS_HALTED;
+            dpl->params[(IO_DISPLAY_PARAM0 - address) >> 2] = v;
+        }
         break;
     }
 }

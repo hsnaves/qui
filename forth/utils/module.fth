@@ -78,6 +78,17 @@ last @ >xt onboot !
    global-buffer buf>here !     \ d:
    ;
 
+," could not read "
+: file-error ( addr -- )
+   1 channel c!
+   [ swap ] lit lit             \ compile string
+   type
+   dup uninstall-module         \ d: addr
+   file-name @                  \ d: c-str
+   dup 0 char-find              \ d: c-str n
+   error tail
+   ; noexit
+
 \ reads the file and fills the buffer
 \ returns the number of bytes red
 : fill-buffer ( addr -- n )
@@ -89,7 +100,13 @@ last @ >xt onboot !
    str-buffer-off !             \ d: addr | r: start
    r@ buffer-size
    file-buffer!                 \ d: addr | r: start
-   file-read >r                 \ d: addr | r: start n
+   file-read                    \ d: addr n | r: start
+   dup 0 <                      \ d: addr n err? | r: start
+   if
+      rdrop drop                \ d: addr
+      file-error tail           \ print error message
+   then
+   >r                           \ d: addr | r: start n
    dup file-offset              \ d: addr fileoffset | r: start n
    dup @ r@ + swap !            \ d: addr | start n
    r> r> over +                 \ d: addr n vhere
