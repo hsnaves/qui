@@ -6,32 +6,32 @@ hex
 
 \ obtains the flags for the word
 : >flags ( addr -- fl )
-   c@                           \ d: fl
-   dup F_EXT and                \ d: fl ext?
-   =0 if
-      [
-         0 F_EXT -
-         F_IMM or
-         F_INL or
-      ]
-      lit and                   \ d: fl'
-   then
+   c@ [ F_EXT 1- ] lit
+   over u<
+   [ 0 F_EXT - F_IMM or F_INL or ] lit
+   or and
    ;
 
 \ obtains the link to the next word
 : >link ( addr -- addr' )
-   dup >flags                   \ d: addr fl
-   over 1+                      \ d: addr fl addr'
-
-   over F_EXT and               \ d: addr fl addr' ext?
-   if 1+ then                   \ d: addr fl addr'
-
-   swap F_LINK and              \ d: addr addr' link?
-   if @ else c@ 8 signe then    \ d: addr diff
-
-   dup =0                       \ d: addr diff zero?
+   dup 1+                       \ d: addr addr'
+   over c@                      \ d: addr addr' fl
+   dup F_EXT and                \ d: addr addr' fl ext?
+   if
+      F_LINK and                \ d: addr addr' link?
+      if
+         1+ @                   \ d: addr diff
+      else
+         1+
+         c@ 8 signe             \ d: addr diff
+      then
+   else
+      drop                      \ d: addr addr'
+      c@ 8 signe                \ d: addr diff
+   then                         \ d: addr diff
+   dup =0
    if nip exit then
-   +                            \ d: addr'
+   +
    ;
 
 \ obtains the name of the word
@@ -246,7 +246,7 @@ public
 
 \ to end a word definition in the dictionary
 : wrapup ( addr -- )
-   exit,                        \ compile return
-   this @ last !                \ set last to this
-   0 this !                     \ set list to zero
+   exit,
+   this @ last !
+   0 this !
    ;

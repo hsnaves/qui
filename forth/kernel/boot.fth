@@ -18,7 +18,7 @@ private
 : default_error ( c-str n -- )
    1 channel c!
    type nl
-   line                         \ flush the current line
+   line  \ flush the current line
    quit tail
    ; noexit
 last @ >xt is error
@@ -32,17 +32,18 @@ last @ >xt onexcept !
 }scope
 
 : boot ( status -- )
-   dup                          \ d: status status
+   dup
    if onexcept @ exec tail then
-   drop                         \ d:
-   0 rsp ! 1 dsp !              \ reset the data and return stack
-   onboot @ exec                \ assumes onboot is non-zero
+   drop
+   0 rsp ! 1 dsp !
+   onboot @ exec \ assumes onboot is non-zero
    quit tail
    ; noexit
 
 
-here @                          \ d: vhere
-0 here !                        \ d: vhere
-' boot 3 I_JMP jumpn,           \ write the jump
-here !                          \ restore old here
+\ write the initial jump to boot
+here @
+0 here !
+' boot 3 I_JMP jumpn,
+here !
 

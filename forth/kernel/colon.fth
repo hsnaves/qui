@@ -4,34 +4,34 @@ hex
 
 \ to start a word definition in the meta dictionary
 : : ( -- addr )
-   create                       \ call the word creation
-   1 state c!                   \ set the state to 1
+   create
+   1 state c!
    ;
 
 
 \ to end a word definition in the meta dictionary
 : ; ( addr -- )
-   0 state c!                   \ set the state to 0
+   0 state c!
    wrapup tail
    ; noexit imm
 
 \ the word to enter the interpreter
 : [ ( -- )
-   0 state c!                   \ set the state to 0
+   0 state c!
    ; imm
 
 \ the word to exit the interpreter
 : ] ( -- )
-   1 state c!                   \ set the state to 1
+   1 state c!
    ;
 
 \ changes the last opcode from a call to a jump
 : tail ( -- )
-   here @                       \ d: vhere
-   1- dup c@                    \ d: vhere' c
-   I_JSR <>                     \ d: vhere' notcall?
+   here @
+   1- dup c@
+   I_JSR <>
    if drop exit then
-   I_JMP swap c!                \ d:
+   I_JMP swap c!
    ; imm
 
 \ compiles an exit in place
@@ -42,16 +42,16 @@ hex
 
 \ drop the return at the end of the word
 : noexit ( -- )
-   here dup @                   \ d: here vhere
-   1- swap  !                   \ d:
+   here dup @
+   1- swap  !
    ;
 
 \ comments
 : ( ( -- )
    begin
-      key                       \ d: c
-      [ char ) ] lit =          \ d: end?
-      until                     \ d:
+      key
+      [ char ) ] lit =
+      until
    end
    ; imm
 
