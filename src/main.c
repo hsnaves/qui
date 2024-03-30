@@ -27,6 +27,7 @@
 static SDL_Window *window;      /* the interface window */
 static SDL_Renderer *renderer;  /* the renderer for the window */
 static SDL_Texture *texture;    /* the texture for drawing */
+static int audio_id;            /* the id of the audio device */
 static int zoom = 1;            /* the zoom level */
 static int mouse_captured;      /* the mouse was captured */
 #endif
@@ -201,7 +202,6 @@ void process_events(struct quivm *qvm)
         switch (e.type) {
         case SDL_QUIT:
             break;
-
         case SDL_MOUSEMOTION:
             if (!mouse_captured) break;
 
@@ -217,10 +217,11 @@ void process_events(struct quivm *qvm)
                 y = dpl->height - 1;
             kbd->y = y;
             break;
-
         case SDL_MOUSEBUTTONDOWN:
-            if (!mouse_captured)
+            if (!mouse_captured) {
                 capture_mouse(1);
+                break;
+            }
             /* fall through */
         case SDL_MOUSEBUTTONUP:
             if (!mouse_captured) break;
@@ -241,7 +242,6 @@ void process_events(struct quivm *qvm)
                 kbd->button &= ~button;
             }
             break;
-
         case SDL_KEYDOWN:
             mod = SDL_GetModState();
             if ((mod & KMOD_CTRL) && (mod & KMOD_ALT)) {
@@ -254,12 +254,43 @@ void process_events(struct quivm *qvm)
                                   dpl->height * zoom);
             }
             /* fall through */
-
         case SDL_KEYUP:
             if (!mouse_captured) break;
             break;
         }
     }
+}
+
+/* Auxiliary function to stop the SDL audio device */
+static
+void stop_audio(void)
+{
+    if (audio_id) SDL_CloseAudioDevice(audio_id);
+    audio_id = 0;
+}
+
+/* Starts the audio device */
+static
+void start_audio(struct audio *aud)
+{
+    SDL_AudioSpec as;
+
+    SDL_zero(as);
+
+    as.freq = 44100;
+    as.format = AUDIO_S16SYS;
+    as.channels = 2;
+    as.callback = &audio_stream_callback;
+    as.samples = 256;
+    as.userdata = aud;
+    audio_id = SDL_OpenAudioDevice(NULL, 0, &as, NULL, 0);
+    if (!audio_id) {
+        fprintf(stderr, "main: start_audio: "
+                "could not start audio (SDL_Error: %s)",
+                SDL_GetError());
+        return;
+    }
+    SDL_PauseAudioDevice(audio_id, 0);
 }
 
 #endif /* USE_SDL */
@@ -272,6 +303,7 @@ int run(struct quivm *qvm)
 {
     struct devio *io;
     struct display *dpl;
+    struct audio *aud;
     unsigned int i;
 #ifdef USE_SDL
     uint32_t time0, delta;
@@ -282,6 +314,7 @@ int run(struct quivm *qvm)
 
     io = (struct devio *) qvm->arg;
     dpl = io->dpl;
+    aud = io->aud;
 
     while (1) {
         for (i = 0; i < NUM_TICKS_PER_FRAME; i++) {
@@ -301,6 +334,15 @@ int run(struct quivm *qvm)
                 break;
             }
         }
+        if (aud->initialized && !audio_id) {
+            start_audio(aud);
+            if (!audio_id) {
+                qvm->status |= STS_TERMINATED;
+                qvm->termvalue = 1;
+                break;
+            }
+        }
+
         process_events(qvm);
         update_screen(qvm);
 
@@ -316,6 +358,13 @@ int run(struct quivm *qvm)
 #else
         /* No support for display here */
         if (dpl->initialized) {
+            qvm->status |= STS_TERMINATED;
+            qvm->termvalue = 1;
+            break;
+        }
+
+        /* Also no support for audio */
+        if (aud->initialized) {
             qvm->status |= STS_TERMINATED;
             qvm->termvalue = 1;
             break;
@@ -435,7 +484,7 @@ int main(int argc, char **argv, char **envp)
 
 #ifdef USE_SDL
     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
-    ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
+    ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_NOPARACHUTE);
     if (ret < 0) {
         fprintf(stderr, "main: "
                 "could not initialize SDL (SDL_Error(%d): %s)\n",
@@ -464,6 +513,7 @@ int main(int argc, char **argv, char **envp)
 
 #ifdef USE_SDL
     destroy_window();
+    stop_audio();
     SDL_Quit();
 #endif
 

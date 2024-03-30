@@ -28,6 +28,7 @@
 #define DISPLAY_CMD_SETBUF               2
 #define DISPLAY_CMD_WAITSYNC             3
 #define DISPLAY_CMD_FRAMECOUNT           4
+#define DISPLAY_CMD_BLT                  5
 
 /* Display return values */
 #define DISPLAY_SUCCESS                  0

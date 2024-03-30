@@ -35,6 +35,10 @@ struct audio {
 
     uint32_t command;           /* the command */
     uint32_t params[8];         /* the parameters for the command */
+
+    struct quivm *qvm;          /* A reference to the QUI vm to
+                                 * be used in the stream callback
+                                 */
 };
 
 /* Functions */
@@ -63,6 +67,13 @@ uint32_t audio_read_callback(struct audio *aud,
  */
 void audio_write_callback(struct audio *aud,  struct quivm *qvm,
                           uint32_t address, uint32_t v);
+
+/* Callback to generate the samples for playback.
+ * The stream to be filled is given by `stream`, and it has
+ * size of `len` bytes.
+ * The `arg` is a user defined parameter for the callback.
+ */
+void audio_stream_callback(void *arg, uint8_t *stream, int len);
 
 
 #endif /* __DEV_AUDIO_H */

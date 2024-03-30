@@ -63,6 +63,11 @@ uint32_t display_read_callback(struct display *dpl,
 static
 void do_command(struct display *dpl, struct quivm *qvm)
 {
+    uint32_t src, dst;
+    uint32_t src_stride, dst_stride;
+    uint32_t width, height;
+    uint32_t i, length;
+
     switch (dpl->command) {
     case DISPLAY_CMD_INIT:
         if (!dpl->initialized) {
@@ -91,6 +96,30 @@ void do_command(struct display *dpl, struct quivm *qvm)
         break;
     case DISPLAY_CMD_FRAMECOUNT:
         dpl->params[1] = dpl->framecount;
+        dpl->params[0] = DISPLAY_SUCCESS;
+        break;
+    case DISPLAY_CMD_BLT:
+        src = dpl->params[0];
+        src_stride = dpl->params[1];
+        width = dpl->params[2];
+        height = dpl->params[3];
+        dst = dpl->params[4];
+        dst_stride = dpl->params[5];
+
+        for (i = 0; i < height; i++) {
+            if (!(dst < qvm->memsize) || !(src < qvm->memsize))
+                break;
+
+            length = width;
+            if (length > (qvm->memsize - dst))
+                length = qvm->memsize - dst;
+            if (length > (qvm->memsize - src))
+                length = qvm->memsize - src;
+
+            memcpy(&qvm->mem[dst], &qvm->mem[src], length);
+            dst += dst_stride;
+            src += src_stride;
+        }
         dpl->params[0] = DISPLAY_SUCCESS;
         break;
     default:

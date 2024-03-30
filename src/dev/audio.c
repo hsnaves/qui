@@ -11,6 +11,7 @@ int audio_init(struct audio *aud)
     aud->initialized = 0;
     aud->command = 0;
     memset(aud->params, 0, sizeof(aud->params));
+    aud->qvm = NULL;
     return 0;
 }
 
@@ -47,13 +48,12 @@ uint32_t audio_read_callback(struct audio *aud,
 static
 void do_command(struct audio *aud, struct quivm *qvm)
 {
-    (void)(qvm); /* UNUSED */
-
     switch (aud->command) {
     case AUDIO_CMD_INIT:
         if (!aud->initialized) {
             aud->initialized = 1;
             aud->params[0] = AUDIO_SUCCESS;
+            aud->qvm = qvm;
         } else {
             /* already initialized */
             aud->params[0] = AUDIO_ERROR;
@@ -82,4 +82,17 @@ void audio_write_callback(struct audio *aud,  struct quivm *qvm,
         }
         break;
     }
+}
+
+void audio_stream_callback(void *arg, uint8_t *stream, int len)
+{
+    struct audio *aud;
+    struct quivm *qvm;
+
+    aud = (struct audio *) arg;
+    qvm = aud->qvm;
+
+    (void)(qvm); /* UNUSED */
+
+    memset(stream, 0, len);
 }

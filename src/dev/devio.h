@@ -26,7 +26,7 @@ struct devio {
     struct keyboard *kbd;       /* A reference to the keyboard device */
     struct timer *tmr;          /* A reference to the timer device */
 
-    struct quivm *qvm;          /* A reference to the QUI vm. */
+    struct quivm *qvm;          /* A reference to the QUI vm */
 };
 
 /* Functions */
