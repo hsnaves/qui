@@ -280,7 +280,7 @@ void start_audio(struct audio *aud)
     as.format = AUDIO_U8;
     as.channels = 1;
     as.callback = &audio_stream_callback;
-    as.samples = AUDIO_SAMPLE_SIZE;
+    as.samples = 2048;
     as.userdata = aud;
     audio_id = SDL_OpenAudioDevice(NULL, 0, &as, NULL, 0);
     if (!audio_id) {
@@ -358,22 +358,15 @@ int run(struct quivm *qvm)
         delta = (3 * SDL_GetTicks()) - time0;
         time0 += delta;
 
-        /* For 60 FPS, 50 / 3 = 16.666ms */
-        if (delta < 50) {
+        /* For 60 FPS, 1000 / 60 = 50 / 3 = 16.666ms */
+        if (delta < (3 * 1000 / FPS)) {
             /* round up the delay */
-            SDL_Delay((50 - delta + 2) / 3);
-            time0 += (50 - delta);
+            SDL_Delay(((3 * 1000 / FPS) - delta + 2) / 3);
+            time0 += ((3 * 1000 / FPS) - delta);
         }
-#else
-        /* No support for display here */
-        if (dpl->initialized) {
-            qvm->status |= STS_TERMINATED;
-            qvm->termvalue = 1;
-            break;
-        }
-
-        /* Also no support for audio */
-        if (aud->initialized) {
+#else /* !USE_SDL */
+        /* No support for display or audio */
+        if (dpl->initialized || aud->initialized) {
             qvm->status |= STS_TERMINATED;
             qvm->termvalue = 1;
             break;

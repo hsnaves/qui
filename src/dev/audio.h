@@ -30,20 +30,16 @@
 #define AUDIO_ERROR                     -1
 
 /* Other constants */
-#define AUDIO_SAMPLE_SIZE             2048
+#define FPS                             60
 #define AUDIO_FREQUENCY              44100
+#define NUM_TICKS_PER_FRAME             16
 
 /* Data structures and types */
-/* A structure representing the audio command */
-struct audio_command {
-    uint32_t command;           /* the command */
-    uint32_t params[8];         /* the parameters for the command */
-};
-
 /* A structure representing the audio device */
 struct audio {
     int initialized;            /* device was initialized */
-    struct audio_command cmd;   /* the command */
+    uint32_t command;           /* the command */
+    uint32_t params[8];         /* the parameters for the command */
     void *internal;             /* A pointer to the internal data structure */
 };
 

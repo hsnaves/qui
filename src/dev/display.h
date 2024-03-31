@@ -6,8 +6,6 @@
 #include "vm/quivm.h"
 
 /* Constants */
-#define NUM_TICKS_PER_FRAME             16
-
 /* The I/O address space for the display device */
 #define IO_DISPLAY_BASE         0xFFFFFE80
 #define IO_DISPLAY_END          0xFFFFFEC0
