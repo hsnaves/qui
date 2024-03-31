@@ -277,7 +277,7 @@ void start_audio(struct audio *aud)
 
     SDL_zero(as);
     as.freq = AUDIO_FREQUENCY;
-    as.format = AUDIO_U8;
+    as.format = AUDIO_S8;
     as.channels = 1;
     as.callback = &audio_stream_callback;
     as.samples = 2048;

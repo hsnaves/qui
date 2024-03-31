@@ -12,6 +12,20 @@
 #define SAMPLES_PER_UPDATE              46
 
 /* Data structures and types */
+struct envelope {
+    float attack;               /* the attack rate */
+    float decay;                /* the decay rate */
+    float sustain;              /* the sustain value */
+    float release;              /* the release rate */
+    float value;                /* the envelope value */
+    enum envelope_stage {
+        ENV_ATTACK,
+        ENV_DECAY,
+        ENV_SUSTAIN,
+        ENV_RELEASE,
+    } stage;                    /* the envelope stage */
+};
+
 /* Structure representing a sample to be played (or already playing), with
  * the sample data, the length of the sample, etc.
  */
@@ -20,6 +34,7 @@ struct sample {
     uint32_t length;            /* number of data points in the sample */
     float position;             /* the current playing position */
     float increment;            /* Increment of position per sample */
+    struct envelope env;        /* The envelope */
 };
 
 /* Structure reprensenting an audio channel */
@@ -33,7 +48,7 @@ struct channel {
 struct audio_internal {
     struct channel channels[NUM_CHANNELS]; /* the audio channels */
 
-    uint8_t buf[BUFFER_SIZE];   /* the audio buffer */
+    int8_t buf[BUFFER_SIZE];    /* the audio buffer */
     uint32_t head, tail;        /* for the circular buffer */
 };
 
@@ -111,6 +126,7 @@ void audio_update(struct audio *aud, struct quivm *qvm)
     struct audio_internal *audi;
     struct channel *chn;
     struct sample *smpl;
+    struct envelope *env;
     unsigned int i, ch, num_samples;
     uint32_t pos, x0;
     float v, d, y0, y1, y;
@@ -131,6 +147,8 @@ void audio_update(struct audio *aud, struct quivm *qvm)
         for (ch = 0; ch < NUM_CHANNELS; ch++) {
             chn = &audi->channels[ch];
             smpl = &chn->smpl;
+            env = &smpl->env;
+
             if (smpl->length == 0) continue;
 
             x0 = (uint32_t) smpl->position;
@@ -141,21 +159,53 @@ void audio_update(struct audio *aud, struct quivm *qvm)
 
             /* interpolate the samples linearly */
             d = smpl->position - ((float) x0);
-            y0 = (float) qvm->mem[smpl->address + x0];
+            y0 = (float) ((int8_t) qvm->mem[smpl->address + x0]);
             if (++x0 == smpl->length) x0 = 0;
-            y1 = (float) qvm->mem[smpl->address + x0];
+            y1 = (float) ((int8_t) qvm->mem[smpl->address + x0]);
             y = y0 + d * (y1 - y0);
-            v += chn->volume * y;
+
+            /* advance the envelope */
+            switch (env->stage) {
+            case ENV_ATTACK:
+                env->value += env->attack;
+                if (env->value > 1.0f) {
+                    env->value = 1.0f;
+                    env->stage = ENV_DECAY;
+                }
+                break;
+            case ENV_DECAY:
+                env->value -= env->decay;
+                if (env->value < env->sustain) {
+                    env->value = env->sustain;
+                    env->stage = ENV_SUSTAIN;
+                }
+                break;
+            case ENV_SUSTAIN:
+                break;
+            case ENV_RELEASE:
+            default:
+                env->value -= env->release;
+                if (env->value <= 0.0f) {
+                    env->value = 0.0;
+                    smpl->length = 0;
+                }
+                break;
+            }
+            v += chn->volume * env->value * y;
 
             smpl->position += smpl->increment;
-            while (smpl->position >= smpl->length)
-                smpl->position -= smpl->length;
+            if (smpl->length > 0) {
+                while (smpl->position >= smpl->length)
+                    smpl->position -= smpl->length;
+            }
 
             if (!(chn->duration & 0x80000000)) {
                 /* if it reached the end, stop playing sample */
                 chn->duration--;
-                if (chn->duration == 0)
-                    smpl->length = 0;
+                if (chn->duration == 0) {
+                    env->stage = ENV_RELEASE;
+                    chn->duration = 0x80000000;
+                }
             }
             active = 1;
         }
@@ -164,8 +214,9 @@ void audio_update(struct audio *aud, struct quivm *qvm)
 
         pos = audi->tail++;
         if (pos >= BUFFER_SIZE) pos -= BUFFER_SIZE;
-        if (v > 255.0f) v = 255.0f;
-        audi->buf[pos] = (uint8_t) v;
+        if (v < -128.0f) v = -128.0f;
+        if (v > 127.0f) v = 127.0f;
+        audi->buf[pos] = (int8_t) v;
     }
 
     aud->paused = (audi->tail == audi->head);
@@ -202,7 +253,9 @@ void do_command(struct audio *aud, struct quivm *qvm)
     struct audio_internal *audi;
     struct channel *chn;
     struct sample *smpl;
+    struct envelope *env;
     unsigned int ch, pitch, dur, vol;
+    unsigned int attack, decay, sustain, release;
 
     audi = (struct audio_internal *) aud->internal;
     switch (aud->command) {
@@ -229,13 +282,39 @@ void do_command(struct audio *aud, struct quivm *qvm)
         dur = ((aud->params[0] >> 16) & 0xFF);
         vol = ((aud->params[0] >> 24) & 0xFF);
 
+        attack = (aud->params[3] & 0xFF);
+        decay = ((aud->params[3] >> 8) & 0xFF);
+        sustain = ((aud->params[3] >> 16) & 0xFF);
+        release = ((aud->params[3] >> 24) & 0xFF);
+
         chn = &audi->channels[ch];
         smpl = &chn->smpl;
+        env = &smpl->env;
+
         smpl->address = aud->params[1];
         smpl->length = aud->params[2];
         smpl->position = 0.0;
         smpl->increment = PITCH_TO_FREQ[pitch];
-        fprintf(stderr, "%f\n", smpl->increment);
+
+        if (attack != 0)
+            env->attack = 1.0f / ((AUDIO_FREQUENCY * attack) >> 4);
+        else
+            env->attack = 1.0f;
+
+        if (decay != 0)
+            env->decay = 1.0f / ((AUDIO_FREQUENCY * decay) >> 4);
+        else
+            env->decay = 1.0f;
+
+        env->sustain = sustain / 255.0f;
+
+        if (release != 0)
+            env->release = 1.0f / ((AUDIO_FREQUENCY * release) >> 4);
+        else
+            env->release = 1.0f;
+
+        env->value = 0.0f;
+        env->stage = ENV_ATTACK;
 
         chn->volume = ((float) vol) / 16.0f;
         if (dur > 0) {
@@ -295,7 +374,7 @@ void audio_stream_callback(void *arg, uint8_t *stream, int len)
         /* check for buffer empty */
         if (audi->head >= audi->tail) break;
 
-        stream[i] = audi->buf[audi->head++];
+        stream[i] = (uint8_t) audi->buf[audi->head++];
         if (audi->head == BUFFER_SIZE) {
             audi->head = 0;
             audi->tail -= BUFFER_SIZE;
