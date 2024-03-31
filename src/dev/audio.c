@@ -12,7 +12,6 @@
 #define SAMPLES_PER_UPDATE              46
 
 /* Data structures and types */
-
 /* Structure representing a sample to be played (or already playing), with
  * the sample data, the length of the sample, etc.
  */
@@ -26,6 +25,8 @@ struct sample {
 /* Structure reprensenting an audio channel */
 struct channel {
     struct sample smpl;         /* current playing sample */
+    float volume;               /* the volume of the channel */
+    uint32_t duration;          /* the remaining duration for the sample */
 };
 
 /* The structure for the internal audio device */
@@ -92,6 +93,7 @@ int audio_init(struct audio *aud)
     memset(audi, 0, sizeof(*audi));
 
     aud->initialized = 0;
+    aud->paused = 0;
     aud->command = 0;
     memset(&aud->params, 0, sizeof(aud->params));
     aud->internal = audi;
@@ -109,45 +111,64 @@ void audio_update(struct audio *aud, struct quivm *qvm)
     struct audio_internal *audi;
     struct channel *chn;
     struct sample *smpl;
-    unsigned int i, ch;
-    uint32_t v, pos, x0, address;
-    float d, y0, y1, y;
+    unsigned int i, ch, num_samples;
+    uint32_t pos, x0;
+    float v, d, y0, y1, y;
+    int active;
 
     audi = (struct audio_internal *) aud->internal;
-    for (i = 0; i < SAMPLES_PER_UPDATE; i++) {
+
+    num_samples = SAMPLES_PER_UPDATE;
+    if (audi->tail - audi->head < 2048)
+        num_samples = 2048;
+
+    active = 0;
+    for (i = 0; i < num_samples; i++) {
         /* check for buffer full */
         if (audi->tail >= audi->head + BUFFER_SIZE) break;
 
-        v = 0;
+        v = 0.0f;
         for (ch = 0; ch < NUM_CHANNELS; ch++) {
             chn = &audi->channels[ch];
             smpl = &chn->smpl;
             if (smpl->length == 0) continue;
 
-            x0 = ((uint32_t) smpl->position);
+            x0 = (uint32_t) smpl->position;
             if (x0 >= smpl->length) {
                 /* something went wrong here */
                 continue;
             }
 
             /* interpolate the samples linearly */
-            address = smpl->address + x0;
-            y0 = qvm->mem[address];
-            y1 = qvm->mem[address + 1];
             d = smpl->position - ((float) x0);
+            y0 = (float) qvm->mem[smpl->address + x0];
+            if (++x0 == smpl->length) x0 = 0;
+            y1 = (float) qvm->mem[smpl->address + x0];
             y = y0 + d * (y1 - y0);
-
-            v += (uint8_t) y;
+            v += chn->volume * y;
 
             smpl->position += smpl->increment;
             while (smpl->position >= smpl->length)
                 smpl->position -= smpl->length;
+
+            if (!(chn->duration & 0x80000000)) {
+                /* if it reached the end, stop playing sample */
+                chn->duration--;
+                if (chn->duration == 0)
+                    smpl->length = 0;
+            }
+            active = 1;
         }
+
+        if (!active) break;
 
         pos = audi->tail++;
         if (pos >= BUFFER_SIZE) pos -= BUFFER_SIZE;
-        audi->buf[pos] = (v / NUM_CHANNELS);
+        if (v > 255.0f) v = 255.0f;
+        audi->buf[pos] = (uint8_t) v;
     }
+
+    aud->paused = (audi->tail == audi->head);
 }
 
 uint32_t audio_read_callback(struct audio *aud,
@@ -181,13 +202,14 @@ void do_command(struct audio *aud, struct quivm *qvm)
     struct audio_internal *audi;
     struct channel *chn;
     struct sample *smpl;
-    unsigned int ch, pitch;
+    unsigned int ch, pitch, dur, vol;
 
     audi = (struct audio_internal *) aud->internal;
     switch (aud->command) {
     case AUDIO_CMD_INIT:
         if (!aud->initialized) {
             aud->initialized = 1;
+            aud->paused = 1;
             aud->params[0] = AUDIO_SUCCESS;
         } else {
             /* already initialized */
@@ -200,8 +222,12 @@ void do_command(struct audio *aud, struct quivm *qvm)
             aud->params[0] = AUDIO_ERROR;
             break;
         }
+
         pitch = ((aud->params[0] >> 8) & 0xFF);
         if (pitch >= 108) pitch = 107;
+
+        dur = ((aud->params[0] >> 16) & 0xFF);
+        vol = ((aud->params[0] >> 24) & 0xFF);
 
         chn = &audi->channels[ch];
         smpl = &chn->smpl;
@@ -209,6 +235,21 @@ void do_command(struct audio *aud, struct quivm *qvm)
         smpl->length = aud->params[2];
         smpl->position = 0.0;
         smpl->increment = PITCH_TO_FREQ[pitch];
+        fprintf(stderr, "%f\n", smpl->increment);
+
+        chn->volume = ((float) vol) / 16.0f;
+        if (dur > 0) {
+            if (dur == 255) {
+                /* infinite duration */
+                chn->duration = 0x80000000;
+            } else {
+                /* converts from 1/16th of seconds to samples */
+                chn->duration = (AUDIO_FREQUENCY * dur) >> 4;
+            }
+        } else {
+            chn->duration =
+                (uint32_t) (((float) smpl->length) / smpl->increment);
+        }
 
         if (smpl->length > (qvm->memsize - smpl->address))
             smpl->length = qvm->memsize - smpl->address;
@@ -244,6 +285,7 @@ void audio_stream_callback(void *arg, uint8_t *stream, int len)
 {
     struct audio *aud;
     struct audio_internal *audi;
+    /* FILE *fp; */
     int i;
 
     aud = (struct audio *) arg;

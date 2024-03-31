@@ -38,6 +38,7 @@
 /* A structure representing the audio device */
 struct audio {
     int initialized;            /* device was initialized */
+    int paused;                 /* device is paused */
     uint32_t command;           /* the command */
     uint32_t params[8];         /* the parameters for the command */
     void *internal;             /* A pointer to the internal data structure */

@@ -20,7 +20,7 @@
 #include "dev/timer.h"
 
 /* Constants */
-#define NUM_INSN_PER_TICK       100000
+#define NUM_INSN_PER_TICK        80000
 
 /* Global variables */
 #ifdef USE_SDL
@@ -289,7 +289,7 @@ void start_audio(struct audio *aud)
                 SDL_GetError());
         return;
     }
-    SDL_PauseAudioDevice(audio_id, 0);
+    SDL_PauseAudioDevice(audio_id, 1);
 }
 
 #endif /* USE_SDL */
@@ -343,13 +343,16 @@ int run(struct quivm *qvm)
                 break;
             }
         }
-        if (aud->initialized && !audio_id) {
-            start_audio(aud);
+        if (aud->initialized) {
             if (!audio_id) {
-                qvm->status |= STS_TERMINATED;
-                qvm->termvalue = 1;
-                break;
+                start_audio(aud);
+                if (!audio_id) {
+                    qvm->status |= STS_TERMINATED;
+                    qvm->termvalue = 1;
+                    break;
+                }
             }
+            SDL_PauseAudioDevice(audio_id, aud->paused);
         }
 
         process_events(qvm);
