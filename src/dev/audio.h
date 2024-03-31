@@ -23,22 +23,28 @@
 
 /* Audio commands */
 #define AUDIO_CMD_INIT                   1
+#define AUDIO_CMD_PLAY                   2
 
 /* Audio return values */
 #define AUDIO_SUCCESS                    0
 #define AUDIO_ERROR                     -1
 
+/* Other constants */
+#define AUDIO_SAMPLE_SIZE             2048
+#define AUDIO_FREQUENCY              44100
+
 /* Data structures and types */
+/* A structure representing the audio command */
+struct audio_command {
+    uint32_t command;           /* the command */
+    uint32_t params[8];         /* the parameters for the command */
+};
+
 /* A structure representing the audio device */
 struct audio {
     int initialized;            /* device was initialized */
-
-    uint32_t command;           /* the command */
-    uint32_t params[8];         /* the parameters for the command */
-
-    struct quivm *qvm;          /* A reference to the QUI vm to
-                                 * be used in the stream callback
-                                 */
+    struct audio_command cmd;   /* the command */
+    void *internal;             /* A pointer to the internal data structure */
 };
 
 /* Functions */
@@ -52,6 +58,12 @@ int audio_init(struct audio *aud);
  * used by the audio.
  */
 void audio_destroy(struct audio *aud);
+
+/* Refreshes the audio data.
+ * This should be called periodically (and with the proper locks
+ * to no interfere with `audio_stream_callback()`).
+ */
+void audio_update(struct audio *aud, struct quivm *qvm);
 
 /* Implementation of the read callback for the audio.
  * The parameter `address` is the address to read. A reference to

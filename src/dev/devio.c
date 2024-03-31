@@ -323,6 +323,7 @@ void devio_update(struct devio *io)
     if ((io->tmr->tickcount % NUM_TICKS_PER_FRAME) == 0) {
         display_update(io->dpl, io->qvm);
     }
+    audio_update(io->aud, io->qvm);
     timer_update(io->tmr, io->qvm);
 }
 

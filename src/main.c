@@ -27,8 +27,8 @@
 static SDL_Window *window;      /* the interface window */
 static SDL_Renderer *renderer;  /* the renderer for the window */
 static SDL_Texture *texture;    /* the texture for drawing */
-static int audio_id;            /* the id of the audio device */
-static int zoom = 1;            /* the zoom level */
+static SDL_AudioDeviceID audio_id; /* the id of the audio device */
+static int zoom = 4;            /* the zoom level */
 static int mouse_captured;      /* the mouse was captured */
 #endif
 
@@ -276,12 +276,11 @@ void start_audio(struct audio *aud)
     SDL_AudioSpec as;
 
     SDL_zero(as);
-
-    as.freq = 44100;
-    as.format = AUDIO_S16SYS;
-    as.channels = 2;
+    as.freq = AUDIO_FREQUENCY;
+    as.format = AUDIO_U8;
+    as.channels = 1;
     as.callback = &audio_stream_callback;
-    as.samples = 256;
+    as.samples = AUDIO_SAMPLE_SIZE;
     as.userdata = aud;
     audio_id = SDL_OpenAudioDevice(NULL, 0, &as, NULL, 0);
     if (!audio_id) {
@@ -320,7 +319,17 @@ int run(struct quivm *qvm)
         for (i = 0; i < NUM_TICKS_PER_FRAME; i++) {
             if (!quivm_run(qvm, NUM_INSN_PER_TICK))
                 break;
+#ifdef USE_SDL
+            if (audio_id) {
+                SDL_LockAudioDevice(audio_id);
+                devio_update(io);
+                SDL_UnlockAudioDevice(audio_id);
+            } else {
+                devio_update(io);
+            }
+#else
             devio_update(io);
+#endif
         }
         if (qvm->status & STS_TERMINATED)
             break;
@@ -512,8 +521,8 @@ int main(int argc, char **argv, char **envp)
     ret = run(&qvm);
 
 #ifdef USE_SDL
-    destroy_window();
     stop_audio();
+    destroy_window();
     SDL_Quit();
 #endif
 
