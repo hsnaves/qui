@@ -296,22 +296,10 @@ void do_command(struct audio *aud, struct quivm *qvm)
         smpl->position = 0.0;
         smpl->increment = PITCH_TO_FREQ[pitch];
 
-        if (attack != 0)
-            env->attack = 1.0f / ((AUDIO_FREQUENCY * attack) >> 4);
-        else
-            env->attack = 1.0f;
-
-        if (decay != 0)
-            env->decay = 1.0f / ((AUDIO_FREQUENCY * decay) >> 4);
-        else
-            env->decay = 1.0f;
-
+        env->attack = 1.0f / (1.0f + ((AUDIO_FREQUENCY * attack) >> 4));
+        env->decay = 1.0f / (1.0f + ((AUDIO_FREQUENCY * decay) >> 4));
         env->sustain = sustain / 255.0f;
-
-        if (release != 0)
-            env->release = 1.0f / ((AUDIO_FREQUENCY * release) >> 4);
-        else
-            env->release = 1.0f;
+        env->release = 1.0f / (1.0f + ((AUDIO_FREQUENCY * release) >> 4));
 
         env->value = 0.0f;
         env->stage = ENV_ATTACK;
@@ -326,6 +314,7 @@ void do_command(struct audio *aud, struct quivm *qvm)
                 chn->duration = (AUDIO_FREQUENCY * dur) >> 4;
             }
         } else {
+            /* compute duration automatically */
             chn->duration =
                 (uint32_t) (((float) smpl->length) / smpl->increment);
         }
