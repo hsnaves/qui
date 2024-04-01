@@ -7,7 +7,7 @@
 #include "dev/audio.h"
 
 /* Constants */
-#define NUM_CHANNELS                     4
+#define NUM_CHANNELS                    16
 #define BUFFER_SIZE                   8192
 #define SAMPLES_PER_UPDATE              46
 
@@ -34,14 +34,14 @@ struct sample {
     uint32_t length;            /* number of data points in the sample */
     float position;             /* the current playing position */
     float increment;            /* Increment of position per sample */
+    uint32_t duration;          /* The remaining duration of the sample */
     struct envelope env;        /* The envelope */
 };
 
 /* Structure reprensenting an audio channel */
 struct channel {
-    struct sample smpl;         /* current playing sample */
+    struct sample smpl[2];      /* current and next playing sample */
     float volume;               /* the volume of the channel */
-    uint32_t duration;          /* the remaining duration for the sample */
 };
 
 /* The structure for the internal audio device */
@@ -127,7 +127,8 @@ void audio_update(struct audio *aud, struct quivm *qvm)
     struct channel *chn;
     struct sample *smpl;
     struct envelope *env;
-    unsigned int i, ch, num_samples;
+    unsigned int i, ch, sn;
+    unsigned int num_samples;
     uint32_t pos, x0;
     float v, d, y0, y1, y;
     int active;
@@ -146,68 +147,79 @@ void audio_update(struct audio *aud, struct quivm *qvm)
         v = 0.0f;
         for (ch = 0; ch < NUM_CHANNELS; ch++) {
             chn = &audi->channels[ch];
-            smpl = &chn->smpl;
-            env = &smpl->env;
 
-            if (smpl->length == 0) continue;
+            for (sn = 0; sn < 2; sn++) {
+                smpl = &chn->smpl[sn];
+                env = &smpl->env;
 
-            x0 = (uint32_t) smpl->position;
-            if (x0 >= smpl->length) {
-                /* something went wrong here */
-                continue;
-            }
-
-            /* interpolate the samples linearly */
-            d = smpl->position - ((float) x0);
-            y0 = (float) ((int8_t) qvm->mem[smpl->address + x0]);
-            if (++x0 == smpl->length) x0 = 0;
-            y1 = (float) ((int8_t) qvm->mem[smpl->address + x0]);
-            y = y0 + d * (y1 - y0);
-
-            /* advance the envelope */
-            switch (env->stage) {
-            case ENV_ATTACK:
-                env->value += env->attack;
-                if (env->value > 1.0f) {
-                    env->value = 1.0f;
-                    env->stage = ENV_DECAY;
+                if (smpl->length == 0) {
+                    if (sn == 0) {
+                        chn->smpl[0] = chn->smpl[1];
+                        chn->smpl[1].length = 0;
+                        if (smpl->length != 0)
+                            sn--;
+                    }
+                    continue;
                 }
-                break;
-            case ENV_DECAY:
-                env->value -= env->decay;
-                if (env->value < env->sustain) {
-                    env->value = env->sustain;
-                    env->stage = ENV_SUSTAIN;
-                }
-                break;
-            case ENV_SUSTAIN:
-                break;
-            case ENV_RELEASE:
-            default:
-                env->value -= env->release;
-                if (env->value <= 0.0f) {
-                    env->value = 0.0;
-                    smpl->length = 0;
-                }
-                break;
-            }
-            v += chn->volume * env->value * y;
 
-            smpl->position += smpl->increment;
-            if (smpl->length > 0) {
-                while (smpl->position >= smpl->length)
-                    smpl->position -= smpl->length;
-            }
-
-            if (!(chn->duration & 0x80000000)) {
-                /* if it reached the end, stop playing sample */
-                chn->duration--;
-                if (chn->duration == 0) {
-                    env->stage = ENV_RELEASE;
-                    chn->duration = 0x80000000;
+                x0 = (uint32_t) smpl->position;
+                if (x0 >= smpl->length) {
+                    /* something went wrong here */
+                    continue;
                 }
+
+                /* interpolate the samples linearly */
+                d = smpl->position - ((float) x0);
+                y0 = (float) ((int8_t) qvm->mem[smpl->address + x0]);
+                if (++x0 == smpl->length) x0 = 0;
+                y1 = (float) ((int8_t) qvm->mem[smpl->address + x0]);
+                y = y0 + d * (y1 - y0);
+
+                /* advance the envelope */
+                switch (env->stage) {
+                case ENV_ATTACK:
+                    env->value += env->attack;
+                    if (env->value > 1.0f) {
+                        env->value = 1.0f;
+                        env->stage = ENV_DECAY;
+                    }
+                    break;
+                case ENV_DECAY:
+                    env->value -= env->decay;
+                    if (env->value < env->sustain) {
+                        env->value = env->sustain;
+                        env->stage = ENV_SUSTAIN;
+                    }
+                    break;
+                case ENV_SUSTAIN:
+                    break;
+                case ENV_RELEASE:
+                default:
+                    env->value -= env->release;
+                    if (env->value <= 0.0f) {
+                        env->value = 0.0;
+                        smpl->length = 0;
+                    }
+                    break;
+                }
+                v += chn->volume * env->value * y;
+
+                smpl->position += smpl->increment;
+                if (smpl->length > 0) {
+                    while (smpl->position >= smpl->length)
+                        smpl->position -= smpl->length;
+                }
+
+                if (!(smpl->duration & 0x80000000)) {
+                    /* if it reached the end, stop playing sample */
+                    smpl->duration--;
+                    if (smpl->duration == 0) {
+                        env->stage = ENV_RELEASE;
+                        smpl->duration = 0x80000000;
+                    }
+                }
+                active = 1;
             }
-            active = 1;
         }
 
         if (!active) break;
@@ -288,7 +300,14 @@ void do_command(struct audio *aud, struct quivm *qvm)
         release = ((aud->params[3] >> 24) & 0xFF);
 
         chn = &audi->channels[ch];
-        smpl = &chn->smpl;
+        smpl = &chn->smpl[0];
+        if (smpl->length != 0) {
+            /* if a note is playing, use the smpl[1] */
+            smpl->env.stage = ENV_RELEASE;
+            smpl->duration = 0x80000000;
+            smpl = &chn->smpl[1];
+        }
+
         env = &smpl->env;
 
         smpl->address = aud->params[1];
@@ -308,14 +327,14 @@ void do_command(struct audio *aud, struct quivm *qvm)
         if (dur > 0) {
             if (dur == 255) {
                 /* infinite duration */
-                chn->duration = 0x80000000;
+                smpl->duration = 0x80000000;
             } else {
                 /* converts from 1/16th of seconds to samples */
-                chn->duration = (AUDIO_FREQUENCY * dur) >> 4;
+                smpl->duration = (AUDIO_FREQUENCY * dur) >> 4;
             }
         } else {
             /* compute duration automatically */
-            chn->duration =
+            smpl->duration =
                 (uint32_t) (((float) smpl->length) / smpl->increment);
         }
 
