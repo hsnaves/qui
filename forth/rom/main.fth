@@ -179,3 +179,16 @@ F_IMM swap toggleflags \ set then to immediate
   word
   drop c@
   ;
+
+\ the random seed
+align 4 var seed
+1 seed !
+
+\ generated a random number based on the seed
+: rand ( -- v )
+  seed @
+  dup 1 and
+  swap 1 ushr
+  swap if AC000000 xor then
+  dup seed !
+  ;

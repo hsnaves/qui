@@ -25,6 +25,7 @@ void timer_update(struct timer *tmr, struct quivm *qvm)
     if (tmr->enabled) {
         quivm_stack_push(qvm, 1, qvm->pc);
         qvm->pc = tmr->oninterrupt;
+        qvm->status &= ~STS_HALTED;
     }
 }
 

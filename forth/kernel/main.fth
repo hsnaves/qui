@@ -85,6 +85,7 @@ auxiliary
 : IO_SYS_SCELL       FFFFFFF8 ; inl
 : IO_SYS_DSTACK      FFFFFFF4 ; inl
 : IO_SYS_RSTACK      FFFFFFF0 ; inl
+: IO_SYS_STATUS      FFFFFFEC ; inl
 : IO_SYS_TERMINATE   FFFFFFE8 ; inl
 : IO_SYS_STACKSIZE   FFFFFFE4 ; inl
 : IO_SYS_MEMSIZE     FFFFFFE0 ; inl
@@ -96,6 +97,9 @@ auxiliary
 public
 \ terminate the program
 : terminate ( n -- ) IO_SYS_TERMINATE ! ;
+
+\ halt the VM
+: halt ( -- ) -1 IO_SYS_STATUS ! ;
 
 \ terminate the program successfully
 : bye ( -- ) 0 terminate tail ; noexit
@@ -111,6 +115,9 @@ public
 
 \ Obtains the address to the return stack pointer
 : rsp ( -- addr ) CELL_STACK_POINTER rstack tail ; noexit
+
+\ Address of the status
+: status ( -- addr ) IO_SYS_STATUS ; inl
 
 \ obtains the memory size
 : stacksize ( -- u ) IO_SYS_STACKSIZE @ ;

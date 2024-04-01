@@ -354,9 +354,8 @@ int quivm_run(struct quivm *qvm, uint32_t max_steps)
 
         if (ret == 0) { /* halted */
             if (max_steps == 0) {
-                /* no interrupts pending, halted, and
-                 * max_steps == 0, this means that the
-                 * machine has frozen
+                /* halted, and max_steps == 0, this means
+                 * that the machine has frozen
                  */
                 fprintf(stderr, "vm/quivm: run: "
                         "halted forever\n");
