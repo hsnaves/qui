@@ -9,7 +9,6 @@
 int display_init(struct display *dpl)
 {
     dpl->initialized = 0;
-    dpl->waitsync = 0;
     dpl->width = 0;
     dpl->height = 0;
     dpl->buffer = 0;
@@ -27,11 +26,8 @@ void display_destroy(struct display *dpl)
 
 void display_update(struct display *dpl, struct quivm *qvm)
 {
-    if (dpl->waitsync) {
-        /* resume the VM */
-        qvm->status &= ~STS_HALTED;
-    }
-    dpl->waitsync = 0;
+    /* resume the VM */
+    qvm->status &= ~STS_HALTED;
     dpl->framecount++;
 }
 
@@ -86,13 +82,6 @@ void do_command(struct display *dpl, struct quivm *qvm)
         dpl->buffer = dpl->params[0];
         dpl->stride = dpl->params[1];
         dpl->params[0] = DISPLAY_SUCCESS;
-        break;
-    case DISPLAY_CMD_WAITSYNC:
-        dpl->waitsync = !!dpl->params[0];
-        dpl->params[0] = DISPLAY_SUCCESS;
-
-        /* halts the VM */
-        if (dpl->waitsync) qvm->status |= STS_HALTED;
         break;
     case DISPLAY_CMD_FRAMECOUNT:
         dpl->params[1] = dpl->framecount;

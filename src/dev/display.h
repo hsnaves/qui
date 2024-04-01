@@ -24,9 +24,8 @@
 /* Display commands */
 #define DISPLAY_CMD_INIT                 1
 #define DISPLAY_CMD_SETBUF               2
-#define DISPLAY_CMD_WAITSYNC             3
-#define DISPLAY_CMD_FRAMECOUNT           4
-#define DISPLAY_CMD_BLT                  5
+#define DISPLAY_CMD_FRAMECOUNT           3
+#define DISPLAY_CMD_BLT                  4
 
 /* Display return values */
 #define DISPLAY_SUCCESS                  0
@@ -36,7 +35,6 @@
 /* A structure representing the display device */
 struct display {
     int initialized;            /* device was initialized */
-    int waitsync;               /* the vm is waiting for a sync */
     uint32_t mode;              /* display mode */
     uint32_t width;             /* display width */
     uint32_t height;            /* display height */
