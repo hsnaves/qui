@@ -43,7 +43,7 @@ private
 \ initializes the global-buffer
 : module_initialize ( -- )
   [ onboot @ ] lit exec
-  global-buffer-size allocate
+  global-buffer-size alloc
   dup [ global-buffer buf>here ] lit !
   dup [ global-buffer buf>start ] lit !
   0 [ global-buffer buf>off ] lit !
@@ -83,14 +83,10 @@ last @ >xt onboot !
 \ returns the number of bytes red
 : fill-buffer ( addr -- n )
   dup file-name @ file-name!
-  dup file-offset @
-  file-offset!
   dup buffer-start >r           \ d: addr | r: start
-  r@ over
-  str-buffer-off !
-  r@ buffer-size
-  file-buffer!
-  file-read                     \ d: addr n | r: start
+  r@ over str-buffer-off !
+  dup file-offset @
+  r@ buffer-size 1 file-do      \ d: addr n | r: start
   dup 0 <
   if rdrop drop file-error tail then
   >r                            \ d: addr | r: start n
@@ -145,8 +141,10 @@ last @ >xt onboot !
   ; noexit
 
 public
+
+internal current !
 \ include a module
-: include ( c-str -- )
+: (include) ( c-str -- )
   dup 0 char-find
   \ add 1 for the null character
   1+ dup struct-size +
@@ -157,11 +155,12 @@ public
   file-name !
   str-copy
   ;
+forth current !
 
 \ include a module (inline)
 : include" ( -- )
   ," 0 c, drop
-  dup include here !            \ restore here pointer
+  dup (include) here !          \ restore here pointer
   ;
 }scope
 

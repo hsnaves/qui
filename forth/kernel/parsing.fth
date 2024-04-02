@@ -9,8 +9,8 @@ public
 \ if it returns, the address is guarateed to be non-zero
 \ otherwise it terminates the program
 ," memory exhausted"
-: allocate ( size -- addr )
-  alloc dup if exit then
+: alloc ( size -- addr )
+  (alloc) dup if exit then
   drop 1 channel c!
   [ swap ] lit lit type nl
   type nl
@@ -24,7 +24,7 @@ private
 \ initializes the tib
 : tib_initialize ( -- )
   [ onboot @ ] lit exec
-  TIB_SIZE allocate
+  TIB_SIZE alloc
   dup [ tib buf>here ] lit !
   dup [ tib buf>start ] lit !
   dup [ tib buf>off ] lit !
@@ -186,6 +186,8 @@ public
   ; noexit
 }scope
 
+internal current !
+
 \ prints an error message of an unknown word
 ," ? "
 : unknown ( c-str n -- )
@@ -194,3 +196,4 @@ public
   error tail
   ; noexit
 
+forth current !

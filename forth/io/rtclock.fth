@@ -1,6 +1,8 @@
 \ module for reading the real time clock
 hex
 
+extra current !
+
 scope{
 auxiliary
 ( define constants )
@@ -18,3 +20,5 @@ public
 \ Get other information
 : rtc-other ( -- n ) IO_RTCLOCK_OTHER @ ; inl
 }scope
+
+forth current !

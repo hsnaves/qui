@@ -9,8 +9,8 @@ QUI := ./src/qui
 
 ROM_DEPS := forth/rom/main.fth forth/rom/scope.fth \
  forth/rom/scopeimpl.fth forth/io/storage.fth forth/io/rtclock.fth \
- forth/rom/printing.fth forth/utils/module.fth forth/utils/disasm.fth \
- forth/rom/other.fth
+ forth/utils/module.fth forth/rom/other.fth forth/utils/disasm.fth \
+ forth/rom/end.fth
 
 KERNEL_DEPS := forth/kernel/build.fth \
  forth/meta/meta.fth forth/meta/basic.fth forth/meta/interp.fth \
@@ -18,7 +18,7 @@ KERNEL_DEPS := forth/kernel/build.fth \
  forth/kernel/herelast.fth forth/kernel/imain.fth forth/kernel/iextra.fth \
  forth/kernel/wordmain.fth forth/kernel/colon.fth forth/kernel/main.fth \
  forth/kernel/parsing.fth forth/kernel/interp.fth forth/kernel/boot.fth \
- forth/rom/main.fth forth/rom/scopeimpl.fth
+ forth/rom/main.fth forth/rom/scopeimpl.fth forth/io/console.fth
 
 all: build rom.bin
 

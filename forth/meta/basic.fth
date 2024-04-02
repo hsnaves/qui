@@ -17,12 +17,12 @@ auxiliary
 public
 \ address of the meta-buffer
 : meta-buffer ( -- addr )
-  [ META_BUFFER_SIZE allocate ] lit
+  [ META_BUFFER_SIZE alloc ] lit
   ; inl
 
 \ exit the meta-compilation dictionary
 : meta-exit ( -- )
-  abandon-last
+  discard*
   rdrop \ drops from the meta interpreter
   ;
 
@@ -44,7 +44,10 @@ auxiliary
 : META_BUFFER_SIZE lit ; inl
 
 private
-," write outside meta-buffer" embed-str INVALIDWRITE_STR
+," write outside meta-buffer"
+: INVALIDWRITE_STR ( -- c-str n )
+  [ swap ] lit lit
+  ; inl
 
 \ checks for write outside the buffer
 : check-write ( addr n -- )

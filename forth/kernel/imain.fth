@@ -16,6 +16,8 @@ hex
   r@ 1+ + - r>
   ;
 
+scope{
+private
 \ checks if a given value fits a literal of fixed size
 : litn? ( v n -- b )
   7 * 1-
@@ -29,6 +31,7 @@ hex
   litn? tail
   ; noexit
 
+public
 \ obtains the size of a literal
 : litn ( v -- v n )
   1
@@ -47,7 +50,6 @@ hex
   end
   ;
 
-scope{
 private
 \ shows an error for large literal string
 ," large literal"

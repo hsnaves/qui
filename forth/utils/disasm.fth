@@ -2,6 +2,8 @@
 
 hex
 
+extra current !
+
 scope{
 public
 ( the opcode table )
@@ -138,3 +140,5 @@ public
   ;
 
 }scope
+
+forth current !

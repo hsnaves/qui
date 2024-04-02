@@ -1,6 +1,8 @@
 \ module for performing storage operations
 hex
 
+extra current !
+
 scope{
 auxiliary
 ( define constants )
@@ -9,17 +11,9 @@ auxiliary
 : IO_STORAGE_LEN    FFFFFFB4 ; inl
 : IO_STORAGE_OFFSET FFFFFFB0 ; inl
 : IO_STORAGE_OP     FFFFFFAC ; inl
-: STORAGE_OP_READ          1 ; inl
-: STORAGE_OP_WRITE         2 ; inl
-
-private
-\ perform the operation
-: do-operation ( op -- n )
-  IO_STORAGE_OP !
-  IO_STORAGE_LEN @
-  ;
 
 public
+
 \ set the name of the file to operate on
 : file-name! ( c-str -- ) IO_STORAGE_NAME ! ;
 
@@ -32,25 +26,16 @@ public
   here ! \ revert back the here
   ;
 
-\ set the offset for reading (or for appending when writing)
-: file-offset! ( offset -- ) IO_STORAGE_OFFSET ! ;
-
-\ set the buffer to be used for the file operations
-: file-buffer! ( addr n -- )
-  IO_STORAGE_LEN !
+\ perform a file operation on a given buffer (and file offset)
+\ returns the number of bytes read/written ( or negative for error )
+: file-do ( offset addr n op -- n )
+  >r IO_STORAGE_LEN !
   IO_STORAGE_DATA !
+  IO_STORAGE_OFFSET !
+  r> IO_STORAGE_OP !
+  IO_STORAGE_LEN @
   ;
 
-\ write the file on the provided buffer
-\ returns the number of bytes read ( or negative for error )
-: file-read ( -- n )
-  STORAGE_OP_READ do-operation tail
-  ; noexit
-
-\ write the file using the data provided in the buffer
-\ returns the number of bytes written ( or negative for error )
-: file-write ( -- n )
-  STORAGE_OP_WRITE do-operation tail
-  ; noexit
 }scope
 
+forth current !

@@ -97,18 +97,12 @@ auxiliary
 : CELL_STACK_POINTER FFFFFFFF ; inl
 
 public
+
+internal current !
 \ terminate the program
 : terminate ( n -- )
   SYS_TERMINATE IO_SYS_SELECTOR ! IO_SYS_VALUE !
   ;
-
-\ halt the VM
-: halt ( -- )
-  SYS_STATUS IO_SYS_SELECTOR ! -1 IO_SYS_VALUE !
-  ;
-
-\ terminate the program successfully
-: bye ( -- ) 0 terminate tail ; noexit
 
 \ obtains the address to access the data stack
 : dstack ( idx -- addr ) IO_SYS_SCELL ! IO_SYS_DSTACK ;
@@ -146,18 +140,24 @@ public
 : id ( -- u )
   SYS_ID IO_SYS_SELECTOR ! IO_SYS_VALUE @
   ;
+forth current !
+
+\ terminate the program successfully
+: bye ( -- ) 0 terminate tail ; noexit
 
 \ obtains the number of cycles executed
 : cycles ( -- u )
   SYS_CYCLES IO_SYS_SELECTOR ! IO_SYS_VALUE @
   ;
 
+\ halt the VM
+: halt ( -- )
+  SYS_STATUS IO_SYS_SELECTOR ! -1 IO_SYS_VALUE !
+  ;
+
 }scope
 
 ( *** deferred words *** )
-
-\ obtains an input character from standard input
-align defer getc ( -- c)
 
 \ emits one character to the standard output
 align defer emit ( c -- )
@@ -165,15 +165,20 @@ align defer emit ( c -- )
 \ types a counted string to the standard output
 align defer type ( c-str n -- )
 
+\ obtains an input character from standard input
+align defer getc ( -- c)
+
 \ prints an error message and restarts the interpreter
 align defer error ( c-str n  -- )
 
 ( *** memory allocation words *** )
 
+internal current !
+
 \ shrinks wordbuf and returns the address of the
 \ reserved memory following the shrunk buffer
 \ returns zero when it fails
-: alloc ( size -- addr )
+: (alloc) ( size -- addr )
   [ wordbuf buf>end ] lit @ tuck
   [ wordbuf buf>here ] lit @ -
   over u<
@@ -181,6 +186,7 @@ align defer error ( c-str n  -- )
   - dup [ wordbuf buf>end ] lit !
   ;
 
+forth current !
 
 ( *** helper words *** )
 
@@ -231,18 +237,6 @@ align defer error ( c-str n  -- )
 
 \ prints a newline to the console
 : nl ( -- ) 0A emit tail ; noexit
-
-\ types a counted string to the standard output
-: (type) ( c-str n -- )
-  begin
-    dup =0
-    if 2drop exit then
-    over c@ emit
-    1/str
-    again
-  end
-  ; noexit
-' (type) is type
 
 ( *** initializes the wordbuf *** )
 scope{

@@ -1,23 +1,31 @@
 \ control structures (if, then, else, etc.)
 hex
 
+\ detect if the meta compiler is present
+\ the stack will contain the address of the internal
+\ dictionary or the meta dictionary
+word meta 0 lookup =0
+dup internal and swap =0 current @ and or
+
+current @ over current !
 \ flips the flags of the word
-: toggleflags ( fl addr -- )
+: toggle ( fl addr -- )
   dup c@
   rot xor
   swap c!
   ;
+current !
 
 \ marks a word as immediate in the dictionary
 : imm ( -- )
   F_IMM last @
-  toggleflags tail
+  toggle tail
   ; noexit
 
 \ marks a word as inline in the dictionary
 : inl ( -- )
   F_INL last @
-  toggleflags tail
+  toggle tail
   ; noexit
 
 ( *** basic control structures *** )
@@ -44,7 +52,7 @@ last @ \ keep address of then on the stack
   swap
   then tail
   ; noexit imm
-F_IMM swap toggleflags \ set then to immediate
+F_IMM swap toggle \ set then to immediate
 
 \ places the current address on the return stack
 \ to later be used by words such as while, until, again, etc.
@@ -75,6 +83,7 @@ F_IMM swap toggleflags \ set then to immediate
   ; imm
 
 ( *** miscellaneous words *** )
+current @ over current !
 \ links the previous node to a given node node
 : node-link ( prev node -- )
   over node>next @
@@ -84,7 +93,7 @@ F_IMM swap toggleflags \ set then to immediate
 
 \ unlinks a node from the linked list
 \ the previous node is passed to this word
-: node-unlink ( prev -- )
+: node-drop ( prev -- )
   dup node>next @
   tuck node>next @
   swap node>next !
@@ -106,6 +115,8 @@ F_IMM swap toggleflags \ set then to immediate
   drop
   ;
 
+current !
+
 \ obtains the execution token of the next word
 : ' ( -- xt )
   find >xt tail
@@ -121,24 +132,11 @@ F_IMM swap toggleflags \ set then to immediate
   lit, tail
   ; noexit imm
 
-\ word to create a word for a literal
-: embed ( n -- )
-  create lit, wrapup
-  inl tail
-  ; noexit
-
-\ word to create a word for a string
-: embed-str ( c-str n -- )
-  create
-  swap lit, lit,
-  wrapup
-  inl tail
-  ; noexit
-
 \ word to create a variable
 : var ( size -- )
   here @ swap allot
-  embed tail
+  create lit, wrapup
+  inl tail
   ; noexit
 
 \ word to create a dictionary
@@ -158,38 +156,21 @@ F_IMM swap toggleflags \ set then to immediate
   ; noexit
 
 \ use of the first dictionary (set the context)
-: use-first ( addr -- )
+: use* ( addr -- )
   0 context ! use tail
   ; noexit
 
 \ no longer uses a given dictionary
-: abandon ( addr -- )
+: discard ( addr -- )
   context swap
   node-find dup
-  if node-unlink tail then
+  if node-drop tail then
   drop
   ;
 
 \ drops the last dictionary from the context
-: abandon-last ( -- )
-  context node-unlink tail
+: discard* ( -- )
+  context node-drop tail
   ; noexit
 
-\ obtains the first character of the next word
-: char ( -- c )
-  word
-  drop c@
-  ;
-
-\ the random seed
-align 4 var seed
-1 seed !
-
-\ generated a random number based on the seed
-: rand ( -- v )
-  seed @
-  dup 1 and
-  swap 1 ushr
-  swap if AC000000 xor then
-  dup seed !
-  ;
+drop

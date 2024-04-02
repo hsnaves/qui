@@ -48,8 +48,8 @@ hex
 \ stop the scope
 : }scope ( -- )
   public
-  abandon-last
-  currnext node-unlink tail
+  discard*
+  currnext node-drop tail
   ; noexit
 
 \ creates a deferred word
@@ -64,10 +64,15 @@ hex
   wrapup tail
   ; noexit
 
+\ swaps to the dictionary in the stack
+current @ swap current !
+
 \ finds the address of the pointer to the deferred word
 : defer-ptr ( -- addr )
   find 4 -
   ;
+
+current ! \ restore current
 
 \ sets the xt of a deferred word
 : is ( xt -- )
@@ -81,7 +86,7 @@ private
 \ initializes the tmpbuf
 : scope_initialize ( -- )
    [ onboot @ ] lit exec
-   TMPBUF_SIZE allocate
+   TMPBUF_SIZE alloc
    dup [ tmpbuf buf>here ] lit !
    dup [ tmpbuf buf>start ] lit !
    0 [ tmpbuf buf>off ] lit !

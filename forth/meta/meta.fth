@@ -2,7 +2,7 @@ hex
 
 \ build the meta dictionary first
 include" forth/meta/basic.fth"
-include" forth/kernel/globals.fth"
+meta meta include" forth/kernel/globals.fth"
 include" forth/kernel/ibasic.fth"
 include" forth/kernel/herelast.fth"
 include" forth/kernel/imain.fth"
@@ -21,7 +21,7 @@ meta use
 
 \ initialize global variables
 forth current !
-forth context !
+extra context !
 0 this !
 0 flags c!
 0 state c!
@@ -29,29 +29,36 @@ forth context !
 01 janum c!
 
 \ initialize the forth dictionary
-0 forth dict>last !
 internal forth node>next !
+0 forth dict>last !
 wordbuf forth dict>code !
 wordbuf forth dict>data !
 0 forth dict>index !
 
 \ initialize the internal dictionary
-0 internal dict>last !
 0 internal node>next !
+0 internal dict>last !
 wordbuf internal dict>code !
 wordbuf internal dict>data !
 0 internal dict>index !
 
+\ initialize the extra dictionary
+forth extra node>next !
+0 extra dict>last !
+wordbuf extra dict>code !
+wordbuf extra dict>data !
+0 extra dict>index !
+
 \ initialize the wordbuffer
 \ use smaller size here
-94 wordbuf buf>here !
-94 wordbuf buf>start !
+A8 wordbuf buf>here !
+A8 wordbuf buf>start !
 10000 wordbuf buf>end !
 0 wordbuf buf>off !
 
 \ initialize the temp dictionary
-0 temp dict>last !
 0 temp node>next !
+0 temp dict>last !
 tmpbuf temp dict>code !
 tmpbuf temp dict>data !
 0 temp dict>index !

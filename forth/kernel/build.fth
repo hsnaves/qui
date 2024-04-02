@@ -2,10 +2,10 @@ hex
 include" forth/meta/meta.fth"
 
 \ the kernel code
-include" forth/kernel/globals.fth"
+forth internal include" forth/kernel/globals.fth"
 include" forth/kernel/main.fth"
-include" forth/io/console.fth"
 internal current !
+include" forth/io/console.fth"
 include" forth/kernel/ibasic.fth"
 forth current !
 include" forth/kernel/herelast.fth"
@@ -13,9 +13,7 @@ internal current !
 include" forth/kernel/imain.fth"
 forth current !
 include" forth/kernel/parsing.fth"
-internal current !
 include" forth/kernel/iextra.fth"
-forth current !
 include" forth/kernel/wordmain.fth"
 include" forth/kernel/interp.fth"
 include" forth/kernel/colon.fth"
@@ -23,14 +21,12 @@ include" forth/kernel/boot.fth"
 
 \ end of the compilation
 
-here @
+0 here @
 meta-exit
 forth current !
 decimal
 
-meta-buffer swap file-buffer!
-0 file-offset!
 file-name" kernel.bin"
-file-write . nl
+meta-buffer swap 2 file-do . nl
 cycles . nl
 bye
