@@ -20,7 +20,7 @@
 #include "dev/timer.h"
 
 /* Constants */
-#define NUM_INSN_PER_TICK        80000
+#define NUM_INSN_PER_FRAME         1280000
 
 /* Global variables */
 #ifdef USE_SDL
@@ -303,7 +303,6 @@ int run(struct quivm *qvm)
     struct devio *io;
     struct display *dpl;
     struct audio *aud;
-    unsigned int i;
 #ifdef USE_SDL
     uint32_t time0, delta;
 
@@ -316,21 +315,22 @@ int run(struct quivm *qvm)
     aud = io->aud;
 
     while (1) {
-        for (i = 0; i < NUM_TICKS_PER_FRAME; i++) {
-            if (!quivm_run(qvm, NUM_INSN_PER_TICK))
-                break;
+        if (!quivm_run(qvm, NUM_INSN_PER_FRAME))
+            break;
+
 #ifdef USE_SDL
-            if (audio_id) {
-                SDL_LockAudioDevice(audio_id);
-                devio_update(io);
-                SDL_UnlockAudioDevice(audio_id);
-            } else {
-                devio_update(io);
-            }
-#else
+        if (audio_id) {
+            SDL_LockAudioDevice(audio_id);
             devio_update(io);
-#endif
+            SDL_UnlockAudioDevice(audio_id);
+        } else {
+            devio_update(io);
         }
+#else
+        devio_update(io);
+#endif
+
+        /* check if some device terminated the VM */
         if (qvm->status & STS_TERMINATED)
             break;
 
@@ -387,18 +387,21 @@ static
 void print_help(const char *execname)
 {
     printf("Usage:\n");
-    printf("  %s [-r <romfile>] [--readonly] [--bind <addr>]\n", execname);
-    printf("        [--target <addr>] [--port <port> ] [--utc]\n");
-    printf("        [-h|--help] args...\n");
+    printf("  %s [-r <romfile>] [--stacksize <size>] [--memsize <size>]\n",
+           execname);
+    printf("        [--readonly] [--bind <addr>] [--target <addr>]\n");
+    printf("        [--port <port> ] [--utc] [-h|--help] args...\n");
 
     printf("where:\n");
-    printf("  -r <romfile>    Specify the rom file to use\n");
-    printf("  --readonly      To not allow writes in the storage device\n");
-    printf("  --bind <addr>   Binds the UDP socket to a given address\n");
-    printf("  --target <addr> The address of the target socket\n");
-    printf("  --port <port>   The UDP port to bind to\n");
-    printf("  --utc           To use UTC for the real time clock\n");
-    printf("  -h|--help       Print this help\n");
+    printf("  -r <romfile>       Specify the rom file to use\n");
+    printf("  --stackize <size>  The stack size in cells\n");
+    printf("  --memsize <size>   The memory size in bytes\n");
+    printf("  --readonly         To not allow writes in the storage device\n");
+    printf("  --bind <addr>      Binds the UDP socket to a given address\n");
+    printf("  --target <addr>    The address of the target socket\n");
+    printf("  --port <port>      The UDP port to bind to\n");
+    printf("  --utc              To use UTC for the real time clock\n");
+    printf("  -h|--help          Print this help\n");
 }
 
 /* main function */
@@ -409,11 +412,16 @@ int main(int argc, char **argv, char **envp)
     const char *filename;
     const char *bind_address;
     const char *target_address;
+    uint32_t stacksize, memsize;
     uint32_t length;
     int use_utc;
     int disable_write;
     int port;
     int i, ret;
+    char *end;
+
+    stacksize = 0x0400;
+    memsize = 0x100000;
 
     filename = "rom.bin";
     bind_address = NULL;
@@ -426,20 +434,22 @@ int main(int argc, char **argv, char **envp)
         if (strcmp(argv[i], "-r") == 0) {
             if (i == argc - 1) goto missing_argument;
             filename = argv[++i];
+        } else if (strcmp(argv[i], "--stacksize") == 0) {
+            if (i == argc - 1) goto missing_argument;
+            stacksize = strtol(argv[++i], &end, 10);
+            if (end[0] != '\0') goto invalid_argument;
+        } else if (strcmp(argv[i], "--memsize") == 0) {
+            if (i == argc - 1) goto missing_argument;
+            memsize = strtol(argv[++i], &end, 10);
+            if (end[0] != '\0') goto invalid_argument;
         } else if (strcmp(argv[i], "--readonly") == 0) {
             disable_write = 1;
         } else if (strcmp(argv[i], "--utc") == 0) {
             use_utc = 1;
         } else if (strcmp(argv[i], "--port") == 0) {
-            char *end;
             if (i == argc - 1) goto missing_argument;
             port = strtol(argv[++i], &end, 10);
-            if (end[0] != '\0') {
-                fprintf(stderr, "main: "
-                        "invalid port `%s`\n",
-                        argv[i]);
-                return 1;
-            }
+            if (end[0] != '\0') goto invalid_argument;
         } else if (strcmp(argv[i], "--bind") == 0) {
             if (i == argc - 1) goto missing_argument;
             bind_address = argv[++i];
@@ -460,13 +470,18 @@ int main(int argc, char **argv, char **envp)
                 "missing argument for `%s`\n",
                 argv[i]);
         return 1;
+
+    invalid_argument:
+        fprintf(stderr, "main: invalid argument for `%s`: `%s`\n",
+                argv[i - 1], argv[i]);
+        return 1;
     }
 
     /* Move the arguments forward */
     argc -= i;
     argv = &argv[i];
 
-    if (quivm_init(&qvm)) {
+    if (quivm_init(&qvm, stacksize, memsize)) {
         fprintf(stderr, "main: could not initialize the VM\n");
         return 1;
     }

@@ -7,18 +7,16 @@
 
 /* Constants */
 /* The I/O address space for the timer device */
-#define IO_TIMER_BASE           0xFFFFFD80
-#define IO_TIMER_END            0xFFFFFE00
+#define IO_TIMER_BASE           0xFFFFFF60
+#define IO_TIMER_END            0xFFFFFF70
 
 /* Addresses within the timer device */
-#define IO_TIMER_TICKCOUNT      0xFFFFFDFC
-#define IO_TIMER_ONINTERRUPT    0xFFFFFDF8
-#define IO_TIMER_ENABLED        0xFFFFFDF4
+#define IO_TIMER_ONINTERRUPT    0xFFFFFF6C
+#define IO_TIMER_ENABLED        0xFFFFFF68
 
 /* Data structures and types */
 /* A structure representing the timer device */
 struct timer {
-    uint32_t tickcount;         /* counts the number of ticks */
     uint32_t oninterrupt;       /* an address to be called in case
                                  * of interrupts (timer must be enabled)
                                  */

@@ -7,19 +7,18 @@
 
 /* Constants */
 /* The I/O address space for the audio device */
-#define IO_AUDIO_BASE           0xFFFFFE40
-#define IO_AUDIO_END            0xFFFFFE80
+#define IO_AUDIO_BASE           0xFFFFFF20
+#define IO_AUDIO_END            0xFFFFFF40
 
 /* Addresses within the audio device */
-#define IO_AUDIO_COMMAND        0xFFFFFE7C
-#define IO_AUDIO_PARAM0         0xFFFFFE78
-#define IO_AUDIO_PARAM1         0xFFFFFE74
-#define IO_AUDIO_PARAM2         0xFFFFFE70
-#define IO_AUDIO_PARAM3         0xFFFFFE6C
-#define IO_AUDIO_PARAM4         0xFFFFFE68
-#define IO_AUDIO_PARAM5         0xFFFFFE64
-#define IO_AUDIO_PARAM6         0xFFFFFE60
-#define IO_AUDIO_PARAM7         0xFFFFFE5C
+#define IO_AUDIO_COMMAND        0xFFFFFF3C
+#define IO_AUDIO_PARAM0         0xFFFFFF38
+#define IO_AUDIO_PARAM1         0xFFFFFF34
+#define IO_AUDIO_PARAM2         0xFFFFFF30
+#define IO_AUDIO_PARAM3         0xFFFFFF2C
+#define IO_AUDIO_PARAM4         0xFFFFFF28
+#define IO_AUDIO_PARAM5         0xFFFFFF24
+#define IO_AUDIO_PARAM6         0xFFFFFF20
 
 /* Audio commands */
 #define AUDIO_CMD_INIT                   1
@@ -32,7 +31,6 @@
 /* Other constants */
 #define FPS                             60
 #define AUDIO_FREQUENCY              44100
-#define NUM_TICKS_PER_FRAME             16
 
 /* Data structures and types */
 /* A structure representing the audio device */
@@ -40,7 +38,7 @@ struct audio {
     int initialized;            /* device was initialized */
     int paused;                 /* device is paused */
     uint32_t command;           /* the command */
-    uint32_t params[8];         /* the parameters for the command */
+    uint32_t params[7];         /* the parameters for the command */
     void *internal;             /* A pointer to the internal data structure */
 };
 

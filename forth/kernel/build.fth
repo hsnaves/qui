@@ -32,5 +32,5 @@ meta-buffer swap file-buffer!
 0 file-offset!
 file-name" kernel.bin"
 file-write . nl
-cyclecount . nl
+cycles . nl
 bye

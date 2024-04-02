@@ -66,19 +66,23 @@
 
 /* The I/O address for the system device */
 #define IO_BASE                 0xFFF00000
-#define IO_SYS_BASE             0xFFFFFFC0
+#define IO_SYS_BASE             0xFFFFFFE0
 
 /* Addresses within the system device */
 #define IO_SYS_SCELL            0xFFFFFFF8
 #define IO_SYS_DSTACK           0xFFFFFFF4
 #define IO_SYS_RSTACK           0xFFFFFFF0
-#define IO_SYS_STATUS           0xFFFFFFEC
-#define IO_SYS_TERMINATE        0xFFFFFFE8
-#define IO_SYS_STACKSIZE        0xFFFFFFE4
-#define IO_SYS_MEMSIZE          0xFFFFFFE0
-#define IO_SYS_CELLSIZE         0xFFFFFFDC
-#define IO_SYS_ID               0xFFFFFFD8
-#define IO_SYS_CYCLECOUNT       0xFFFFFFD4
+#define IO_SYS_SELECTOR         0xFFFFFFEC
+#define IO_SYS_VALUE            0xFFFFFFE8
+
+/* Possible values of the selector */
+#define SYS_STATUS                       1
+#define SYS_TERMINATE                    2
+#define SYS_STACKSIZE                    3
+#define SYS_MEMSIZE                      4
+#define SYS_CELLSIZE                     5
+#define SYS_ID                           6
+#define SYS_CYCLES                       7
 
 /* Data structures and types */
 
@@ -116,9 +120,10 @@ struct quivm {
                                      */
 
     uint32_t scell;                 /* The cell for the stack read/write */
+    uint32_t selector;              /* The selector for internal registers */
     uint32_t status;                /* The status of the VM */
     int termvalue;                  /* termination value */
-    uint32_t cyclecount;            /* counter for cycles */
+    uint32_t cycles;                /* counter for cycles */
 
     void *arg;                      /* extra argument for callbacks */
     quivm_read_cb read_cb;          /* read callback function */
@@ -128,9 +133,12 @@ struct quivm {
 /* Functions */
 
 /* Creates and initializes the QUI vm.
+ * The stack size (in cells) is specified in `stacksize` and the
+ * memory size (in bytes) is specified in `memsize`. The `memsize`
+ * parameter must be a multiple of 4.
  * Returns zero on success.
  */
-int quivm_init(struct quivm *qvm);
+int quivm_init(struct quivm *qvm, uint32_t stacksize, uint32_t memsize);
 
 /* Destroys the QUI vm and release the resources. */
 void quivm_destroy(struct quivm *qvm);

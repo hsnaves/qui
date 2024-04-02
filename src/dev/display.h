@@ -7,19 +7,18 @@
 
 /* Constants */
 /* The I/O address space for the display device */
-#define IO_DISPLAY_BASE         0xFFFFFE80
-#define IO_DISPLAY_END          0xFFFFFEC0
+#define IO_DISPLAY_BASE         0xFFFFFF40
+#define IO_DISPLAY_END          0xFFFFFF60
 
 /* Addresses within the display device */
-#define IO_DISPLAY_COMMAND      0xFFFFFEBC
-#define IO_DISPLAY_PARAM0       0xFFFFFEB8
-#define IO_DISPLAY_PARAM1       0xFFFFFEB4
-#define IO_DISPLAY_PARAM2       0xFFFFFEB0
-#define IO_DISPLAY_PARAM3       0xFFFFFEAC
-#define IO_DISPLAY_PARAM4       0xFFFFFEA8
-#define IO_DISPLAY_PARAM5       0xFFFFFEA4
-#define IO_DISPLAY_PARAM6       0xFFFFFEA0
-#define IO_DISPLAY_PARAM7       0xFFFFFE9C
+#define IO_DISPLAY_COMMAND      0xFFFFFF5C
+#define IO_DISPLAY_PARAM0       0xFFFFFF58
+#define IO_DISPLAY_PARAM1       0xFFFFFF54
+#define IO_DISPLAY_PARAM2       0xFFFFFF50
+#define IO_DISPLAY_PARAM3       0xFFFFFF4C
+#define IO_DISPLAY_PARAM4       0xFFFFFF48
+#define IO_DISPLAY_PARAM5       0xFFFFFF44
+#define IO_DISPLAY_PARAM6       0xFFFFFF40
 
 /* Display commands */
 #define DISPLAY_CMD_INIT                 1
@@ -43,7 +42,7 @@ struct display {
     uint32_t framecount;        /* counter for frames */
 
     uint32_t command;           /* the command */
-    uint32_t params[8];         /* the parameters for the command */
+    uint32_t params[7];         /* the parameters for the command */
 };
 
 /* Functions */

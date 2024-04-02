@@ -133,6 +133,9 @@ void audio_update(struct audio *aud, struct quivm *qvm)
     float v, d, y0, y1, y;
     int active;
 
+    /* resume the VM */
+    qvm->status &= ~STS_HALTED;
+
     audi = (struct audio_internal *) aud->internal;
 
     num_samples = SAMPLES_PER_UPDATE;
@@ -246,7 +249,7 @@ uint32_t audio_read_callback(struct audio *aud,
         break;
     default:
         if (((IO_AUDIO_PARAM0 - address) % 4 == 0)
-            && (address >= IO_AUDIO_PARAM7)
+            && (address >= IO_AUDIO_PARAM6)
             && (address <= IO_AUDIO_PARAM0)) {
 
             v = aud->params[(IO_AUDIO_PARAM0 - address) >> 2];
@@ -359,7 +362,7 @@ void audio_write_callback(struct audio *aud,  struct quivm *qvm,
         break;
     default:
         if (((IO_AUDIO_PARAM0 - address) % 4 == 0)
-            && (address >= IO_AUDIO_PARAM7)
+            && (address >= IO_AUDIO_PARAM6)
             && (address <= IO_AUDIO_PARAM0)) {
 
             aud->params[(IO_AUDIO_PARAM0 - address) >> 2] = v;

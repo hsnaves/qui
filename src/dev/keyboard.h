@@ -7,15 +7,15 @@
 
 /* Constants */
 /* The I/O address space for the keyboard device */
-#define IO_KEYBOARD_BASE        0xFFFFFE00
-#define IO_KEYBOARD_END         0xFFFFFE40
+#define IO_KEYBOARD_BASE        0xFFFFFF00
+#define IO_KEYBOARD_END         0xFFFFFF20
 
 /* Addresses within the keyboard device */
-#define IO_KEYBOARD_KEY0        0xFFFFFE3C
-#define IO_KEYBOARD_KEY1        0xFFFFFE38
-#define IO_KEYBOARD_X           0xFFFFFE34
-#define IO_KEYBOARD_Y           0xFFFFFE30
-#define IO_KEYBOARD_BUTTON      0xFFFFFE2C
+#define IO_KEYBOARD_KEY0        0xFFFFFF1C
+#define IO_KEYBOARD_KEY1        0xFFFFFF18
+#define IO_KEYBOARD_X           0xFFFFFF14
+#define IO_KEYBOARD_Y           0xFFFFFF10
+#define IO_KEYBOARD_BUTTON      0xFFFFFF0C
 
 /* Keyboard keys */
 #define KEYBOARD_KEY0_A         0x00000001

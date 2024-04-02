@@ -4,11 +4,11 @@ hex
 scope{
 auxiliary
 ( define constants )
-: IO_STORAGE_NAME   FFFFFF7C ; inl
-: IO_STORAGE_DATA   FFFFFF78 ; inl
-: IO_STORAGE_LEN    FFFFFF74 ; inl
-: IO_STORAGE_OFFSET FFFFFF70 ; inl
-: IO_STORAGE_OP     FFFFFF6C ; inl
+: IO_STORAGE_NAME   FFFFFFBC ; inl
+: IO_STORAGE_DATA   FFFFFFB8 ; inl
+: IO_STORAGE_LEN    FFFFFFB4 ; inl
+: IO_STORAGE_OFFSET FFFFFFB0 ; inl
+: IO_STORAGE_OP     FFFFFFAC ; inl
 : STORAGE_OP_READ          1 ; inl
 : STORAGE_OP_WRITE         2 ; inl
 

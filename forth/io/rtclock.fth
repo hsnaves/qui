@@ -4,9 +4,9 @@ hex
 scope{
 auxiliary
 ( define constants )
-: IO_RTCLOCK_DATE    FFFFFEFC ; inl
-: IO_RTCLOCK_TIME    FFFFFEF8 ; inl
-: IO_RTCLOCK_OTHER   FFFFFEF4 ; inl
+: IO_RTCLOCK_DATE    FFFFFF7C ; inl
+: IO_RTCLOCK_TIME    FFFFFF78 ; inl
+: IO_RTCLOCK_OTHER   FFFFFF74 ; inl
 
 public
 \ Get the current date

@@ -8,7 +8,6 @@
 
 int timer_init(struct timer *tmr)
 {
-    tmr->tickcount = 0;
     tmr->oninterrupt = 0;
     tmr->enabled = 0;
     return 0;
@@ -21,11 +20,10 @@ void timer_destroy(struct timer *tmr)
 
 void timer_update(struct timer *tmr, struct quivm *qvm)
 {
-    tmr->tickcount++;
+    qvm->status &= ~STS_HALTED;
     if (tmr->enabled) {
         quivm_stack_push(qvm, 1, qvm->pc);
         qvm->pc = tmr->oninterrupt;
-        qvm->status &= ~STS_HALTED;
     }
 }
 
@@ -36,9 +34,6 @@ uint32_t timer_read_callback(struct timer *tmr,
     (void)(qvm); /* UNUSED */
 
     switch (address) {
-    case IO_TIMER_TICKCOUNT:
-        v = tmr->tickcount;
-        break;
     case IO_TIMER_ONINTERRUPT:
         v = tmr->oninterrupt;
         break;
@@ -59,9 +54,6 @@ void timer_write_callback(struct timer *tmr,  struct quivm *qvm,
     (void)(qvm); /* UNUSED */
 
     switch (address) {
-    case IO_TIMER_TICKCOUNT:
-        tmr->tickcount = v;
-        break;
     case IO_TIMER_ONINTERRUPT:
         tmr->oninterrupt = v;
         break;

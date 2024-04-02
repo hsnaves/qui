@@ -4,9 +4,9 @@ hex
 scope{
 auxiliary
 ( *** constants for the console *** )
-: IO_CONSOLE_IN       FFFFFFBC ; inl
-: IO_CONSOLE_OUT      FFFFFFB8 ; inl
-: IO_CONSOLE_CHANNEL  FFFFFFB4 ; inl
+: IO_CONSOLE_IN       FFFFFFDC ; inl
+: IO_CONSOLE_OUT      FFFFFFD8 ; inl
+: IO_CONSOLE_CHANNEL  FFFFFFD4 ; inl
 
 public
 \ emits one character to the standard output

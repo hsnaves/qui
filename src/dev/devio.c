@@ -241,6 +241,9 @@ uint32_t devio_read_callback(struct quivm *qvm, void *arg,
     if ((address >= IO_RTCLOCK_BASE) && (address < IO_RTCLOCK_END)) {
         return rtclock_read_callback(io->rtc, qvm, address);
     }
+    if ((address >= IO_TIMER_BASE) && (address < IO_TIMER_END)) {
+        return timer_read_callback(io->tmr, qvm, address);
+    }
     if ((address >= IO_DISPLAY_BASE) && (address < IO_DISPLAY_END)) {
         return display_read_callback(io->dpl, qvm, address);
     }
@@ -249,9 +252,6 @@ uint32_t devio_read_callback(struct quivm *qvm, void *arg,
     }
     if ((address >= IO_KEYBOARD_BASE) && (address < IO_KEYBOARD_END)) {
         return keyboard_read_callback(io->kbd, qvm, address);
-    }
-    if ((address >= IO_TIMER_BASE) && (address < IO_TIMER_END)) {
-        return timer_read_callback(io->tmr, qvm, address);
     }
 
     return -1;
@@ -281,6 +281,10 @@ void devio_write_callback(struct quivm *qvm, void *arg,
         rtclock_write_callback(io->rtc, qvm, address, v);
         return;
     }
+    if ((address >= IO_TIMER_BASE) && (address < IO_TIMER_END)) {
+        timer_write_callback(io->tmr, qvm, address, v);
+        return;
+    }
     if ((address >= IO_DISPLAY_BASE) && (address < IO_DISPLAY_END)) {
         display_write_callback(io->dpl, qvm, address, v);
         return;
@@ -291,10 +295,6 @@ void devio_write_callback(struct quivm *qvm, void *arg,
     }
     if ((address >= IO_KEYBOARD_BASE) && (address < IO_KEYBOARD_END)) {
         keyboard_write_callback(io->kbd, qvm, address, v);
-        return;
-    }
-    if ((address >= IO_TIMER_BASE) && (address < IO_TIMER_END)) {
-        timer_write_callback(io->tmr, qvm, address, v);
         return;
     }
 }
@@ -320,9 +320,7 @@ void devio_configure(struct devio *io, struct quivm *qvm)
 void devio_update(struct devio *io)
 {
     if (!io->qvm) return;
-    if ((io->tmr->tickcount % NUM_TICKS_PER_FRAME) == 0) {
-        display_update(io->dpl, io->qvm);
-    }
+    display_update(io->dpl, io->qvm);
     audio_update(io->aud, io->qvm);
     timer_update(io->tmr, io->qvm);
 }

@@ -43,7 +43,7 @@ uint32_t display_read_callback(struct display *dpl,
         break;
     default:
         if (((IO_DISPLAY_PARAM0 - address) % 4 == 0)
-            && (address >= IO_DISPLAY_PARAM7)
+            && (address >= IO_DISPLAY_PARAM6)
             && (address <= IO_DISPLAY_PARAM0)) {
 
             v = dpl->params[(IO_DISPLAY_PARAM0 - address) >> 2];
@@ -127,7 +127,7 @@ void display_write_callback(struct display *dpl,  struct quivm *qvm,
         break;
     default:
         if (((IO_DISPLAY_PARAM0 - address) % 4 == 0)
-            && (address >= IO_DISPLAY_PARAM7)
+            && (address >= IO_DISPLAY_PARAM6)
             && (address <= IO_DISPLAY_PARAM0)) {
 
             dpl->params[(IO_DISPLAY_PARAM0 - address) >> 2] = v;

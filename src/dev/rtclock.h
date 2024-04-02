@@ -7,13 +7,13 @@
 
 /* Constants */
 /* The I/O address space for the rtclock device */
-#define IO_RTCLOCK_BASE         0xFFFFFEC0
-#define IO_RTCLOCK_END          0xFFFFFF00
+#define IO_RTCLOCK_BASE         0xFFFFFF70
+#define IO_RTCLOCK_END          0xFFFFFF80
 
 /* Addresses within the rtclock device */
-#define IO_RTCLOCK_DATE         0xFFFFFEFC
-#define IO_RTCLOCK_TIME         0xFFFFFEF8
-#define IO_RTCLOCK_OTHER        0xFFFFFEF4
+#define IO_RTCLOCK_DATE         0xFFFFFF7C
+#define IO_RTCLOCK_TIME         0xFFFFFF78
+#define IO_RTCLOCK_OTHER        0xFFFFFF74
 
 /* Data structures and types */
 /* A structure representing the external rtclock device */

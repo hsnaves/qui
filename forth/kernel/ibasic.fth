@@ -90,7 +90,7 @@ public
 \ aligns the here pointer to multiple of a cell
 : %align ( buf -- )
   dup buf>here @
-  dup 3 + -3 and
+  dup 3 + -4 and
   swap -
   swap %allot tail
   ; noexit

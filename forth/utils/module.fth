@@ -54,7 +54,7 @@ last @ >xt onboot !
 
 \ allocate space in the global-buffer
 : allocate-space ( size -- addr )
-  3 + -3 and                    \ round the size to multiple of 4
+  3 + -4 and                    \ round the size to multiple of 4
   global-buffer buf>here @ swap
   global-buffer %allot tail
   ; noexit

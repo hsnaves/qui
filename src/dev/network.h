@@ -7,13 +7,13 @@
 
 /* Constants */
 /* The I/O address space for the network device */
-#define IO_NETWORK_BASE         0xFFFFFF00
-#define IO_NETWORK_END          0xFFFFFF40
+#define IO_NETWORK_BASE         0xFFFFFF80
+#define IO_NETWORK_END          0xFFFFFFA0
 
 /* Addresses within the network device */
-#define IO_NETWORK_DATA         0xFFFFFF3C
-#define IO_NETWORK_LEN          0xFFFFFF38
-#define IO_NETWORK_OP           0xFFFFFF34
+#define IO_NETWORK_DATA         0xFFFFFF9C
+#define IO_NETWORK_LEN          0xFFFFFF98
+#define IO_NETWORK_OP           0xFFFFFF94
 
 /* The possible operations */
 #define NETWORK_OP_RECEIVE               1

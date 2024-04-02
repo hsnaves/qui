@@ -85,21 +85,27 @@ auxiliary
 : IO_SYS_SCELL       FFFFFFF8 ; inl
 : IO_SYS_DSTACK      FFFFFFF4 ; inl
 : IO_SYS_RSTACK      FFFFFFF0 ; inl
-: IO_SYS_STATUS      FFFFFFEC ; inl
-: IO_SYS_TERMINATE   FFFFFFE8 ; inl
-: IO_SYS_STACKSIZE   FFFFFFE4 ; inl
-: IO_SYS_MEMSIZE     FFFFFFE0 ; inl
-: IO_SYS_CELLSIZE    FFFFFFDC ; inl
-: IO_SYS_ID          FFFFFFD8 ; inl
-: IO_SYS_CYCLECOUNT  FFFFFFD4 ; inl
+: IO_SYS_SELECTOR    FFFFFFEC ; inl
+: IO_SYS_VALUE       FFFFFFE8 ; inl
+: SYS_STATUS                1 ; inl
+: SYS_TERMINATE             2 ; inl
+: SYS_STACKSIZE             3 ; inl
+: SYS_MEMSIZE               4 ; inl
+: SYS_CELLSIZE              5 ; inl
+: SYS_ID                    6 ; inl
+: SYS_CYCLES                7 ; inl
 : CELL_STACK_POINTER FFFFFFFF ; inl
 
 public
 \ terminate the program
-: terminate ( n -- ) IO_SYS_TERMINATE ! ;
+: terminate ( n -- )
+  SYS_TERMINATE IO_SYS_SELECTOR ! IO_SYS_VALUE !
+  ;
 
 \ halt the VM
-: halt ( -- ) -1 IO_SYS_STATUS ! ;
+: halt ( -- )
+  SYS_STATUS IO_SYS_SELECTOR ! -1 IO_SYS_VALUE !
+  ;
 
 \ terminate the program successfully
 : bye ( -- ) 0 terminate tail ; noexit
@@ -117,22 +123,35 @@ public
 : rsp ( -- addr ) CELL_STACK_POINTER rstack tail ; noexit
 
 \ Address of the status
-: status ( -- addr ) IO_SYS_STATUS ; inl
+: status ( -- addr )
+  SYS_STATUS IO_SYS_SELECTOR ! IO_SYS_VALUE
+  ;
 
 \ obtains the memory size
-: stacksize ( -- u ) IO_SYS_STACKSIZE @ ;
+: stacksize ( -- u )
+  SYS_STACKSIZE IO_SYS_SELECTOR ! IO_SYS_VALUE @
+  ;
 
 \ obtains the memory size
-: memsize ( -- u ) IO_SYS_MEMSIZE @ ;
+: memsize ( -- u )
+  SYS_MEMSIZE IO_SYS_SELECTOR ! IO_SYS_VALUE @
+  ;
 
 \ obtains the size of a cell
-: cellsize ( -- u ) IO_SYS_CELLSIZE @ ;
+: cellsize ( -- u )
+  SYS_CELLSIZE IO_SYS_SELECTOR ! IO_SYS_VALUE @
+  ;
 
 \ obtains the ID of the VM
-: sysid ( -- u ) IO_SYS_ID @ ;
+: id ( -- u )
+  SYS_ID IO_SYS_SELECTOR ! IO_SYS_VALUE @
+  ;
 
 \ obtains the number of cycles executed
-: cyclecount ( -- u ) IO_SYS_CYCLECOUNT @ ;
+: cycles ( -- u )
+  SYS_CYCLES IO_SYS_SELECTOR ! IO_SYS_VALUE @
+  ;
+
 }scope
 
 ( *** deferred words *** )

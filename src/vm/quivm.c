@@ -5,10 +5,6 @@
 
 #include "vm/quivm.h"
 
-/* Some constants */
-#define DEFAULT_STACKSIZE      0x00000400
-#define DEFAULT_MEMSIZE        0x00100000
-
 /* Macros */
 #define BSWAP(n) ((uint32_t) ((((n) & 0xFFU) << 24) |  \
                               (((n) & 0xFF00U) << 8) | \
@@ -25,10 +21,44 @@
 
 /* Functions */
 
-int quivm_init(struct quivm *qvm)
+int quivm_init(struct quivm *qvm, uint32_t stacksize, uint32_t memsize)
 {
-    qvm->stacksize = DEFAULT_STACKSIZE;
-    qvm->memsize = DEFAULT_MEMSIZE;
+    qvm->dstack = NULL;
+    qvm->rstack = NULL;
+    qvm->mem = NULL;
+
+    /* validate the stacksize parameter */
+    if (stacksize < 4 * STACK_THRESHOLD) {
+        quivm_destroy(qvm);
+        fprintf(stderr, "vm/quivm: init: "
+                "stacksize is too small\n");
+        return 1;
+    }
+
+    /* validate the memsize parameter */
+    if ((memsize % 4) != 0) {
+        quivm_destroy(qvm);
+        fprintf(stderr, "vm/quivm: init: "
+                "memsize is not multiple of 4\n");
+        return 1;
+    }
+
+    if (memsize < 0x80000) {
+        quivm_destroy(qvm);
+        fprintf(stderr, "vm/quivm: init: "
+                "memsize too small\n");
+        return 1;
+    }
+
+    if (memsize > IO_BASE) {
+        quivm_destroy(qvm);
+        fprintf(stderr, "vm/quivm: init: "
+                "memsize too large\n");
+        return 1;
+    }
+
+    qvm->stacksize = stacksize;
+    qvm->memsize = memsize;
 
     qvm->dstack = (uint32_t *) malloc(qvm->stacksize * sizeof(uint32_t));
     qvm->rstack = (uint32_t *) malloc(qvm->stacksize * sizeof(uint32_t));
@@ -80,10 +110,10 @@ void quivm_reset(struct quivm *qvm)
     qvm->dsp = 1; /* leave a sentinel value of zero */
     qvm->rsp = 0;
     qvm->scell = CELL_STACK_POINTER;
+    qvm->selector = 0;
     qvm->status = 0;
     qvm->termvalue = 0;
-
-    qvm->cyclecount = 0;
+    qvm->cycles = 0;
 }
 
 int quivm_load(struct quivm *qvm, const char *filename,
@@ -152,7 +182,7 @@ int quivm_step(struct quivm *qvm)
         return -1;
 
     /* update cycle count */
-    qvm->cyclecount++;
+    qvm->cycles++;
 
     /* check if it has halted */
     if (qvm->status & STS_HALTED)
@@ -364,7 +394,7 @@ int quivm_run(struct quivm *qvm, uint32_t max_steps)
                 return 0;
             }
 
-            qvm->cyclecount += max_steps - step;
+            qvm->cycles += max_steps - step;
             break;
         }
     }
@@ -425,23 +455,19 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
                 v = quivm_stack_read(qvm, 1, qvm->scell);
             }
             break;
-        case IO_SYS_STATUS:
-            v = qvm->status;
+        case IO_SYS_SELECTOR:
+            v = qvm->selector;
             break;
-        case IO_SYS_STACKSIZE:
-            v = qvm->stacksize;
-            break;
-        case IO_SYS_MEMSIZE:
-            v = qvm->memsize;
-            break;
-        case IO_SYS_CELLSIZE:
-            v = 4;
-            break;
-        case IO_SYS_ID:
-            v = 0; /* TODO: add some meaning to this */
-            break;
-        case IO_SYS_CYCLECOUNT:
-            v = qvm->cyclecount;
+        case IO_SYS_VALUE:
+            switch (qvm->selector) {
+            case SYS_STATUS:    v = qvm->status; break;
+            case SYS_STACKSIZE: v = qvm->stacksize; break;
+            case SYS_MEMSIZE:   v = qvm->memsize; break;
+            case SYS_CELLSIZE:  v = 4; break;
+            case SYS_ID:        v = 0; break; /* TODO: set proper value */
+            case SYS_CYCLES:    v=  qvm->cycles; break;
+            default: v = -1; break;
+            }
             break;
         default:
             v = -1;
@@ -490,13 +516,20 @@ void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
                 quivm_stack_write(qvm, 1, qvm->scell, v);
             }
             break;
-        case IO_SYS_STATUS:
-            qvm->status &= ~(STS_EXCEPTION | STS_HALTED);
-            qvm->status |= v & STS_HALTED;
+        case IO_SYS_SELECTOR:
+            qvm->selector = v;
             break;
-        case IO_SYS_TERMINATE:
-            qvm->termvalue = v;
-            qvm->status |= STS_TERMINATED;
+        case IO_SYS_VALUE:
+            switch (qvm->selector) {
+            case SYS_STATUS:
+                qvm->status &= ~(STS_EXCEPTION | STS_HALTED);
+                qvm->status |= v & STS_HALTED;
+                break;
+            case SYS_TERMINATE:
+                qvm->termvalue = v;
+                qvm->status |= STS_TERMINATED;
+                break;
+            }
             break;
         }
         return;

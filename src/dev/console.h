@@ -7,13 +7,13 @@
 
 /* Constants */
 /* The I/O address space for the console device */
-#define IO_CONSOLE_BASE         0xFFFFFF80
-#define IO_CONSOLE_END          0xFFFFFFC0
+#define IO_CONSOLE_BASE         0xFFFFFFC0
+#define IO_CONSOLE_END          0xFFFFFFE0
 
 /* Addresses within the console device */
-#define IO_CONSOLE_IN           0xFFFFFFBC
-#define IO_CONSOLE_OUT          0xFFFFFFB8
-#define IO_CONSOLE_CHANNEL      0xFFFFFFB4
+#define IO_CONSOLE_IN           0xFFFFFFDC
+#define IO_CONSOLE_OUT          0xFFFFFFD8
+#define IO_CONSOLE_CHANNEL      0xFFFFFFD4
 
 /* Possible channels */
 #define CONSOLE_ICHANNEL_STDIN          00
