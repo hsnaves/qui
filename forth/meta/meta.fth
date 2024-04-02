@@ -33,17 +33,19 @@ forth context !
 internal forth node>next !
 wordbuf forth dict>code !
 wordbuf forth dict>data !
+0 forth dict>index !
 
 \ initialize the internal dictionary
 0 internal dict>last !
 0 internal node>next !
 wordbuf internal dict>code !
 wordbuf internal dict>data !
+0 internal dict>index !
 
 \ initialize the wordbuffer
 \ use smaller size here
-88 wordbuf buf>here !
-88 wordbuf buf>start !
+94 wordbuf buf>here !
+94 wordbuf buf>start !
 10000 wordbuf buf>end !
 0 wordbuf buf>off !
 
@@ -52,6 +54,7 @@ wordbuf internal dict>data !
 0 temp node>next !
 tmpbuf temp dict>code !
 tmpbuf temp dict>data !
+0 temp dict>index !
 
 \ initialize the tmpbuffer
 \ make it smaller here to fit the current

@@ -143,11 +143,12 @@ F_IMM swap toggleflags \ set then to immediate
 
 \ word to create a dictionary
 : dictionary ( -- )
-  align here @ 10 var
+  align here @ [ 4 dict>index ] lit var
   0 over dict>last !
   0 over node>next !
   wordbuf over dict>code !
-  wordbuf swap dict>data !
+  wordbuf over dict>data !
+  0 swap dict>index !
   ;
 
 \ uses a dictionary (appends to context)

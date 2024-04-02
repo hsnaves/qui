@@ -3,16 +3,18 @@ hex
 
 ( *** definition words for working with dictionaries *** )
 \ node sibling
-: node>next ( addr -- addr' )     ; inl
+: node>next ( addr -- addr' )      ; inl
 \ the value of the node
-: node>val ( addr -- addr' ) 04 + ; inl
+: node>val ( addr -- addr' )  04 + ; inl
 
 \ last word of dictionary
-: dict>last ( addr -- addr ) 04 + ; inl
+: dict>last ( addr -- addr )  04 + ; inl
 \ buffer for code in dictinary
-: dict>code ( addr -- addr ) 08 + ; inl
+: dict>code ( addr -- addr )  08 + ; inl
 \ buffer for data in dictionary
-: dict>data ( addr -- addr ) 0C + ; inl
+: dict>data ( addr -- addr )  0C + ; inl
+\ index data in dictionary
+: dict>index ( addr -- addr ) 10 + ; inl
 
 ( *** useful words for compilation *** )
 \ the current code buffer

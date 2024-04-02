@@ -4,10 +4,10 @@ hex
 scope{
 auxiliary
 ( *** variables for scope implementation *** )
-: temp        60 ; inl
-: tmpbuf      70 ; inl
-: templink    80 ; inl
-: tempcurr    84 ; inl
+: temp        68 ; inl
+: tmpbuf      7C ; inl
+: tnode       8C ; inl
+: tcurr       90 ; inl
 
 private
 \ obtains the xt of the exec word
@@ -23,5 +23,5 @@ public
 ( *** redefine variables in meta scope *** )
 : temp        temp     ; inl
 : tmpbuf      tmpbuf   ; inl
-: templink    templink ; inl
-: tempcurr    tempcurr ; inl
+: tnode       tnode    ; inl
+: tcurr       tcurr    ; inl

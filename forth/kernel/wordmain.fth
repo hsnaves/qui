@@ -48,9 +48,7 @@ hex
 
 ( *** implementation of the lookup word *** )
 
-scope{
-private
-\ finds a word in the dictionary at given address
+\ finds a word in the dictionary
 : lookup1 ( c-str n dict -- addr )
   swap >r swap >r
   dict>last @
@@ -64,6 +62,9 @@ private
     rdrop rdrop
   end
   ;
+
+scope{
+private
 
 \ finds a word in the current (and sibling) dictionaries
 : lookupcurrent ( c-str n -- addr )

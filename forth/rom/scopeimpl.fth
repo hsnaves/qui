@@ -12,9 +12,9 @@ hex
   tmpbuf [ temp dict>code ] lit !
   tmpbuf [ temp dict>data ] lit !
 
-  \ clear the templink and tempcurr
-  currnext templink node-link
-  temp tempcurr !
+  \ clear the tnode and tcurr
+  currnext tnode node-link
+  temp tcurr !
 
   \ set the context to the temp
   temp use tail
@@ -24,8 +24,8 @@ hex
 : public ( -- )
   current @ temp =
   if
-     tempcurr @ current !
-     temp tempcurr !
+     tcurr @ current !
+     temp tcurr !
   then
   ;
 
@@ -33,7 +33,7 @@ hex
 : private ( -- )
   public
   current @
-  dup tempcurr !
+  dup tcurr !
   temp current !
   dict>code @
   [ temp dict>code ] lit !

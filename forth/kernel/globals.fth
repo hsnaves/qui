@@ -13,6 +13,6 @@ hex
 : base ( -- addr )     1E ; inl
 : janum ( -- addr )    1F ; inl
 : forth ( -- addr )    20 ; inl
-: internal ( -- addr ) 30 ; inl
-: wordbuf ( -- addr )  40 ; inl
-: tib ( -- addr )      50 ; inl
+: internal ( -- addr ) 34 ; inl
+: wordbuf ( -- addr )  48 ; inl
+: tib ( -- addr )      58 ; inl

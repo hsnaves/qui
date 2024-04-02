@@ -22,6 +22,8 @@ public
   ;
 
 private
+
+\ finds the address of the slot containing a given hash
 : hfind-slot ( hash htable -- addr )
   over >r                       \ d: hash htable | r: hash
   dup >r htable-table swap      \ d: start hash | r: hash htable
@@ -30,33 +32,52 @@ private
   3 shl r@ htable-table +       \ d: start size pos | r: hash htable
   swap 3 shl r> htable-table +  \ d: start pos end | r: hash
   begin
-    over @ 4 + @                \ d: start pos end hasword? | r: hash
+    over 4 + @                  \ d: start pos end hasword? | r: hash
     if
       over @ r@ <>              \ d: start pos end diff? | r: hash
       if
-         swap 8 + over =        \ d: start end pos' end? | r:hash
+         swap 8 + swap          \ d: start pos' end | r: hash
+         2dup =                 \ d: start pos end end? | r: hash
          if
-            drop over swap      \ d: start pos' end | r:hash
-            again
+            nip over swap       \ d: start pos' end | r: hash
          then
+         again
       then
     then
   end
-  drop nip rdrop
+  drop nip
+  r> over !                     \ write the hash
   ;
 
+\ increments the counter of the hash table
 : hincrement ( htable -- )
   htable-count dup @
   1+ swap !
   ;
 
 public
+
+\ creates a new hash table
+: hcreate ( size -- htable )
+  align here @ swap
+  dup , 0 ,
+  begin
+    dup if
+      0 , 0 ,
+      1- again
+    then
+  end
+  drop
+  ;
+
+\ checks if the hash table is full
 : hfull? ( htable -- full? )
   dup htable-count @
   swap htable-size @
   u< =0
   ;
 
+\ looks up a given string in the hash table
 : hlookup ( c-str n htable -- v )
   >r 2dup hash r>               \ d: c-str n hash htable
   hfind-slot                    \ d: c-str n addr
@@ -64,6 +85,7 @@ public
   nip nip
   ;
 
+\ inserts a given string in the hash table
 : hinsert ( c-str n v htable -- ok? )
   dup hfull?                    \ d: c-str n v htable full?
   if 2drop 2drop 0 exit then    \ d: 0
@@ -80,4 +102,7 @@ public
   r> swap 4 + !                 \ d: c-str n
   2drop 1 exit
   ;
+
 }scope
+
+decimal
