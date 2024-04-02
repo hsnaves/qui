@@ -9,7 +9,7 @@
 /* Constants */
 #define NUM_CHANNELS                    16
 #define BUFFER_SIZE                   8192
-#define SAMPLES_PER_UPDATE              46
+#define SAMPLES_PER_UPDATE             735
 
 /* Data structures and types */
 struct envelope {
