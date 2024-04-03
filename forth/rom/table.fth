@@ -3,41 +3,6 @@ hex
 
 scope{
 public
-\ variable space
-align here @ 14 allot
-
-ephemeral
-: table-buffer [ dup ] lit           ; inl
-: scratch-buffer [ 04 + ] lit        ; inl
-
-: table-size                     200 ; inl
-: table>count ( addr -- addr' )      ; inl
-: table>data  ( addr -- addr' ) 04 + ; inl
-
-\ size of the global buffer
-: scratch-buffer-size          10040 ; inl
-
-wordbuf table-buffer !
-
-\ initialize the global buffer
-0 scratch-buffer buf>here !
-0 scratch-buffer buf>start !
-0 scratch-buffer buf>off !
-0 scratch-buffer buf>end !
-
-\ initializes the scratch-buffer
-: hash_initialize ( -- )
-  [ onboot @ ] lit exec
-  scratch-buffer-size alloc
-  dup [ scratch-buffer buf>here ] lit !
-  dup [ scratch-buffer buf>start ] lit !
-  scratch-buffer-size +
-  [ scratch-buffer buf>end ] lit !
-  scratch-buffer table-buffer !
-  ;
-last @ >xt onboot !
-
-public
 \ computes the hash of a counted string
 : hash ( c-str n -- hash )
   0 >r
@@ -51,12 +16,89 @@ public
   2drop r>
   ;
 
+\ word to create a variable
+: var ( size -- )
+  here @ swap allot
+  create lit, wrapup
+  inl tail
+  ; noexit
+
+\ variable space
+align here @ 0C buf>end allot
+
+ephemeral
+: num-tables [ dup ] lit  ; inl
+: indices [ 4 + dup ] lit ; inl
+: main-buffer [ 4 + ] lit ; inl
+
+: max-tables                                         10 ; inl
+: table-capacity                                    200 ; inl
+: table>count ( addr -- addr' )                         ; inl
+: table>dict ( addr -- addr' )                      4 + ; inl
+: table>data  ( addr -- addr' )                     8 + ; inl
+: table-bytes [ table-capacity 3 shl table>data ]   lit ; inl
+: main-buffer-size [ table-bytes 4 + max-tables * ] lit ; inl
+
 private
+
+\ initialize the variables
+0 num-tables !
+0 indices !
+0 main-buffer buf>here !
+0 main-buffer buf>start !
+0 main-buffer buf>off !
+0 main-buffer buf>end !
+
+\ initializes the main-buffer
+: allocate-main-buffer ( -- )
+  main-buffer-size alloc
+  dup [ main-buffer buf>here ] lit !
+  dup [ main-buffer buf>start ] lit !
+  dup main-buffer-size +
+  [ main-buffer buf>end ] lit !
+  indices ! 0 num-tables !
+  [ max-tables 2 shl ] lit
+  main-buffer %allot tail
+  ;
+
+allocate-main-buffer
+
+\ initializes the table
+: table-initialize ( -- )
+  [ onboot @ ] lit exec
+  allocate-main-buffer tail
+  ; noexit
+last @ >xt onboot !
+
+\ fills the buffer with n zeros ( slots )
+: zero-fill-slots ( buf n -- )
+  swap >r
+  begin
+    dup if
+      0 r@ %,
+      1- again
+    then
+  end
+  drop rdrop
+  ;
+
+\ creates a new hash table
+: new-table ( -- table )
+  num-tables @ dup max-tables u>=
+  if drop 0 exit then
+  main-buffer dup %align
+  dup buf>here @ swap
+  [ table-capacity 1 shl 1+ ] lit
+  zero-fill-slots
+  >r r@ over 2 shl indices @ + !
+  1+ num-tables ! r>
+  ;
+
 \ finds the address of the slot containing a given hash
 : find-slot ( hash table -- addr )
   over >r
   dup >r table>data swap
-  table-size
+  table-capacity
   tuck u/mod drop
   3 shl r@ table>data +
   swap 3 shl r> table>data +    \ d: start pos end | r: hash
@@ -81,22 +123,13 @@ private
 \ increments the counter of the hash table
 : increment-count ( table -- err? )
   table>count dup @
-  dup table-size u<
+  dup table-capacity u<
   if 1+ swap ! 0 exit then
   2drop 1
   ;
 
-\ looks up a given string in the hash table
-: table-lookup ( c-str n dict -- addr )
-  dict>index @ >r 2dup hash r> find-slot
-  4 + @                         \ d: c-str n addr
-  >r r@ >name compare r> swap
-  if drop 0 then
-  ;
-\ ' table-lookup is (index-lookup)
-
 \ checks if the given hash is occupied
-: table-slot ( addr table -- slot )
+: word-slot ( addr table -- slot )
   >r >name hash r> find-slot tail
   ; noexit
 
@@ -112,41 +145,16 @@ private
   4 + !
   ;
 
-\ inserts a given string in the hash table
-: table-insert ( addr dict -- )
-  dict>index @ >r dup r@
-  table-slot                    \ d: addr slot | r: table
-  r> slot-set tail
-  ; noexit
-\ ' table-insert is (index-insert)
-
-\ creates a new hash table
-: table-create ( -- table )
-  table-buffer @ >r
-  r@ %align
-  r@ buf>here @
-  0 r@ %,
-  table-size
-  begin
-    dup if
-      0 r@ %,
-      0 r@ %,
-      1- again
-    then
-  end
-  drop rdrop
-  ;
-
-public
-
 \ builds the index of a dictionary
 : build-index ( dict -- )
-  table-create >r
-  r@ over dict>index !
+  new-table
+  dup =0 if swap dict>index ! exit then
+  2dup table>dict !
+  >r num-tables @ over dict>index !
   dict>last @
   begin
     dup if
-      dup r@ table-slot
+      dup r@ word-slot
       dup 4 + @ =0
       if 2dup r@ slot-set then
       drop
@@ -156,5 +164,63 @@ public
   drop rdrop
   ;
 
+\ resolve the table from an index
+: resolve-table-simple ( dict -- table )
+  dup dict>index @
+  num-tables @ over u<
+  \ try to rebuild the index
+  if 2drop 0 exit then
+  1- 2 shl indices @ + @
+  tuck table>dict @ <>
+  if drop 0 then
+  ;
+
+\ resolve the table from an index
+: resolve-table ( dict -- table )
+  dup resolve-table-simple dup =0
+  if
+    drop dup build-index
+    dup resolve-table-simple
+  then
+  nip
+  ;
+
+\ looks up a given string in the hash table
+: index-lookup ( c-str n dict -- addr )
+  resolve-table dup =0
+  if nip nip exit then
+  >r 2dup hash r> find-slot
+  4 + @                         \ d: c-str n addr
+  >r r@ >name compare r> swap
+  if drop 0 then
+  ;
+' index-lookup is (index-lookup)
+
+\ inserts a given string in the hash table
+: index-insert ( addr dict -- )
+  resolve-table dup =0
+  if nip exit then
+  >r dup r@
+  word-slot                     \ d: addr slot | r: table
+  r> slot-set tail
+  ; noexit
+' index-insert is (index-insert)
+
+public
+
+\ word to create a dictionary
+: dictionary ( -- )
+  align here @ [ 4 dict>index ] lit var
+  0 over dict>last !
+  0 over node>next !
+  wordbuf over dict>code !
+  wordbuf over dict>data !
+  0 over dict>index !
+  build-index tail
+  ; \ noexit
+
 }scope
 
+1 forth dict>index !
+2 internal dict>index !
+3 extra dict>index !

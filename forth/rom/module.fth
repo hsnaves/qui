@@ -4,7 +4,7 @@ hex
 scope{
 public
 \ variable space
-align here @ 14 allot
+align here @ 8 buf>end allot
 
 ephemeral
 : module-current [ dup ] lit            ; inl

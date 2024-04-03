@@ -58,7 +58,7 @@ private
 public
 ( read / write in meta system )
 \ read cell in meta system
-: @ ( addr -- v ) addr>host @ ;
+: @ ( addr -- v ) addr>host @ ; inl
 
 \ write cell in meta system
 : ! ( v addr -- )
@@ -67,7 +67,7 @@ public
   ;
 
 \ read byte in meta system
-: c@ ( addr -- v ) addr>host c@ ;
+: c@ ( addr -- v ) addr>host c@ ; inl
 
 \ write byte in meta system
 : c! ( v addr -- )
