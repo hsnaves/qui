@@ -172,8 +172,6 @@ int quivm_load(struct quivm *qvm, const char *filename,
 int quivm_step(struct quivm *qvm);
 
 /* Runs the virtual machine for `max_steps`.
- * If `max_steps` is zero, this function runs until the virtual
- * machine is halted or terminated.
  * Returns nonzero if the machine has not yet terminated.
  */
 int quivm_run(struct quivm *qvm, uint32_t max_steps);

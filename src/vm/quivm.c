@@ -177,16 +177,15 @@ int quivm_step(struct quivm *qvm)
     uint32_t old_pc;
     uint8_t insn;
 
-    /* check if it has terminated */
-    if (qvm->status & STS_TERMINATED)
-        return -1;
-
     /* update cycle count */
     qvm->cycles++;
 
-    /* check if it has halted */
-    if (qvm->status & STS_HALTED)
+    /* check if it has terminated or halted */
+    if (qvm->status & (STS_TERMINATED | STS_HALTED)) {
+        if (qvm->status & STS_TERMINATED)
+            return -1;
         return 0;
+    }
 
     /* Detect stack overflow
      * Overflows are detected even if the last
@@ -199,8 +198,8 @@ int quivm_step(struct quivm *qvm)
         return 1;
     }
 
-    old_pc = qvm->pc;
-    insn = quivm_read_byte(qvm, qvm->pc++);
+    old_pc = qvm->pc++;
+    insn = quivm_read_byte(qvm, old_pc);
 
     if (insn < INSN_LIT_BASE) {
         qvm->acc <<= 7;
@@ -377,25 +376,12 @@ int quivm_run(struct quivm *qvm, uint32_t max_steps)
     int ret;
 
     step = 0;
-    while ((step++ < max_steps) || (max_steps == 0)) {
+    while (step++ < max_steps) {
         ret = quivm_step(qvm);
         /* check if terminated */
-        if (ret < 0) return 0;
-
-        if (ret == 0) { /* halted */
-            if (max_steps == 0) {
-                /* halted, and max_steps == 0, this means
-                 * that the machine has frozen
-                 */
-                fprintf(stderr, "vm/quivm: run: "
-                        "halted forever\n");
-                qvm->status |= STS_TERMINATED;
-                qvm->termvalue = 1;
-                return 0;
-            }
-
+        if (ret <= 0) {
             qvm->cycles += max_steps - step;
-            break;
+            return (ret == 0);
         }
     }
     return 1;

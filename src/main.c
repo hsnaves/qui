@@ -20,7 +20,7 @@
 #include "dev/timer.h"
 
 /* Constants */
-#define NUM_INSN_PER_FRAME         1280000
+#define NUM_INSN_PER_FRAME         1000000
 
 /* Global variables */
 #ifdef USE_SDL
