@@ -48,8 +48,26 @@ hex
 
 ( *** implementation of the lookup word *** )
 
+\ detect if the meta compiler is present
+\ the stack will contain the address of the internal
+\ dictionary or the meta dictionary
+word meta 0 lookup =0
+dup internal and swap =0 current @ and or
+
+current @ swap current !
+\ align defer (index-lookup)
+\ align defer (index-insert)
+current !
+
 \ finds a word in the dictionary
 : lookup1 ( c-str n dict -- addr )
+  \ dup dict>index @
+  \ if
+  \   >r 2dup r@ (index-lookup)
+  \   dup if rdrop nip nip exit then
+  \   drop r>
+  \ then
+
   swap >r swap >r
   dict>last @
   begin                         \ d: addr | r: n c-str
@@ -192,6 +210,10 @@ public
 \ to end a word definition in the dictionary
 : wrapup ( addr -- )
   exit,
-  this @ last !
+  this @ \ dup
+  last !
+  \ current @ dup dict>index @
+  \ if 2dup (index-insert) then
+  \ 2drop
   0 this !
   ;

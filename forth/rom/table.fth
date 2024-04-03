@@ -86,7 +86,39 @@ private
   2drop 1
   ;
 
-public
+\ looks up a given string in the hash table
+: table-lookup ( c-str n dict -- addr )
+  dict>index @ >r 2dup hash r> find-slot
+  4 + @                         \ d: c-str n addr
+  >r r@ >name compare r> swap
+  if drop 0 then
+  ;
+\ ' table-lookup is (index-lookup)
+
+\ checks if the given hash is occupied
+: table-slot ( addr table -- slot )
+  >r >name hash r> find-slot tail
+  ; noexit
+
+\ set the value of a slot
+: slot-set ( addr slot table -- )
+  over 4 + @
+  if
+    drop
+  else
+    increment-count
+    if 2drop exit then
+  then
+  4 + !
+  ;
+
+\ inserts a given string in the hash table
+: table-insert ( addr dict -- )
+  dict>index @ >r dup r@
+  table-slot                    \ d: addr slot | r: table
+  r> slot-set tail
+  ; noexit
+\ ' table-insert is (index-insert)
 
 \ creates a new hash table
 : table-create ( -- table )
@@ -105,29 +137,24 @@ public
   drop rdrop
   ;
 
-\ looks up a given string in the hash table
-: table-lookup ( c-str n table -- addr )
-  >r 2dup hash r> find-slot
-  4 + @                         \ d: c-str n addr
-  >r r@ >name compare r> swap
-  if drop 0 then
-  ;
+public
 
-\ inserts a given string in the hash table
-: table-insert ( addr table -- )
-  \ dup table-full?
-  \ if 2drop exit then
-  over >r >r
-  >name hash r@
-  find-slot                     \ d: slot | r: addr table
-  dup 4 + @
-  if
-    rdrop
-  else
-    r> increment-count
-    if drop rdrop exit then
-  then
-  r> swap 4 + !
+\ builds the index of a dictionary
+: build-index ( dict -- )
+  table-create >r
+  r@ over dict>index !
+  dict>last @
+  begin
+    dup if
+      dup r@ table-slot
+      dup 4 + @ =0
+      if 2dup r@ slot-set then
+      drop
+      >link again
+    then
+  end
+  drop rdrop
   ;
 
 }scope
+
