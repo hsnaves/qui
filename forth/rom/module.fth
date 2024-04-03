@@ -11,26 +11,24 @@ ephemeral
 : global-buffer [ 4 + ] lit             ; inl
 
 \ offsets within the structure
-: file-name   ( addr -- addr' )     4 + ; inl
-: file-offset ( addr -- addr' )     8 + ; inl
-: prev-getc ( addr -- addr' )      0C + ; inl
-: str-buffer ( addr -- addr' )     10 + ; inl
-: buffer-start  ( addr -- addr' )  20 + ; inl
+: mod>filename   ( addr -- addr' )  4 + ; inl
+: mod>offset ( addr -- addr' )      8 + ; inl
+: mod>pgetc ( addr -- addr' )      0C + ; inl
+: mod>strbuf ( addr -- addr' )     10 + ; inl
+: mod>bufstart  ( addr -- addr' )  20 + ; inl
 
-: str-buffer-here ( addr -- addr' )
-  [ 0 str-buffer buf>here ] lit
-  +
+: mod>strbuf-here ( addr -- addr' )
+  [ 0 mod>strbuf buf>here ] lit +
   ; inl
 
-: str-buffer-off ( addr -- addr' )
-  [ 0 str-buffer buf>off ] lit
-  +
+: mod>strbuf-off ( addr -- addr' )
+  [ 0 mod>strbuf buf>off ] lit +
   ; inl
 
 \ sizes of the buffer and of the structure
 : buffer-size                       100 ; inl
 : struct-size
-  [ buffer-size buffer-start ] lit
+  [ buffer-size mod>bufstart ] lit
   ; inl
 
 \ size of the global buffer
@@ -40,13 +38,18 @@ ephemeral
 
 private
 
+\ initialize the global buffer
+0 global-buffer buf>here !
+0 global-buffer buf>start !
+0 global-buffer buf>off !
+0 global-buffer buf>end !
+
 \ initializes the global-buffer
 : module_initialize ( -- )
   [ onboot @ ] lit exec
   global-buffer-size alloc
   dup [ global-buffer buf>here ] lit !
   dup [ global-buffer buf>start ] lit !
-  0 [ global-buffer buf>off ] lit !
   global-buffer-size +
   [ global-buffer buf>end ] lit !
   ;
@@ -61,7 +64,7 @@ last @ >xt onboot !
 
 \ install the module
 : uninstall-module ( addr -- )
-  dup prev-getc @
+  dup mod>pgetc @
   \ obtain the previous value of getc
   [ defer-ptr getc ] lit !
   \ link the module
@@ -75,41 +78,41 @@ last @ >xt onboot !
   1 channel c!
   [ swap ] lit lit type
   dup uninstall-module
-  file-name @ dup 0 char-find
+  mod>filename @ dup 0 char-find
   error tail
   ; noexit
 
 \ reads the file and fills the buffer
 \ returns the number of bytes red
 : fill-buffer ( addr -- n )
-  dup file-name @ file-name!
-  dup buffer-start >r           \ d: addr | r: start
-  r@ over str-buffer-off !
-  dup file-offset @
+  dup mod>filename @ file-name!
+  dup mod>bufstart >r           \ d: addr | r: start
+  r@ over mod>strbuf-off !
+  dup mod>offset @
   r@ buffer-size 1 file-do      \ d: addr n | r: start
   dup 0 <
   if rdrop drop file-error tail then
   >r                            \ d: addr | r: start n
-  dup file-offset
+  dup mod>offset
   dup @ r@ + swap !
   r> r> over +                  \ d: addr n vhere
-  rot str-buffer-here !
+  rot mod>strbuf-here !
   ;
 
 \ implementation of getc for the module
 : module-getc ( -- c )
   module-current @
-  dup str-buffer-off @
-  over str-buffer-here @
+  dup mod>strbuf-off @
+  over mod>strbuf-here @
   over u<=                      \ d: addr voff full?
   if
     drop dup fill-buffer =0
     if uninstall-module getc tail then
-    dup str-buffer-off @
+    dup mod>strbuf-off @
   then
   dup c@                        \ d: addr voff c
   swap 1+
-  rot str-buffer-off !
+  rot mod>strbuf-off !
   ;
 
 \ install the current module
@@ -117,7 +120,7 @@ last @ >xt onboot !
   \ obtain the previous value of getc
   [ defer-ptr getc ] lit
   2dup @
-  swap prev-getc !
+  swap mod>pgetc !
   [ ' module-getc ] lit
   swap !
   \ link the module
@@ -130,13 +133,13 @@ last @ >xt onboot !
 \ initializes the structure for the module
 \ except for the filename
 : init-struct ( addr -- )
-  dup str-buffer
-  dup buffer-start swap
+  dup mod>strbuf
+  dup mod>bufstart swap
   2dup buf>start !
   2dup buf>here !
   buf>off !
   \ buf>end was already initialized in allocate-space
-  0 over file-offset !
+  0 over mod>offset !
   install-module tail
   ; noexit
 
@@ -152,7 +155,7 @@ internal current !
   dup init-struct
   dup struct-size +
   swap over swap
-  file-name !
+  mod>filename !
   str-copy
   ;
 forth current !

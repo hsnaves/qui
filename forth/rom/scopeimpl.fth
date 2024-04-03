@@ -89,7 +89,6 @@ private
    TMPBUF_SIZE alloc
    dup [ tmpbuf buf>here ] lit !
    dup [ tmpbuf buf>start ] lit !
-   0 [ tmpbuf buf>off ] lit !
    TMPBUF_SIZE + [ tmpbuf buf>end ] lit !
    ;
 last @ >xt onboot !

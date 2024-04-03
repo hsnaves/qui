@@ -220,31 +220,49 @@ forth current !
 
 scope{
 private
-\ prints the words in a given dictionary
-: words1 ( dict -- )
+\ calls the xt on each word of the dictionary
+\ and one with the zero address ( to signal the end of list )
+: process-dict ( xt dict -- )
   dict>last @
   begin
+    2dup swap exec
     dup if
-      dup >name
-      type space
       >link
       again
     then
   end
-  drop
+  2drop
   ;
 
+\ print a word
+: print-word ( word -- )
+  dup if
+     >name type space tail
+  then
+  drop nl nl tail
+  ; noexit
+
 public
-\ prints the words in the context
-: words ( -- )
+internal current !
+
+\ implementation of words with a callback
+: (words) ( xt -- )
   context @
   begin
     dup if
-      dup words1 nl nl
+      2dup process-dict
       node>next @
       again
     then
   end
-  drop
+  2drop
   ;
+
+forth current !
+
+\ prints the words in the context
+: words ( -- )
+  [ ' print-word ] lit
+  (words) tail
+  ; noexit
 }scope
