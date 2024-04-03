@@ -132,32 +132,10 @@ current !
   lit, tail
   ; noexit imm
 
-\ word to create a variable
-: var ( size -- )
-  here @ swap allot
-  create lit, wrapup
-  inl tail
-  ; noexit
-
-\ word to create a dictionary
-: dictionary ( -- )
-  align here @ [ 4 dict>index ] lit var
-  0 over dict>last !
-  0 over node>next !
-  wordbuf over dict>code !
-  wordbuf over dict>data !
-  0 swap dict>index !
-  ;
-
 \ uses a dictionary (appends to context)
 : use ( addr -- )
   context swap
   node-link tail
-  ; noexit
-
-\ use of the first dictionary (set the context)
-: use* ( addr -- )
-  0 context ! use tail
   ; noexit
 
 \ no longer uses a given dictionary
@@ -167,10 +145,5 @@ current !
   if node-drop tail then
   drop
   ;
-
-\ drops the last dictionary from the context
-: discard* ( -- )
-  context node-drop tail
-  ; noexit
 
 drop

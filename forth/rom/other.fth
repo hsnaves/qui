@@ -1,6 +1,32 @@
 \ implementation of the dot "."  and related words
 hex
 
+\ set the context
+: set-context ( dictn ... dict2 dict1 n -- )
+  0 context !
+  begin
+    dup if swap use 1- again then
+  end
+  drop
+  ;
+
+\ word to create a variable
+: var ( size -- )
+  here @ swap allot
+  create lit, wrapup
+  inl tail
+  ; noexit
+
+\ word to create a dictionary
+: dictionary ( -- )
+  align here @ [ 4 dict>index ] lit var
+  0 over dict>last !
+  0 over node>next !
+  wordbuf over dict>code !
+  wordbuf over dict>data !
+  0 swap dict>index !
+  ;
+
 \ obtains the first character of the next word
 : char ( -- c )
   word

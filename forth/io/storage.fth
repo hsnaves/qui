@@ -4,7 +4,7 @@ hex
 extra current !
 
 scope{
-auxiliary
+ephemeral
 ( define constants )
 : IO_STORAGE_NAME   FFFFFFBC ; inl
 : IO_STORAGE_DATA   FFFFFFB8 ; inl
@@ -13,7 +13,6 @@ auxiliary
 : IO_STORAGE_OP     FFFFFFAC ; inl
 
 public
-
 \ set the name of the file to operate on
 : file-name! ( c-str -- ) IO_STORAGE_NAME ! ;
 

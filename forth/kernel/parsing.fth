@@ -17,7 +17,7 @@ public
   1 terminate tail
   ; noexit
 
-auxiliary
+ephemeral
 : TIB_SIZE 1000 ; inl
 
 private
@@ -34,7 +34,7 @@ last @ >xt onboot !
 }scope
 
 scope{
-auxiliary
+ephemeral
 \ checks for a newline
 : nl? ( c -- b ) 0A = ; inl
 
@@ -91,7 +91,7 @@ public
 }scope
 
 scope{
-auxiliary
+ephemeral
 \ checks if a character is blank
 : blank? ( c -- b )
   [ char ! ] lit u<

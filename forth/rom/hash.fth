@@ -2,7 +2,7 @@
 hex
 
 scope{
-auxiliary
+ephemeral
 : htable-size ( addr -- addr' )       ; inl
 : htable-count ( addr -- addr' ) 04 + ; inl
 : htable-table ( addr -- addr' ) 08 + ; inl

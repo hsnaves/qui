@@ -11,7 +11,7 @@ dictionary meta
 : h:lookup  [ ' lookup ] lit exec tail ; noexit
 
 scope{
-auxiliary
+ephemeral
 : META_BUFFER_SIZE 20000 ; inl
 
 public
@@ -22,7 +22,7 @@ public
 
 \ exit the meta-compilation dictionary
 : meta-exit ( -- )
-  discard*
+  meta discard
   rdrop \ drops from the meta interpreter
   ;
 
@@ -40,7 +40,7 @@ META_BUFFER_SIZE \ pass the value
 meta current !
 
 scope{
-auxiliary
+ephemeral
 : META_BUFFER_SIZE lit ; inl
 
 private

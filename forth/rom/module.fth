@@ -6,7 +6,7 @@ public
 \ variable space
 align here @ 14 allot
 
-auxiliary
+ephemeral
 : module-current [ dup ] lit            ; inl
 : global-buffer [ 4 + ] lit             ; inl
 

@@ -14,7 +14,7 @@ here @
 ," DUP  DROP SWAP OVER ROT  RTO  RFROMRPEEK" 2drop
 ," INVL " 2drop
 
-auxiliary
+ephemeral
 \ opcodes points to the table defined above
 : opcodes ( -- addr ) lit ; inl
 

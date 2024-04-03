@@ -2,7 +2,7 @@
 hex
 
 scope{
-auxiliary
+ephemeral
 ( *** variables for scope implementation *** )
 : temp        7C ; inl
 : tmpbuf      90 ; inl

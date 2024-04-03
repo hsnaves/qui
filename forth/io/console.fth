@@ -2,7 +2,7 @@
 hex
 
 scope{
-auxiliary
+ephemeral
 ( *** constants for the console *** )
 : IO_CONSOLE_IN       FFFFFFDC ; inl
 : IO_CONSOLE_OUT      FFFFFFD8 ; inl

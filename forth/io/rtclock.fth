@@ -4,7 +4,7 @@ hex
 extra current !
 
 scope{
-auxiliary
+ephemeral
 ( define constants )
 : IO_RTCLOCK_DATE    FFFFFF7C ; inl
 : IO_RTCLOCK_TIME    FFFFFF78 ; inl

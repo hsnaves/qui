@@ -39,8 +39,8 @@ hex
   [ temp dict>code ] lit !
   ;
 
-\ auxiliary declarations in the scope
-: auxiliary ( -- )
+\ ephemeral declarations in the scope
+: ephemeral ( -- )
   private
   tmpbuf [ temp dict>code ] lit !
   ;
@@ -48,7 +48,7 @@ hex
 \ stop the scope
 : }scope ( -- )
   public
-  discard*
+  context @ discard
   currnext node-drop tail
   ; noexit
 
@@ -79,7 +79,7 @@ current ! \ restore current
   defer-ptr !
   ;
 
-auxiliary
+ephemeral
 : TMPBUF_SIZE 10000 ; inl
 
 private

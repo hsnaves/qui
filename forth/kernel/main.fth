@@ -80,7 +80,7 @@ F_XT flags c!
 ( *** implementation of basic system words *** )
 
 scope{
-auxiliary
+ephemeral
 ( *** constants for the QUI vm *** )
 : IO_SYS_SCELL       FFFFFFF8 ; inl
 : IO_SYS_DSTACK      FFFFFFF4 ; inl

@@ -4,7 +4,7 @@ hex
 ( *** implementation of stack words *** )
 
 scope{
-auxiliary
+ephemeral
 \ fix the implementation of the word
 : fix_implementation ( -- )
   last @ >xt
