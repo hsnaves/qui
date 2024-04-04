@@ -35,6 +35,9 @@ last @ >xt onboot !
 
 scope{
 ephemeral
+\ checks for a end of line
+: eof? ( c -- b ) 0 < ; inl
+
 \ checks for a newline
 : nl? ( c -- b ) 0A = ; inl
 
@@ -56,6 +59,7 @@ public
     getc [ tib buf>here ] lit @
     2dup c!
     1+ [ tib buf>here ] lit !
+    dup eof? if bye tail then
     nl? =0
     if
       [ tib buf>here ] lit @
