@@ -69,7 +69,7 @@ current @ swap current !
 
 \ finds the address of the pointer to the deferred word
 : defer-ptr ( -- addr )
-  find 4 -
+  1 (find) 4 -
   ;
 
 current ! \ restore current

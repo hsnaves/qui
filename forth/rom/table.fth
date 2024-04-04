@@ -42,12 +42,7 @@ ephemeral
 private
 
 \ initialize the variables
-0 num-tables !
-0 indices !
-0 main-buffer buf>here !
-0 main-buffer buf>start !
 0 main-buffer buf>off !
-0 main-buffer buf>end !
 
 \ initializes the main-buffer
 : allocate-main-buffer ( -- )

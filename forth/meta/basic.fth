@@ -21,10 +21,15 @@ public
   ; inl
 
 \ exit the meta-compilation dictionary
+: meta-discard ( -- )
+  meta discard tail
+  ; noexit
+
+\ exit the meta-compilation dictionary and interpreter
 : meta-exit ( -- )
-  meta discard
   rdrop \ drops from the meta interpreter
-  ;
+  meta-discard tail
+  ; noexit
 
 ( conversion to meta and host words )
 \ host address to meta address

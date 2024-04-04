@@ -54,7 +54,7 @@ hex
 word meta 0 lookup =0
 dup internal and swap =0 current @ and or
 
-current @ swap current !
+current @ over current !
 align defer (index-lookup)
 align defer (index-insert)
 current !
@@ -138,11 +138,18 @@ public
 
 }scope
 
+current @ swap current !
 \ finds the next word from TIB in the context
-: find ( -- addr )
-  word 2dup 0 lookup
+: (find) ( include? -- addr )
+  >r word 2dup r> lookup
   dup if nip nip exit then
   drop unknown tail
+  ; noexit
+current !
+
+\ finds the next word from TIB in the context
+: find ( -- addr )
+  0 (find) tail
   ; noexit
 
 ( *** create and related words *** )

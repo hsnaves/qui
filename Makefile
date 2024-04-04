@@ -14,11 +14,12 @@ ROM_DEPS := forth/rom/main.fth forth/rom/scope.fth \
 
 KERNEL_DEPS := forth/kernel/build.fth \
  forth/meta/meta.fth forth/meta/basic.fth forth/meta/interp.fth \
- forth/meta/scope.fth forth/kernel/globals.fth forth/kernel/ibasic.fth \
- forth/kernel/herelast.fth forth/kernel/imain.fth forth/kernel/iextra.fth \
- forth/kernel/wordmain.fth forth/kernel/colon.fth forth/kernel/main.fth \
- forth/kernel/parsing.fth forth/kernel/interp.fth forth/kernel/boot.fth \
- forth/rom/main.fth forth/rom/scopeimpl.fth forth/io/console.fth
+ forth/meta/scope.fth forth/meta/init.fth forth/kernel/globals.fth \
+ forth/kernel/ibasic.fth forth/kernel/herelast.fth forth/kernel/imain.fth \
+ forth/kernel/iextra.fth forth/kernel/wordmain.fth forth/kernel/colon.fth \
+ forth/kernel/main.fth forth/kernel/parsing.fth forth/kernel/interp.fth \
+ forth/kernel/boot.fth forth/rom/main.fth forth/rom/scopeimpl.fth \
+ forth/io/console.fth
 
 all: build rom.bin
 
