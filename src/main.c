@@ -73,6 +73,8 @@ void create_window(uint32_t width, uint32_t height)
                                   SDL_RENDERER_PRESENTVSYNC
                                   | SDL_RENDERER_ACCELERATED);
     if (!renderer) {
+        fprintf(stderr, "main: create_window: "
+                "using software renderer\n");
         renderer = SDL_CreateRenderer(window, -1,
                                       SDL_RENDERER_PRESENTVSYNC
                                       | SDL_RENDERER_SOFTWARE);
@@ -524,7 +526,9 @@ int main(int argc, char **argv, char **envp)
 
 #ifdef USE_SDL
     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
-    ret = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_NOPARACHUTE);
+    ret = SDL_Init(SDL_INIT_VIDEO
+                   | SDL_INIT_AUDIO
+                   | SDL_INIT_NOPARACHUTE);
     if (ret < 0) {
         fprintf(stderr, "main: "
                 "could not initialize SDL (SDL_Error(%d): %s)\n",
