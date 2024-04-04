@@ -9,6 +9,7 @@ int keyboard_init(struct keyboard *kbd)
 {
     kbd->key[0] = 0;
     kbd->key[1] = 0;
+    kbd->key[2] = 0;
     kbd->x = 0;
     kbd->y = 0;
     kbd->button = 0;
@@ -33,6 +34,9 @@ uint32_t keyboard_read_callback(struct keyboard *kbd,
         break;
     case IO_KEYBOARD_KEY1:
         v = kbd->key[1];
+        break;
+    case IO_KEYBOARD_KEY2:
+        v = kbd->key[2];
         break;
     case IO_KEYBOARD_X:
         v = kbd->x;

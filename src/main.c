@@ -187,7 +187,8 @@ void process_events(struct quivm *qvm)
     struct devio *io;
     struct keyboard *kbd;
     struct display *dpl;
-    uint32_t button;
+    uint8_t idx;
+    uint32_t bit, button;
     SDL_Event e;
     SDL_Keymod mod;
     int x, y;
@@ -201,6 +202,7 @@ void process_events(struct quivm *qvm)
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
+            kbd->key[2] |= KEYBOARD_KEY2_QUIT;
             break;
         case SDL_MOUSEMOTION:
             if (!mouse_captured) break;
@@ -247,7 +249,7 @@ void process_events(struct quivm *qvm)
             if ((mod & KMOD_CTRL) && (mod & KMOD_ALT)) {
                 capture_mouse(0);
             }
-            if (e.key.keysym.sym == SDLK_F5) {
+            if ((e.key.keysym.sym == SDLK_F5) && (mod & KMOD_CTRL)) {
                 zoom = (zoom == 4) ? 1 : zoom + 1;
                 SDL_SetWindowSize(window,
                                   dpl->width * zoom,
@@ -256,6 +258,24 @@ void process_events(struct quivm *qvm)
             /* fall through */
         case SDL_KEYUP:
             if (!mouse_captured) break;
+
+            if (e.key.keysym.scancode >= 0x04
+                && e.key.keysym.scancode <= 0x52) {
+                idx = (e.key.keysym.scancode - 04) / 32;
+                bit = 1 << ((e.key.keysym.scancode - 04) % 32);
+            } else if (e.key.keysym.scancode >= 0xE0
+                       && e.key.keysym.scancode <= 0xE7) {
+                idx = (e.key.keysym.scancode - 0x91) / 32;
+                bit = 1 << ((e.key.keysym.scancode - 0x91) % 32);
+            } else {
+                break;
+            }
+
+            if (e.type == SDL_KEYDOWN) {
+                kbd->key[idx] |= bit;
+            } else {
+                kbd->key[idx] &= ~bit;
+            }
             break;
         }
     }
