@@ -57,7 +57,11 @@ private
 \ checks for write outside the buffer
 : check-write ( addr n -- )
   + META_BUFFER_SIZE swap u<
-  if INVALIDWRITE_STR error tail then
+  if
+    1 channel c!
+    INVALIDWRITE_STR type nl
+    1 terminate
+  then
   ;
 
 public

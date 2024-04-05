@@ -18,6 +18,16 @@ hex
 
 extra current !
 
+\ halts the machine
+: halt ( -- )
+  -1 1 sysreg !
+  ;
+
+\ counts the number of VM cycles
+: cycles ( -- )
+  7 sysreg @
+  ;
+
 \ the random seed
 align 4 var seed
 7644FF9A seed !

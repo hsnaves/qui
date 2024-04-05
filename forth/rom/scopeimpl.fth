@@ -12,11 +12,7 @@ hex
   tmpbuf [ temp dict>code ] lit !
   tmpbuf [ temp dict>data ] lit !
 
-  \ clear the tnode and tcurr
-  currnext tnode node-link
-  temp tcurr !
-
-  \ set the context to the temp
+  temp currnext !
   temp use tail
   ; noexit
 
@@ -24,16 +20,15 @@ hex
 : public ( -- )
   current @ temp =
   if
-     tcurr @ current !
-     temp tcurr !
+     currnext @ current !
+     temp currnext !
   then
   ;
 
 \ the private declarations of the scope
 : private ( -- )
   public
-  current @
-  dup tcurr !
+  current @ dup currnext !
   temp current !
   dict>code @
   [ temp dict>code ] lit !
@@ -48,8 +43,8 @@ hex
 \ stop the scope
 : }scope ( -- )
   public
-  context @ discard
-  currnext node-drop tail
+  0 currnext !
+  temp discard tail
   ; noexit
 
 \ creates a deferred word

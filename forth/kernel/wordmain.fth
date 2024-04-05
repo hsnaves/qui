@@ -84,24 +84,21 @@ current !
 scope{
 private
 
-\ finds a word in the current (and sibling) dictionaries
+\ finds a word in the dictionary that is not immediate
+: lookup1-nonimm ( c-str n dict -- addr )
+  lookup1
+  dup if
+    dup c@                      \ small optimization instead of >flags
+    F_IMM and =0 and
+  then
+  ;
+
+\ finds a word in the current (and currnext) dictionaries
 : lookupcurrent ( c-str n -- addr )
-  currnext >r
-  begin
-    2dup r@ node>val @
-    lookup1                     \ d: c-str n addr | r: chain
-    dup if
-      dup c@                    \ small optimization instead of >flags
-      F_IMM and =0
-      if
-        r> swap >r 2drop drop
-        r> exit
-      then
-    then
-    drop                        \ d: c-str n | r: chain
-    r> node>next @
-    dup if >r again then
-  end
+  2dup current @ lookup1-nonimm
+  dup if nip nip exit then
+  drop currnext @
+  dup if lookup1-nonimm tail then
   nip nip
   ;
 

@@ -36,8 +36,8 @@ wordbuf extra dict>data !
 
 \ initialize the wordbuffer
 \ use smaller size here
-A8 wordbuf buf>here !
-A8 wordbuf buf>start !
+A0 wordbuf buf>here !
+A0 wordbuf buf>start !
 10000 wordbuf buf>end !
 0 wordbuf buf>off !
 

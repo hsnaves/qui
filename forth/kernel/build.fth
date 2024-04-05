@@ -27,5 +27,5 @@ decimal
 
 file-name" kernel.bin"
 meta-buffer swap 2 file-do . nl
-7 sysreg @ . nl \ print the cycles
+cycles . nl
 bye
