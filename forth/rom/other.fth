@@ -20,7 +20,7 @@ extra current !
 
 \ the random seed
 align 4 var seed
-1 seed !
+7644FF9A seed !
 
 \ generated a random number based on the seed
 : rand ( -- v )
@@ -106,7 +106,7 @@ extra current !
 ( *** implementation of the stack printing words *** )
 \ prints the contents of the data stack
 : ds. ( -- )
-  dsp @ 1- 0
+  -1 dstack @ 1- 0
   begin
     2dup u>                     \ d: num idx rem?
     if
@@ -121,7 +121,7 @@ extra current !
 
 \ prints the contents of the return stack
 : rs. ( -- )
-  rsp @ 0
+  -1 rstack @ 0
   begin
     2dup u>                     \ d: num idx rem?
     if

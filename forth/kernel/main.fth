@@ -87,22 +87,16 @@ ephemeral
 : IO_SYS_RSTACK      FFFFFFF0 ; inl
 : IO_SYS_SELECTOR    FFFFFFEC ; inl
 : IO_SYS_VALUE       FFFFFFE8 ; inl
-: SYS_STATUS                1 ; inl
 : SYS_TERMINATE             2 ; inl
-: SYS_STACKSIZE             3 ; inl
-: SYS_MEMSIZE               4 ; inl
-: SYS_CELLSIZE              5 ; inl
-: SYS_ID                    6 ; inl
-: SYS_CYCLES                7 ; inl
-: CELL_STACK_POINTER FFFFFFFF ; inl
 
 public
 
 internal current !
-\ terminate the program
-: terminate ( n -- )
-  SYS_TERMINATE IO_SYS_SELECTOR ! IO_SYS_VALUE !
-  ;
+\ obtains the address of a system register
+: sysreg ( n -- addr ) IO_SYS_SELECTOR ! IO_SYS_VALUE ;
+
+\ terminates the program
+: terminate ( status -- ) SYS_TERMINATE sysreg ! ;
 
 \ obtains the address to access the data stack
 : dstack ( idx -- addr ) IO_SYS_SCELL ! IO_SYS_DSTACK ;
@@ -110,50 +104,10 @@ internal current !
 \ obtains the address to access the return stack
 : rstack ( idx -- addr ) IO_SYS_SCELL ! IO_SYS_RSTACK ;
 
-\ Obtains the address to the data stack pointer
-: dsp ( -- addr ) CELL_STACK_POINTER dstack tail ; noexit
-
-\ Obtains the address to the return stack pointer
-: rsp ( -- addr ) CELL_STACK_POINTER rstack tail ; noexit
-
-\ Address of the status
-: status ( -- addr )
-  SYS_STATUS IO_SYS_SELECTOR ! IO_SYS_VALUE
-  ;
-
-\ obtains the memory size
-: stacksize ( -- u )
-  SYS_STACKSIZE IO_SYS_SELECTOR ! IO_SYS_VALUE @
-  ;
-
-\ obtains the memory size
-: memsize ( -- u )
-  SYS_MEMSIZE IO_SYS_SELECTOR ! IO_SYS_VALUE @
-  ;
-
-\ obtains the size of a cell
-: cellsize ( -- u )
-  SYS_CELLSIZE IO_SYS_SELECTOR ! IO_SYS_VALUE @
-  ;
-
-\ obtains the ID of the VM
-: id ( -- u )
-  SYS_ID IO_SYS_SELECTOR ! IO_SYS_VALUE @
-  ;
 forth current !
 
 \ terminate the program successfully
 : bye ( -- ) 0 terminate tail ; noexit
-
-\ obtains the number of cycles executed
-: cycles ( -- u )
-  SYS_CYCLES IO_SYS_SELECTOR ! IO_SYS_VALUE @
-  ;
-
-\ halt the VM
-: halt ( -- )
-  SYS_STATUS IO_SYS_SELECTOR ! -1 IO_SYS_VALUE !
-  ;
 
 }scope
 
@@ -170,23 +124,6 @@ align defer getc ( -- c)
 
 \ prints an error message and restarts the interpreter
 align defer error ( c-str n  -- )
-
-( *** memory allocation words *** )
-
-internal current !
-
-\ shrinks wordbuf and returns the address of the
-\ reserved memory following the shrunk buffer
-\ returns zero when it fails
-: (alloc) ( size -- addr )
-  [ wordbuf buf>end ] lit @ tuck
-  [ wordbuf buf>here ] lit @ -
-  over u<
-  if 2drop 0 exit then
-  - dup [ wordbuf buf>end ] lit !
-  ;
-
-forth current !
 
 ( *** helper words *** )
 
@@ -240,10 +177,14 @@ forth current !
 
 ( *** initializes the wordbuf *** )
 scope{
+ephemeral
+( *** constants for the QUI vm *** )
+: SYS_MEMSIZE               4 ; inl
+
 private
 \ initializes the wordbuf
 : wordbuf_initialize ( -- )
-  memsize [ wordbuf buf>end ] lit !
+  SYS_MEMSIZE sysreg @ [ wordbuf buf>end ] lit !
   ;
 last @ >xt onboot !
 

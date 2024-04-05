@@ -1,15 +1,6 @@
 \ main internal words
 hex
 
-\ compile a value in the code buffer
-: , ( v -- )  here %, tail ; noexit
-
-\ compile a byte in the code buffer
-: c, ( b -- ) here %c, tail ; noexit
-
-\ compiles a string in the code buffer
-: str, ( c-str n -- )  here %str, tail ; noexit
-
 \ computes the relative address for jumps
 : reladdr ( target n -- v n )
   >r here @

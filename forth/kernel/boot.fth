@@ -1,15 +1,30 @@
 \ implementation of the boot, quit and related words
 hex
 
+( *** boot *** )
+scope{
+public
 \ goes back to the interpreter
 : quit ( -- )
-  0 rsp !
+  0 -1 rstack !
   0 channel c!
   interpreter tail
   ; noexit
 
-( *** boot *** )
-scope{
+: boot ( status -- )
+  dup
+  if onexcept @ exec tail then
+  drop
+  0 -1 rstack ! 1 -1 dstack !
+  onboot @ exec \ assumes onboot is non-zero
+  quit tail
+  ; noexit
+
+\ write the initial jump to boot
+here @ 0 here !
+' boot 3 I_JMP jumpn,
+here !  \ restore here
+
 private
 \ default implementation of error
 : default_error ( c-str n -- )
@@ -26,17 +41,3 @@ last @ >xt is error
   ; noexit
 last @ >xt onexcept !
 }scope
-
-: boot ( status -- )
-  dup
-  if onexcept @ exec tail then
-  drop
-  0 rsp ! 1 dsp !
-  onboot @ exec \ assumes onboot is non-zero
-  quit tail
-  ; noexit
-
-\ write the initial jump to boot
-here @ 0 here !
-' boot 3 I_JMP jumpn,
-here !  \ restore here

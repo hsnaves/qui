@@ -55,15 +55,15 @@ word meta 0 lookup =0
 dup internal and swap =0 current @ and or
 
 current @ over current !
-align defer (index-lookup)
-align defer (index-insert)
+align defer (i-lookup)
+align defer (i-insert)
 current !
 
 \ finds a word in the dictionary
 : lookup1 ( c-str n dict -- addr )
   dup dict>index @
   if
-    >r 2dup r@ (index-lookup)
+    >r 2dup r@ (i-lookup)
     dup if rdrop nip nip exit then
     drop r>
   then
@@ -219,7 +219,7 @@ public
   exit,
   this @ dup last !
   current @ dup dict>index @
-  if 2dup (index-insert) then
+  if 2dup (i-insert) then
   2drop
   0 this !
   ;

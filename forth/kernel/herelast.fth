@@ -20,3 +20,12 @@ hex
 : align ( -- )
   code %align tail
   ; noexit
+
+\ compile a value in the code buffer
+: , ( v -- )  here %, tail ; noexit
+
+\ compile a byte in the code buffer
+: c, ( b -- ) here %c, tail ; noexit
+
+\ compiles a string in the code buffer
+: str, ( c-str n -- )  here %str, tail ; noexit

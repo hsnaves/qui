@@ -4,6 +4,18 @@ hex
 ( *** words related to the TIB *** )
 
 scope{
+private
+\ shrinks wordbuf and returns the address of the
+\ reserved memory following the shrunk buffer
+\ returns zero when it fails
+: (alloc) ( size -- addr )
+  [ wordbuf buf>end ] lit @ tuck
+  [ wordbuf buf>here ] lit @ -
+  over u<
+  if 2drop 0 exit then
+  - dup [ wordbuf buf>end ] lit !
+  ;
+
 public
 \ memory allocation function with validation
 \ if it returns, the address is guarateed to be non-zero

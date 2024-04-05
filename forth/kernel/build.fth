@@ -13,7 +13,6 @@ internal current !
 include" forth/kernel/imain.fth"
 forth current !
 include" forth/kernel/parsing.fth"
-include" forth/kernel/iextra.fth"
 include" forth/kernel/wordmain.fth"
 include" forth/kernel/interp.fth"
 include" forth/kernel/colon.fth"
@@ -28,5 +27,5 @@ decimal
 
 file-name" kernel.bin"
 meta-buffer swap 2 file-do . nl
-cycles . nl
+7 sysreg @ . nl \ print the cycles
 bye
