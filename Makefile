@@ -3,6 +3,7 @@
 # General definitions
 
 INSTALL := install
+LD := ld
 RM := rm -f
 CAT := cat
 QUI := ./src/qui
@@ -20,22 +21,29 @@ KERNEL_DEPS := forth/kernel/build.fth \
  forth/kernel/parsing.fth forth/kernel/interp.fth forth/kernel/boot.fth \
  forth/rom/main.fth forth/rom/scopeimpl.fth forth/io/console.fth
 
-all: build rom.bin
+all: build-pre rom.bin build
 
-build:
+build-pre:
 	$(MAKE) -C src
 
-rom.bin: $(ROM_DEPS)
-	$(CAT) $^ | $(QUI) -r kernel.bin
+build: src/default_rom.o
+	$(MAKE) -C src clean
+	USE_DEFAULT_ROM=1 $(MAKE) -C src
 
-kernel.bin: $(KERNEL_DEPS)
+rom.bin: $(ROM_DEPS) $(QUI)
+	$(CAT) $(ROM_DEPS) | $(QUI) -r kernel.bin
+
+kernel.bin: $(KERNEL_DEPS) $(QUI)
 	$(CAT) forth/kernel/build.fth | $(QUI) -r rom.bin
+
+src/default_rom.o: rom.bin
+	$(LD) -r -b binary -o $@ $<
 
 install:
 	$(MAKE) -C src install
 
 clean:
-	$(MAKE) -C src clean
+	USE_DEFAULT_ROM=1 $(MAKE) -C src clean
 	$(RM) rom.bin
 
-.PHONY: all build install clean
+.PHONY: all build-pre build install clean

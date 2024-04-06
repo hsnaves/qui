@@ -435,7 +435,6 @@ int main(int argc, char **argv, char **envp)
     const char *bind_address;
     const char *target_address;
     uint32_t stacksize, memsize;
-    uint32_t length;
     int use_utc;
     int disable_write;
     int port;
@@ -445,7 +444,7 @@ int main(int argc, char **argv, char **envp)
     stacksize = 0x0400;
     memsize = 0x100000;
 
-    filename = "rom.bin";
+    filename = NULL;
     bind_address = NULL;
     target_address = NULL;
     use_utc = 0;
@@ -516,12 +515,17 @@ int main(int argc, char **argv, char **envp)
 
     devio_configure(&io, &qvm);
 
-    length = 0;
-    if (quivm_load(&qvm, filename, 0, &length)) {
-        fprintf(stderr, "main: could not load image `%s`\n", filename);
-        quivm_destroy(&qvm);
-        devio_destroy(&io);
-        return 1;
+    if (filename) {
+        uint32_t length = 0;
+        if (quivm_load(&qvm, filename, 0, &length)) {
+            fprintf(stderr, "main: could not load image `%s`\n",
+                    filename);
+            quivm_destroy(&qvm);
+            devio_destroy(&io);
+            return 1;
+        }
+    } else {
+        quivm_load_default_rom(&qvm);
     }
 
 #ifdef USE_SDL

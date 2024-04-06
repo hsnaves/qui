@@ -154,6 +154,11 @@ void quivm_configure(struct quivm *qvm, void *arg,
 /* Resets the QUI vm. */
 void quivm_reset(struct quivm *qvm);
 
+/* Loads the default rom image.
+ * Returns zero on success.
+ */
+int quivm_load_default_rom(struct quivm *qvm);
+
 /* Loads an image from a file named `filename`
  * at address `address`, loading at most `length` words.
  * The parameter `length` is populated with the number of
