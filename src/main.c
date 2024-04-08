@@ -5,7 +5,11 @@
 #include <signal.h>
 
 #ifdef USE_SDL
-#    include <SDL.h>
+#include <SDL.h>
+#endif
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
 #endif
 
 #include "vm/quivm.h"
@@ -28,7 +32,7 @@ static SDL_Window *window;      /* the interface window */
 static SDL_Renderer *renderer;  /* the renderer for the window */
 static SDL_Texture *texture;    /* the texture for drawing */
 static SDL_AudioDeviceID audio_id; /* the id of the audio device */
-static int zoom = 4;            /* the zoom level */
+static int zoom = 3;            /* the zoom level */
 static int mouse_captured;      /* the mouse was captured */
 #endif
 
@@ -323,15 +327,108 @@ void start_audio(struct audio *aud)
 
 #endif /* USE_SDL */
 
+/* Runs a single frame of simulation (implementation)
+ * Returns zero on success.
+ */
+static
+int run_one_frame_implementation(struct quivm *qvm)
+{
+    struct devio *io;
+    struct display *dpl;
+    struct audio *aud;
+
+    io = (struct devio *) qvm->arg;
+    dpl = io->dpl;
+    aud = io->aud;
+
+    if (!quivm_run(qvm, NUM_INSN_PER_FRAME))
+        return 1;
+
+#ifdef USE_SDL
+    if (audio_id) {
+        SDL_LockAudioDevice(audio_id);
+        devio_update(io);
+        SDL_UnlockAudioDevice(audio_id);
+    } else {
+        devio_update(io);
+    }
+#else
+    devio_update(io);
+#endif
+
+    /* check if some device terminated the VM */
+    if (qvm->status & STS_TERMINATED)
+        return 1;
+
+#ifdef USE_SDL
+    if (dpl->initialized && !window) {
+        create_window(dpl->width, dpl->height);
+        if (!window) {
+            qvm->status |= STS_TERMINATED;
+            qvm->termvalue = 1;
+            return 1;
+        }
+    }
+    if (aud->initialized) {
+        if (!audio_id) {
+            start_audio(aud);
+            if (!audio_id) {
+                qvm->status |= STS_TERMINATED;
+                qvm->termvalue = 1;
+                return 1;
+            }
+        }
+        SDL_PauseAudioDevice(audio_id, aud->paused);
+    }
+
+    process_events(qvm);
+    update_screen(qvm);
+#else /* !USE_SDL */
+    /* No support for display or audio */
+    if (dpl->initialized || aud->initialized) {
+        qvm->status |= STS_TERMINATED;
+        qvm->termvalue = 1;
+        return 1;
+    }
+#endif
+    return 0;
+}
+
+/* Runs a single frame of simulation */
+static
+void run_one_frame(void *arg)
+{
+    struct quivm *qvm;
+    struct devio *io;
+
+    qvm = (struct quivm *) arg;
+    io = (struct devio *) qvm->arg;
+
+    if (run_one_frame_implementation(qvm)) {
+#ifdef __EMSCRIPTEN__
+        emscripten_cancel_main_loop();
+#endif
+#ifdef USE_SDL
+        stop_audio();
+        destroy_window();
+        SDL_Quit();
+#endif
+        quivm_destroy(qvm);
+        devio_destroy(io);
+    }
+}
+
+
 /* Auxiliary function to run the VM with a given set of I/O devices.
  * Returns zero on success.
  */
 static
 int run(struct quivm *qvm)
 {
-    struct devio *io;
-    struct display *dpl;
-    struct audio *aud;
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop_arg(&run_one_frame, qvm, 60, 0);
+    return 0;
+#else
 #ifdef USE_SDL
     uint32_t time0, delta;
 
@@ -339,54 +436,12 @@ int run(struct quivm *qvm)
     time0 = 3 * SDL_GetTicks();
 #endif
 
-    io = (struct devio *) qvm->arg;
-    dpl = io->dpl;
-    aud = io->aud;
-
     while (1) {
-        if (!quivm_run(qvm, NUM_INSN_PER_FRAME))
-            break;
-
-#ifdef USE_SDL
-        if (audio_id) {
-            SDL_LockAudioDevice(audio_id);
-            devio_update(io);
-            SDL_UnlockAudioDevice(audio_id);
-        } else {
-            devio_update(io);
-        }
-#else
-        devio_update(io);
-#endif
-
-        /* check if some device terminated the VM */
+        run_one_frame(qvm);
         if (qvm->status & STS_TERMINATED)
             break;
 
 #ifdef USE_SDL
-        if (dpl->initialized && !window) {
-            create_window(dpl->width, dpl->height);
-            if (!window) {
-                qvm->status |= STS_TERMINATED;
-                qvm->termvalue = 1;
-                break;
-            }
-        }
-        if (aud->initialized) {
-            if (!audio_id) {
-                start_audio(aud);
-                if (!audio_id) {
-                    qvm->status |= STS_TERMINATED;
-                    qvm->termvalue = 1;
-                    break;
-                }
-            }
-            SDL_PauseAudioDevice(audio_id, aud->paused);
-        }
-
-        process_events(qvm);
-        update_screen(qvm);
-
         delta = (3 * SDL_GetTicks()) - time0;
         time0 += delta;
 
@@ -396,17 +451,10 @@ int run(struct quivm *qvm)
             SDL_Delay(((3 * 1000 / FPS) - delta + 2) / 3);
             time0 += ((3 * 1000 / FPS) - delta);
         }
-#else /* !USE_SDL */
-        /* No support for display or audio */
-        if (dpl->initialized || aud->initialized) {
-            qvm->status |= STS_TERMINATED;
-            qvm->termvalue = 1;
-            break;
-        }
 #endif
     }
-
     return qvm->termvalue;
+#endif /* ! __EMSCRIPTEN__ */
 }
 
 /* Prints the help text to the console.
@@ -436,8 +484,12 @@ void print_help(const char *execname)
 /* main function */
 int main(int argc, char **argv, char **envp)
 {
-    struct quivm qvm;
-    struct devio io;
+    /* static variables are not destroyed at the end of main
+     * this is necessary when using emscripten.
+     */
+    static struct quivm qvm;
+    static struct devio io;
+
     const char *filename;
     const char *bind_address;
     const char *target_address;
@@ -566,15 +618,5 @@ int main(int argc, char **argv, char **envp)
     io.cns->argv = argv;
     io.cns->envp = envp;
 
-    ret = run(&qvm);
-
-#ifdef USE_SDL
-    stop_audio();
-    destroy_window();
-    SDL_Quit();
-#endif
-
-    quivm_destroy(&qvm);
-    devio_destroy(&io);
-    return ret;
+    return run(&qvm);
 }

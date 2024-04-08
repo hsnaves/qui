@@ -1,5 +1,9 @@
 # makefile for qui
 
+ifndef BUILD_WASM
+    BUILD_WASM := 0
+endif
+
 # General definitions
 
 INSTALL := install
@@ -24,11 +28,17 @@ KERNEL_DEPS := forth/kernel/build.fth \
 all: build-pre rom.bin build
 
 build-pre:
-	INCLUDE_DEFAULT_ROM=0 $(MAKE) -C src
+	INCLUDE_DEFAULT_ROM=0 BUILD_WASM=0 $(MAKE) -C src
 
+ifneq ($(BUILD_WASM), 0)
+build: src/default_rom.c
+	$(MAKE) -C src clean
+	INCLUDE_DEFAULT_ROM=1 BUILD_WASM=1 $(MAKE) -C src
+else
 build: src/default_rom.c
 	$(MAKE) -C src clean-main
-	INCLUDE_DEFAULT_ROM=1 $(MAKE) -C src
+	INCLUDE_DEFAULT_ROM=1 BUILD_WASM=0 $(MAKE) -C src
+endif
 
 rom.bin: $(ROM_DEPS)
 	$(CAT) $(ROM_DEPS) | $(QUI) -r kernel.bin

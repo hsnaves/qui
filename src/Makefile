@@ -18,6 +18,10 @@ ifndef USE_SDL
     USE_SDL := 1
 endif
 
+ifndef BUILD_WASM
+    BUILD_WASM := 0
+endif
+
 # PREFIX is environment variable, but if it is not set, then set default value
 ifeq ($(PREFIX),)
     PREFIX := /usr/local
@@ -25,9 +29,13 @@ endif
 
 # General definitions
 
-CC := gcc
-INSTALL := install
 RM := rm -f
+INSTALL := install
+ifneq ($(BUILD_WASM), 0)
+    CC := emcc
+else
+    CC := gcc
+endif
 
 CFLAGS := -Wall -Wextra -pedantic $(EXTRA_CFLAGS)
 LDFLAGS :=
@@ -54,15 +62,27 @@ ifneq ($(INCLUDE_DEFAULT_ROM), 0)
     MAIN_CFLAGS := $(MAIN_CFLAGS) -DINCLUDE_DEFAULT_ROM
 endif
 
-ifneq ($(USE_SDL), 0)
-    MAIN_CFLAGS := $(MAIN_CFLAGS) -DUSE_SDL \
-                   $(shell sdl2-config --cflags)
-    LDFLAGS := $(LDFLAGS) $(shell sdl2-config --libs)
+ifneq ($(BUILD_WASM), 0)
+    ifneq ($(USE_SDL), 0)
+        MAIN_CFLAGS := $(MAIN_CFLAGS) -DUSE_SDL -sUSE_SDL=2
+        LDFLAGS := $(LDFLAGS) -sUSE_SDL=2
+    endif
+else
+    ifneq ($(USE_SDL), 0)
+        MAIN_CFLAGS := $(MAIN_CFLAGS) -DUSE_SDL \
+                       $(shell sdl2-config --cflags)
+        LDFLAGS := $(LDFLAGS) $(shell sdl2-config --libs)
+    endif
 endif
 
 # Main targets
 
-TARGET := qui
+ifneq ($(BUILD_WASM), 0)
+    TARGET := ../web/qui.js
+else
+    TARGET := qui
+endif
+
 all: $(TARGET)
 
 include module.mk
