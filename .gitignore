@@ -1,4 +1,5 @@
 *.o
-qui
+src/qui
+src/default_rom.c
 rom.bin
 

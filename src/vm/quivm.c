@@ -116,31 +116,6 @@ void quivm_reset(struct quivm *qvm)
     qvm->cycles = 0;
 }
 
-#ifdef USE_DEFAULT_ROM
-extern const char _binary_rom_bin_start[];
-extern const char _binary_rom_bin_end[];
-#endif
-
-int quivm_load_default_rom(struct quivm *qvm)
-{
-#ifdef USE_DEFAULT_ROM
-    uint32_t i, len;
-    uint32_t address;
-
-    address = 0;
-    len = (uint32_t) (_binary_rom_bin_end - _binary_rom_bin_start);
-    for (i = 0; i < len; i++) {
-        if (!(address < qvm->memsize)) break;
-        qvm->mem[address++] = (uint8_t) _binary_rom_bin_start[i];
-    }
-
-#else /* ! USE_DEFAULT_ROM */
-    (void)(qvm); /* UNUSED */
-#endif
-    return 0;
-}
-
-
 int quivm_load(struct quivm *qvm, const char *filename,
                uint32_t address, uint32_t *length)
 {
@@ -167,6 +142,21 @@ int quivm_load(struct quivm *qvm, const char *filename,
     *length = i;
     fclose(fp);
     return 0;
+}
+
+void quivm_load_array(struct quivm *qvm, const uint8_t *data,
+                      uint32_t address, uint32_t *length)
+{
+    uint32_t len;
+    len = *length;
+    if (address < qvm->memsize) {
+        if (len > (qvm->memsize - address))
+            len = qvm->memsize - address;
+    } else {
+        len = 0;
+    }
+    memcpy(&qvm->mem[address], data, len);
+    *length = len;
 }
 
 /* Auxiliary function to run when an exception is found.

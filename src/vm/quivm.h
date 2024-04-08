@@ -154,20 +154,22 @@ void quivm_configure(struct quivm *qvm, void *arg,
 /* Resets the QUI vm. */
 void quivm_reset(struct quivm *qvm);
 
-/* Loads the default rom image.
- * Returns zero on success.
- */
-int quivm_load_default_rom(struct quivm *qvm);
-
 /* Loads an image from a file named `filename`
  * at address `address`, loading at most `length` words.
  * The parameter `length` is populated with the number of
- * words read on return. If `length` is zero, all the
- * words in the file are read.
+ * bytes read on return. If `length` is initially provided
+ * as zero, all the bytes in the file are read.
  * Returns zero on success.
  */
 int quivm_load(struct quivm *qvm, const char *filename,
                uint32_t address, uint32_t *length);
+
+/* Loads an image from an array named `data` at address
+ * `address`, loading at most `length` words. The parameter
+ * `length` is populated with the number of bytes copied on return.
+ */
+void quivm_load_array(struct quivm *qvm, const uint8_t *data,
+                      uint32_t address, uint32_t *length);
 
 /* Runs one step of the virtual machine.
  * Returns positive number if the machine has not yet terminated

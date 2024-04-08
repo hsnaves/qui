@@ -32,6 +32,13 @@ static int zoom = 4;            /* the zoom level */
 static int mouse_captured;      /* the mouse was captured */
 #endif
 
+#ifdef INCLUDE_DEFAULT_ROM
+#    include "default_rom.c"
+#else
+/* just an infinite loop here */
+static const uint8_t default_rom[] = { 0xBE, 0xC2 };
+#endif
+
 /* Functions */
 
 #ifdef USE_SDL
@@ -435,6 +442,7 @@ int main(int argc, char **argv, char **envp)
     const char *bind_address;
     const char *target_address;
     uint32_t stacksize, memsize;
+    uint32_t length;
     int use_utc;
     int disable_write;
     int port;
@@ -516,7 +524,7 @@ int main(int argc, char **argv, char **envp)
     devio_configure(&io, &qvm);
 
     if (filename) {
-        uint32_t length = 0;
+        length = 0;
         if (quivm_load(&qvm, filename, 0, &length)) {
             fprintf(stderr, "main: could not load image `%s`\n",
                     filename);
@@ -525,7 +533,8 @@ int main(int argc, char **argv, char **envp)
             return 1;
         }
     } else {
-        quivm_load_default_rom(&qvm);
+        length = sizeof(default_rom);
+        quivm_load_array(&qvm, default_rom, 0, &length);
     }
 
 #ifdef USE_SDL

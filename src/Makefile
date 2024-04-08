@@ -10,12 +10,12 @@ ifndef DEBUG
     DEBUG := 0
 endif
 
-ifndef USE_SDL
-    USE_SDL := 1
+ifndef INCLUDE_DEFAULT_ROM
+    INCLUDE_DEFAULT_ROM := 0
 endif
 
-ifndef USE_DEFAULT_ROM
-    USE_DEFAULT_ROM := 0
+ifndef USE_SDL
+    USE_SDL := 1
 endif
 
 # PREFIX is environment variable, but if it is not set, then set default value
@@ -36,15 +36,6 @@ LIBS :=
 
 # Modify the FLAGS based on the options
 
-ifneq ($(USE_DEFAULT_ROM), 0)
-    CFLAGS := $(CFLAGS) -DUSE_DEFAULT_ROM
-endif
-
-ifneq ($(USE_SDL), 0)
-    CFLAGS := $(CFLAGS) -DUSE_SDL $(shell sdl2-config --cflags)
-    LDFLAGS := $(LDFLAGS) $(shell sdl2-config --libs)
-endif
-
 ifneq ($(OPTIMIZE), 0)
     # Maybe add -fno-math-errno
     CFLAGS := $(CFLAGS) -O3
@@ -57,29 +48,44 @@ ifneq ($(DEBUG), 0)
     LDFLAGS := $(LDFLAGS) -g
 endif
 
+MAIN_CFLAGS := $(CFLAGS)
+
+ifneq ($(INCLUDE_DEFAULT_ROM), 0)
+    MAIN_CFLAGS := $(MAIN_CFLAGS) -DINCLUDE_DEFAULT_ROM
+endif
+
+ifneq ($(USE_SDL), 0)
+    MAIN_CFLAGS := $(MAIN_CFLAGS) -DUSE_SDL \
+                   $(shell sdl2-config --cflags)
+    LDFLAGS := $(LDFLAGS) $(shell sdl2-config --libs)
+endif
+
 # Main targets
 
-all: qui
+TARGET := qui
+all: $(TARGET)
 
 include module.mk
 
-ifneq ($(USE_DEFAULT_ROM), 0)
-    OBJS := $(OBJS) default_rom.o
-endif
-
 # Pattern rules
 
-qui: $(OBJS)
+$(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
+main.o: main.c
+	$(CC) $(MAIN_CFLAGS) $(INCLUDES) -c $< -o $@
+
 install: qui
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/bin/
 	$(INSTALL) -m 755 qui $(DESTDIR)$(PREFIX)/bin/
 
-clean:
-	$(RM) qui $(OBJS)
+clean-main:
+	$(RM) main.o
 
-.PHONY: all install clean
+clean:
+	$(RM) $(TARGET) $(OBJS)
+
+.PHONY: all install clean-main clean

@@ -24,26 +24,26 @@ KERNEL_DEPS := forth/kernel/build.fth \
 all: build-pre rom.bin build
 
 build-pre:
-	$(MAKE) -C src
+	INCLUDE_DEFAULT_ROM=0 $(MAKE) -C src
 
-build: src/default_rom.o
-	$(MAKE) -C src clean
-	USE_DEFAULT_ROM=1 $(MAKE) -C src
+build: src/default_rom.c
+	$(MAKE) -C src clean-main
+	INCLUDE_DEFAULT_ROM=1 $(MAKE) -C src
 
-rom.bin: $(ROM_DEPS) $(QUI)
+rom.bin: $(ROM_DEPS)
 	$(CAT) $(ROM_DEPS) | $(QUI) -r kernel.bin
 
-kernel.bin: $(KERNEL_DEPS) $(QUI)
+kernel.bin: $(KERNEL_DEPS)
 	$(CAT) forth/kernel/build.fth | $(QUI) -r rom.bin
 
-src/default_rom.o: rom.bin
-	$(LD) -r -b binary -o $@ $<
+src/default_rom.c: rom.bin
+	$(CAT) forth/utils/default_rom.fth | $(QUI) -r rom.bin
 
 install:
 	$(MAKE) -C src install
 
 clean:
 	USE_DEFAULT_ROM=1 $(MAKE) -C src clean
-	$(RM) rom.bin
+	$(RM) rom.bin src/default_rom.c
 
 .PHONY: all build-pre build install clean
