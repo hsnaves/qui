@@ -50,6 +50,7 @@ static const uint8_t default_rom[] = { 0xBE, 0xC2 };
 static
 void destroy_window(void)
 {
+    if (window) SDL_SetWindowTitle(window, "QUIVM - Terminated");
     if (texture) SDL_DestroyTexture(texture);
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
@@ -57,6 +58,28 @@ void destroy_window(void)
     texture = NULL;
     renderer = NULL;
     window = NULL;
+}
+
+/* To capture the mouse movements (and keyboard).
+ * The `capture` indicates whether we should capture or release
+ * the mouse movements.
+ */
+static
+void capture_mouse(int capture)
+{
+    if (capture) {
+        SDL_ShowCursor(0);
+        SDL_SetWindowGrab(window, SDL_TRUE);
+        SDL_SetWindowTitle(window,
+                           "QUIVM - Mouse captured. "
+                           "Press 'Ctrl+Alt' to release.");
+    } else {
+        SDL_ShowCursor(1);
+        SDL_SetWindowGrab(window, SDL_FALSE);
+        SDL_SetWindowTitle(window, "QUIVM");
+    }
+
+    mouse_captured = capture;
 }
 
 /* Auxiliary function to create an SDL window
@@ -115,7 +138,7 @@ void create_window(uint32_t width, uint32_t height)
         return;
     }
 
-    mouse_captured = 0;
+    capture_mouse(1);
 }
 
 /* Auxiliary function to update the screen.
@@ -167,28 +190,6 @@ void update_screen(struct quivm *qvm)
     }
 
     SDL_RenderPresent(renderer);
-}
-
-/* To capture the mouse movements (and keyboard).
- * The `capture` indicates whether we should capture or release
- * the mouse movements.
- */
-static
-void capture_mouse(int capture)
-{
-    if (capture) {
-        SDL_ShowCursor(0);
-        SDL_SetWindowGrab(window, SDL_TRUE);
-        SDL_SetWindowTitle(window,
-                           "QUIVM - Mouse captured. "
-                           "Press 'Ctrl+Alt' to release.");
-    } else {
-        SDL_ShowCursor(1);
-        SDL_SetWindowGrab(window, SDL_FALSE);
-        SDL_SetWindowTitle(window, "QUIVM");
-    }
-
-    mouse_captured = capture;
 }
 
 /* Auxiliary function to process events.
