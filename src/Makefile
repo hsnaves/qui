@@ -78,7 +78,7 @@ endif
 # Main targets
 
 ifneq ($(BUILD_WASM), 0)
-    TARGET := ../web/qui.js
+    TARGET := qui.js
 else
     TARGET := qui
 endif

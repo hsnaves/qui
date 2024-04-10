@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <sys/time.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "vm/quivm.h"
 #include "dev/console.h"
 
@@ -16,6 +20,7 @@ int console_init(struct console *cns)
     cns->channel = 0;
     cns->argi = cns->argii = 0;
     cns->envi = cns->envii = 0;
+    setvbuf(stdin, NULL, _IONBF, 0);
     return 0;
 }
 
@@ -29,14 +34,28 @@ void console_destroy(struct console *cns)
 uint32_t console_read_callback(struct console *cns,
                                struct quivm *qvm, uint32_t address)
 {
+    fd_set rfds;
+    struct timeval tv;
     uint32_t v;
-    (void)(qvm); /* UNUSED */
+    int ret;
 
     switch (address) {
     case IO_CONSOLE_IN:
         switch ((cns->channel >> 8) & 0xFF) {
         case CONSOLE_ICHANNEL_STDIN:
-            v = fgetc(stdin);
+            FD_ZERO(&rfds);
+            FD_SET(0, &rfds);
+            tv.tv_sec = 0;
+            tv.tv_usec = 0;
+            ret = select(1, &rfds, NULL, NULL, &tv);
+            if (ret > 0) {
+                v = fgetc(stdin);
+            } else {
+                /* halt the machine until it has data */
+                qvm->status |= STS_HALTED;
+                qvm->pc--;
+                v = address;
+            }
             break;
         case CONSOLE_ICHANNEL_ARGS:
             if (cns->argi < cns->argc) {

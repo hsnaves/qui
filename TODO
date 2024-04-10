@@ -1,2 +1,6 @@
+- Improve the bit resolution of the audio;
+- Add more capabilities to the display device;
+- Figure out the skipping in the audio when using WASM;
 - Add floating point support to the VM;
+
 

@@ -1,7 +1,7 @@
 *.o
 src/qui
 src/default_rom.c
-web/qui.js
-web/qui.wasm
+src/qui.js
+src/qui.wasm
 rom.bin
 
