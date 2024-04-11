@@ -10,7 +10,6 @@ INSTALL := install
 LD := ld
 RM := rm -f
 CAT := cat
-QUI := ./src/qui
 
 ROM_DEPS := forth/rom/main.fth forth/rom/scope.fth \
  forth/rom/scopeimpl.fth forth/io/storage.fth forth/io/rtclock.fth \
@@ -25,35 +24,50 @@ KERNEL_DEPS := forth/kernel/build.fth \
  forth/kernel/parsing.fth forth/kernel/interp.fth forth/kernel/boot.fth \
  forth/rom/main.fth forth/rom/scopeimpl.fth forth/io/console.fth
 
-all: build-pre rom.bin build
+ifneq ($(BUILD_WASM), 0)
+    TARGET := src/qui.js
+else
+    TARGET := src/qui
+endif
 
-build-pre:
-	INCLUDE_DEFAULT_ROM=0 USE_SDL=0 BUILD_WASM=0 $(MAKE) -C src
+all: rom.bin $(TARGET)
+
+src/qui-headless:
+	INCLUDE_DEFAULT_ROM=0 USE_SDL=0 BUILD_WASM=0 \
+	TARGET=qui-headless $(MAKE) -C src
+	$(RM) src/main.o
 
 ifneq ($(BUILD_WASM), 0)
-build: src/default_rom.c
-	$(MAKE) -C src clean
+$(TARGET): src/default_rom.c
+	$(MAKE) -C src clean-objs
 	INCLUDE_DEFAULT_ROM=1 BUILD_WASM=1 $(MAKE) -C src
+	$(MAKE) -C src clean-objs
 else
-build: src/default_rom.c
-	$(MAKE) -C src clean-main
+$(TARGET): src/default_rom.c
 	INCLUDE_DEFAULT_ROM=1 BUILD_WASM=0 $(MAKE) -C src
 endif
 
-rom.bin: $(ROM_DEPS)
-	$(CAT) $(ROM_DEPS) | $(QUI) -r kernel.bin
+rom.bin: $(ROM_DEPS) src/qui-headless
+	$(CAT) $(ROM_DEPS) | ./src/qui-headless -r kernel.bin
 
-kernel.bin: $(KERNEL_DEPS)
-	$(CAT) forth/kernel/build.fth | $(QUI) -r rom.bin
+kernel.bin: $(KERNEL_DEPS) src/qui-headless
+	./src/qui-headless -r rom.bin < forth/kernel/build.fth
 
 src/default_rom.c: rom.bin
-	$(CAT) forth/utils/default_rom.fth | $(QUI) -r rom.bin
+	./src/qui-headless -r rom.bin < forth/utils/default_rom.fth
 
+ifneq ($(BUILD_WASM), 0)
 install:
 	$(MAKE) -C src install
+	$(MAKE) -C src clean-objs
+else
+install:
+	$(MAKE) -C src install
+endif
 
 clean:
-	USE_DEFAULT_ROM=1 $(MAKE) -C src clean
+	$(MAKE) -C src clean
 	$(RM) rom.bin src/default_rom.c
+	$(RM) src/qui src/qui-headless src/qui.js src/qui.wasm
 
-.PHONY: all build-pre build install clean
+.PHONY: all build install clean

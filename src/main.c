@@ -91,8 +91,8 @@ void create_window(uint32_t width, uint32_t height)
 {
     if (window) return;
     window = SDL_CreateWindow("QUIVM",
-                              SDL_WINDOWPOS_UNDEFINED,
-                              SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_CENTERED_DISPLAY(0),
+                              SDL_WINDOWPOS_CENTERED_DISPLAY(0),
                               zoom * width, zoom * height,
                               SDL_WINDOW_SHOWN);
 
@@ -604,7 +604,8 @@ int main(int argc, char **argv, char **envp)
         devio_destroy(&io);
         return 1;
     }
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
+    SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_SCALING, "1");
 #endif
 
     /* set up the options */

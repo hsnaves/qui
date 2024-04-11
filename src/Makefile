@@ -34,7 +34,7 @@ INSTALL := install
 ifneq ($(BUILD_WASM), 0)
     CC := emcc
 else
-    CC := gcc
+    CC ?= gcc
 endif
 
 CFLAGS := -Wall -Wextra -pedantic $(EXTRA_CFLAGS)
@@ -57,7 +57,6 @@ ifneq ($(DEBUG), 0)
 endif
 
 MAIN_CFLAGS := $(CFLAGS)
-
 ifneq ($(INCLUDE_DEFAULT_ROM), 0)
     MAIN_CFLAGS := $(MAIN_CFLAGS) -DINCLUDE_DEFAULT_ROM
 endif
@@ -76,11 +75,10 @@ else
 endif
 
 # Main targets
-
 ifneq ($(BUILD_WASM), 0)
     TARGET := qui.js
 else
-    TARGET := qui
+    TARGET ?= qui
 endif
 
 all: $(TARGET)
@@ -98,14 +96,14 @@ $(TARGET): $(OBJS)
 main.o: main.c
 	$(CC) $(MAIN_CFLAGS) $(INCLUDES) -c $< -o $@
 
-install: qui
+install: $(TARGET)
 	$(INSTALL) -d $(DESTDIR)$(PREFIX)/bin/
-	$(INSTALL) -m 755 qui $(DESTDIR)$(PREFIX)/bin/
+	$(INSTALL) -m 755 $(TARGET) $(DESTDIR)$(PREFIX)/bin/
 
-clean-main:
-	$(RM) main.o
+clean-objs:
+	$(RM) $(OBJS)
 
-clean:
-	$(RM) $(TARGET) $(OBJS)
+clean: clean-objs
+	$(RM) $(TARGET)
 
-.PHONY: all install clean-main clean
+.PHONY: all install clean-objs clean
