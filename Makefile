@@ -28,7 +28,7 @@ KERNEL_DEPS := forth/kernel/build.fth \
 all: build-pre rom.bin build
 
 build-pre:
-	INCLUDE_DEFAULT_ROM=0 BUILD_WASM=0 $(MAKE) -C src
+	INCLUDE_DEFAULT_ROM=0 USE_SDL=0 BUILD_WASM=0 $(MAKE) -C src
 
 ifneq ($(BUILD_WASM), 0)
 build: src/default_rom.c

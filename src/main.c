@@ -619,5 +619,6 @@ int main(int argc, char **argv, char **envp)
     io.cns->argv = argv;
     io.cns->envp = envp;
 
-    return run(&qvm);
+    ret = run(&qvm);
+    return ret;
 }
