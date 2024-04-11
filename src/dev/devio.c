@@ -320,8 +320,9 @@ void devio_configure(struct devio *io, struct quivm *qvm)
 void devio_update(struct devio *io)
 {
     if (!io->qvm) return;
+    timer_update(io->tmr, io->qvm);
     display_update(io->dpl, io->qvm);
     audio_update(io->aud, io->qvm);
-    timer_update(io->tmr, io->qvm);
+    keyboard_update(io->kbd, io->qvm);
 }
 

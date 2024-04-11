@@ -11,12 +11,18 @@
 #define IO_KEYBOARD_END         0xFFFFFF20
 
 /* Addresses within the keyboard device */
-#define IO_KEYBOARD_KEY0        0xFFFFFF1C
-#define IO_KEYBOARD_KEY1        0xFFFFFF18
-#define IO_KEYBOARD_KEY2        0xFFFFFF14
-#define IO_KEYBOARD_X           0xFFFFFF10
-#define IO_KEYBOARD_Y           0xFFFFFF0C
-#define IO_KEYBOARD_BUTTON      0xFFFFFF08
+#define IO_KEYBOARD_SELECTOR    0xFFFFFF1C
+#define IO_KEYBOARD_STATE       0xFFFFFF18
+#define IO_KEYBOARD_PREV_STATE  0xFFFFFF14
+
+/* Possible values for the selector */
+#define KEYBOARD_KEY0                    0
+#define KEYBOARD_KEY1                    1
+#define KEYBOARD_KEY2                    2
+#define KEYBOARD_X                       3
+#define KEYBOARD_Y                       4
+#define KEYBOARD_BUTTON                  5
+#define KEYBOARD_SIZE                    6
 
 /* Keyboard keys */
 #define KEYBOARD_KEY0_A         0x00000001
@@ -119,9 +125,9 @@
 /* Data structures and types */
 /* A structure representing the keyboard device */
 struct keyboard {
-    uint32_t key[3];            /* state of the keyboard keys */
-    uint32_t x, y;              /* mouse x and y coordinates */
-    uint32_t button;            /* mouse and joystick button state */
+    uint32_t state[KEYBOARD_SIZE]; /* state of the keyboard keys */
+    uint32_t prev_state[KEYBOARD_SIZE]; /* previous state of keys */
+    uint32_t selector;          /* to select which state to read */
 };
 
 /* Functions */
@@ -135,6 +141,11 @@ int keyboard_init(struct keyboard *kbd);
  * used by the keyboard.
  */
 void keyboard_destroy(struct keyboard *kbd);
+
+/* Refreshes the keyboard data.
+ * This is to take the snapshot of the keyboard state.
+ */
+void keyboard_update(struct keyboard *kbd, struct quivm *qvm);
 
 /* Implementation of the read callback for the keyboard.
  * The parameter `address` is the address to read. A reference to

@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <string.h>
 
 #include "vm/quivm.h"
 #include "dev/keyboard.h"
@@ -7,18 +8,21 @@
 
 int keyboard_init(struct keyboard *kbd)
 {
-    kbd->key[0] = 0;
-    kbd->key[1] = 0;
-    kbd->key[2] = 0;
-    kbd->x = 0;
-    kbd->y = 0;
-    kbd->button = 0;
+    memset(kbd->state, 0, sizeof(kbd->state));
+    memset(kbd->prev_state, 0, sizeof(kbd->prev_state));
     return 0;
 }
 
 void keyboard_destroy(struct keyboard *kbd)
 {
     (void)(kbd); /* UNUSED */
+}
+
+void keyboard_update(struct keyboard *kbd, struct quivm *qvm)
+{
+    /* resume the VM */
+    qvm->status &= ~STS_HALTED;
+    memcpy(kbd->prev_state, kbd->state, sizeof(kbd->state));
 }
 
 uint32_t keyboard_read_callback(struct keyboard *kbd,
@@ -29,23 +33,22 @@ uint32_t keyboard_read_callback(struct keyboard *kbd,
     (void)(qvm); /* UNUSED */
 
     switch (address) {
-    case IO_KEYBOARD_KEY0:
-        v = kbd->key[0];
+    case IO_KEYBOARD_SELECTOR:
+        v = kbd->selector;
         break;
-    case IO_KEYBOARD_KEY1:
-        v = kbd->key[1];
+    case IO_KEYBOARD_STATE:
+        if (kbd->selector < KEYBOARD_SIZE) {
+            v = kbd->state[kbd->selector];
+        } else {
+            v = -1;
+        }
         break;
-    case IO_KEYBOARD_KEY2:
-        v = kbd->key[2];
-        break;
-    case IO_KEYBOARD_X:
-        v = kbd->x;
-        break;
-    case IO_KEYBOARD_Y:
-        v = kbd->y;
-        break;
-    case IO_KEYBOARD_BUTTON:
-        v = kbd->button;
+    case IO_KEYBOARD_PREV_STATE:
+        if (kbd->selector < KEYBOARD_SIZE) {
+            v = kbd->prev_state[kbd->selector];
+        } else {
+            v = -1;
+        }
         break;
     default:
         v = -1;
@@ -57,8 +60,10 @@ uint32_t keyboard_read_callback(struct keyboard *kbd,
 void keyboard_write_callback(struct keyboard *kbd,  struct quivm *qvm,
                              uint32_t address, uint32_t v)
 {
-    (void)(kbd); /* UNUSED */
     (void)(qvm); /* UNUSED */
-    (void)(address); /* UNUSED */
-    (void)(v); /* UNUSED */
+    switch (address) {
+    case IO_KEYBOARD_SELECTOR:
+        kbd->selector = v;
+        break;
+    }
 }

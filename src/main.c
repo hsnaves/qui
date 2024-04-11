@@ -216,7 +216,7 @@ void process_events(struct quivm *qvm)
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
-            kbd->key[2] |= KEYBOARD_KEY2_QUIT;
+            kbd->state[KEYBOARD_KEY2] |= KEYBOARD_KEY2_QUIT;
             break;
         case SDL_MOUSEMOTION:
             if (!mouse_captured) break;
@@ -225,13 +225,13 @@ void process_events(struct quivm *qvm)
             if (x < 0) x = 0;
             if (x >= ((int) dpl->width))
                 x = dpl->width - 1;
-            kbd->x = x;
+            kbd->state[KEYBOARD_X] = x;
 
             y = e.motion.y;
             if (y < 0) y = 0;
             if (y >= ((int) dpl->height))
                 y = dpl->height - 1;
-            kbd->y = y;
+            kbd->state[KEYBOARD_Y] = y;
             break;
         case SDL_MOUSEBUTTONDOWN:
             if (!mouse_captured) {
@@ -253,9 +253,9 @@ void process_events(struct quivm *qvm)
             }
 
             if (e.type == SDL_MOUSEBUTTONDOWN) {
-                kbd->button |= button;
+                kbd->state[KEYBOARD_BUTTON] |= button;
             } else {
-                kbd->button &= ~button;
+                kbd->state[KEYBOARD_BUTTON] &= ~button;
             }
             break;
         case SDL_KEYDOWN:
@@ -286,9 +286,9 @@ void process_events(struct quivm *qvm)
             }
 
             if (e.type == SDL_KEYDOWN) {
-                kbd->key[idx] |= bit;
+                kbd->state[idx] |= bit;
             } else {
-                kbd->key[idx] &= ~bit;
+                kbd->state[idx] &= ~bit;
             }
             break;
         }
