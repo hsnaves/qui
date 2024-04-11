@@ -98,11 +98,14 @@ static
 int start_network(struct network *ntw)
 {
     struct ntw_internal *ni;
+#ifndef __EMSCRIPTEN__
     struct timeval tv;
+    int val;
+#endif
     struct addrinfo hints, *addrs;
     struct sockaddr_in bind_addr;
     char port_str[16];
-    int val, ret;
+    int ret;
 
     ni = (struct ntw_internal *) ntw->internal;
     ni->sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -113,6 +116,7 @@ int start_network(struct network *ntw)
         return ni->sockfd;
     }
 
+#ifndef __EMSCRIPTEN__
     /* allow multiple clients on the same port */
     val = 1;
     ret = setsockopt(ni->sockfd, SOL_SOCKET, SO_REUSEADDR,
@@ -146,6 +150,7 @@ int start_network(struct network *ntw)
                 strerror(errno));
         goto error_start;
     }
+#endif /* ! def __EMSCRIPTEN__ */
 
     /* resolve the target address */
     memset(&hints, 0, sizeof(hints));
