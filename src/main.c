@@ -263,7 +263,7 @@ void process_events(struct quivm *qvm)
             if ((mod & KMOD_CTRL) && (mod & KMOD_ALT)) {
                 capture_mouse(0);
             }
-            if ((e.key.keysym.sym == SDLK_F5) && (mod & KMOD_CTRL)) {
+            if ((e.key.keysym.sym == SDLK_F2) && (mod & KMOD_CTRL)) {
                 zoom = (zoom == 4) ? 1 : zoom + 1;
                 SDL_SetWindowSize(window,
                                   dpl->width * zoom,

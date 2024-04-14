@@ -53,8 +53,7 @@ uint32_t console_read_callback(struct console *cns,
             } else {
                 /* halt the machine until it has data */
                 qvm->status |= STS_HALTED;
-                qvm->pc--;
-                v = address;
+                v = -1;
             }
             break;
         case CONSOLE_ICHANNEL_ARGS:

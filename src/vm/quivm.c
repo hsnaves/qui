@@ -213,7 +213,12 @@ int quivm_step(struct quivm *qvm)
     }
 
     old_pc = qvm->pc++;
-    insn = quivm_read_byte(qvm, old_pc);
+    if (old_pc < qvm->memsize) {
+        insn = qvm->mem[old_pc];
+    } else {
+        /* prevent the VM from executing outside the memory space */
+        insn = INSN_INVL;
+    }
 
     if (insn < INSN_LIT_BASE) {
         qvm->acc <<= 7;
@@ -299,15 +304,22 @@ int quivm_step(struct quivm *qvm)
             qvm->acc = v / qvm->acc;
             break;
         case INSN_RD:
-            qvm->acc = quivm_read(qvm, qvm->acc);
-            break;
+            v = quivm_read(qvm, qvm->acc);
+            goto check_rewind;
         case INSN_WRT:
             v = quivm_stack_pop(qvm, 0);
             quivm_write(qvm, qvm->acc, v);
             qvm->acc = quivm_stack_pop(qvm, 0);
             break;
         case INSN_RDB:
-            qvm->acc = quivm_read_byte(qvm, qvm->acc);
+            v = quivm_read_byte(qvm, qvm->acc);
+        check_rewind:
+            if (qvm->status & STS_HALTED) {
+                /* if the machine halted during a read, rewind the pc */
+                qvm->pc = old_pc;
+            } else {
+                qvm->acc = v;
+            }
             break;
         case INSN_WRTB:
             v = quivm_stack_pop(qvm, 0);
