@@ -34,6 +34,7 @@ static SDL_Texture *texture;    /* the texture for drawing */
 static SDL_AudioDeviceID audio_id; /* the id of the audio device */
 static int zoom = 3;            /* the zoom level */
 static int mouse_captured;      /* the mouse was captured */
+static SDL_Joystick *joystick;  /* the joystick device */
 #endif
 
 #ifdef INCLUDE_DEFAULT_ROM
@@ -50,11 +51,13 @@ static const uint8_t default_rom[] = { 0xBE, 0xC2 };
 static
 void destroy_window(void)
 {
+    if (joystick) SDL_JoystickClose(joystick);
     if (window) SDL_SetWindowTitle(window, "QUIVM - Terminated");
     if (texture) SDL_DestroyTexture(texture);
     if (renderer) SDL_DestroyRenderer(renderer);
     if (window) SDL_DestroyWindow(window);
 
+    joystick = NULL;
     texture = NULL;
     renderer = NULL;
     window = NULL;
@@ -138,6 +141,14 @@ void create_window(uint32_t width, uint32_t height)
         return;
     }
 
+    if (SDL_NumJoysticks() > 0) {
+        joystick = SDL_JoystickOpen(0);
+        if (joystick == NULL) {
+            fprintf(stderr,"main: unable to open game controller: "
+                    " SDL Error: %s\n", SDL_GetError());
+        }
+    }
+
     capture_mouse(1);
 }
 
@@ -201,8 +212,8 @@ void process_events(struct quivm *qvm)
     struct devio *io;
     struct keyboard *kbd;
     struct display *dpl;
-    uint8_t idx;
-    uint32_t bit, button;
+    uint32_t idx, bit;
+    uint32_t button, mask;
     SDL_Event e;
     SDL_Keymod mod;
     int x, y;
@@ -217,46 +228,6 @@ void process_events(struct quivm *qvm)
         switch (e.type) {
         case SDL_QUIT:
             kbd->state[KEYBOARD_KEY2] |= KEYBOARD_KEY2_QUIT;
-            break;
-        case SDL_MOUSEMOTION:
-            if (!mouse_captured) break;
-
-            x = e.motion.x;
-            if (x < 0) x = 0;
-            if (x >= ((int) dpl->width))
-                x = dpl->width - 1;
-            kbd->state[KEYBOARD_X] = x;
-
-            y = e.motion.y;
-            if (y < 0) y = 0;
-            if (y >= ((int) dpl->height))
-                y = dpl->height - 1;
-            kbd->state[KEYBOARD_Y] = y;
-            break;
-        case SDL_MOUSEBUTTONDOWN:
-            if (!mouse_captured) {
-                capture_mouse(1);
-                break;
-            }
-            /* fall through */
-        case SDL_MOUSEBUTTONUP:
-            if (!mouse_captured) break;
-
-            if (e.button.button == SDL_BUTTON_LEFT) {
-                button = KEYBOARD_BTN_LEFT;
-            } else if (e.button.button == SDL_BUTTON_RIGHT) {
-                button = KEYBOARD_BTN_RIGHT;
-            } else if (e.button.button == SDL_BUTTON_MIDDLE) {
-                button = KEYBOARD_BTN_MIDDLE;
-            } else {
-                button = 0;
-            }
-
-            if (e.type == SDL_MOUSEBUTTONDOWN) {
-                kbd->state[KEYBOARD_BUTTON] |= button;
-            } else {
-                kbd->state[KEYBOARD_BUTTON] &= ~button;
-            }
             break;
         case SDL_KEYDOWN:
             mod = SDL_GetModState();
@@ -289,6 +260,74 @@ void process_events(struct quivm *qvm)
                 kbd->state[idx] |= bit;
             } else {
                 kbd->state[idx] &= ~bit;
+            }
+            break;
+        case SDL_MOUSEMOTION:
+            if (!mouse_captured) break;
+
+            x = e.motion.x;
+            if (x < 0) x = 0;
+            if (x >= ((int) dpl->width))
+                x = dpl->width - 1;
+            kbd->state[KEYBOARD_MOUSE_X] = x;
+
+            y = e.motion.y;
+            if (y < 0) y = 0;
+            if (y >= ((int) dpl->height))
+                y = dpl->height - 1;
+            kbd->state[KEYBOARD_MOUSE_Y] = y;
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            if (!mouse_captured) {
+                capture_mouse(1);
+                break;
+            }
+            /* fall through */
+        case SDL_MOUSEBUTTONUP:
+            if (!mouse_captured) break;
+
+            if (e.button.button == SDL_BUTTON_LEFT) {
+                button = KEYBOARD_MOUSE_LEFT;
+            } else if (e.button.button == SDL_BUTTON_RIGHT) {
+                button = KEYBOARD_MOUSE_RIGHT;
+            } else if (e.button.button == SDL_BUTTON_MIDDLE) {
+                button = KEYBOARD_MOUSE_MIDDLE;
+            } else {
+                button = 0;
+            }
+
+            if (e.type == SDL_MOUSEBUTTONDOWN) {
+                kbd->state[KEYBOARD_MOUSE_BTN] |= button;
+            } else {
+                kbd->state[KEYBOARD_MOUSE_BTN] &= ~button;
+            }
+            break;
+        case SDL_JOYBUTTONDOWN:
+        case SDL_JOYBUTTONUP:
+            if (e.jbutton.button < 12) {
+                button = (1 << ((uint32_t) e.jbutton.button));
+                if (e.type == SDL_JOYBUTTONDOWN) {
+                    kbd->state[KEYBOARD_JOYSTICK] |= button;
+                } else {
+                    kbd->state[KEYBOARD_JOYSTICK] &= ~button;
+                }
+            }
+            break;
+        case SDL_JOYAXISMOTION:
+            if (e.jaxis.axis < 2) {
+                if (e.jaxis.value < -3200) {
+                    button = 1;
+                } else if (e.jaxis.value > 3200) {
+                    button = 2;
+                } else {
+                    button = 0;
+                }
+
+                idx = 12 + 2 * e.jaxis.axis;
+                mask = 3 << idx;
+                button <<= idx;
+                kbd->state[KEYBOARD_JOYSTICK] &= ~mask;
+                kbd->state[KEYBOARD_JOYSTICK] |= button;
             }
             break;
         }
@@ -465,12 +504,8 @@ static
 void print_help(const char *execname)
 {
     printf("Usage:\n");
-    printf("  %s [-r <romfile>] [--stacksize <size>] [--memsize <size>]\n",
-           execname);
-    printf("        [--readonly] [--bind <addr>] [--target <addr>]\n");
-    printf("        [--port <port> ] [--utc] [-h|--help] args...\n");
-
-    printf("where:\n");
+    printf("  %s [OPTIONS] args...\n", execname);
+    printf("where the available options are:\n");
     printf("  -r <romfile>       Specify the rom file to use\n");
     printf("  --stackize <size>  The stack size in cells\n");
     printf("  --memsize <size>   The memory size in bytes\n");
@@ -479,6 +514,7 @@ void print_help(const char *execname)
     printf("  --target <addr>    The address of the target socket\n");
     printf("  --port <port>      The UDP port to bind to\n");
     printf("  --utc              To use UTC for the real time clock\n");
+    printf("  --joystick         To enable joystick use\n");
     printf("  -h|--help          Print this help\n");
 }
 
@@ -499,6 +535,9 @@ int main(int argc, char **argv, char **envp)
     int use_utc;
     int disable_write;
     int port;
+#ifdef USE_SDL
+    int enable_joystick;
+#endif
     int i, ret;
     char *end;
 
@@ -511,6 +550,9 @@ int main(int argc, char **argv, char **envp)
     use_utc = 0;
     disable_write = 0;
     port = 0;
+#ifdef USE_SDL
+    enable_joystick = 0;
+#endif
 
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-r") == 0) {
@@ -538,6 +580,10 @@ int main(int argc, char **argv, char **envp)
         } else if (strcmp(argv[i], "--target") == 0) {
             if (i == argc - 1) goto missing_argument;
             target_address = argv[++i];
+#ifdef USE_SDL
+        } else if (strcmp(argv[i], "--joystick") == 0) {
+            enable_joystick = 1;
+#endif
         } else if ((strcmp(argv[i], "-h") == 0)
                    || (strcmp(argv[i], "--help") == 0)) {
             print_help(argv[0]);
@@ -594,6 +640,7 @@ int main(int argc, char **argv, char **envp)
     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
     ret = SDL_Init(SDL_INIT_VIDEO
                    | SDL_INIT_AUDIO
+                   | ((enable_joystick) ? SDL_INIT_JOYSTICK : 0)
                    | SDL_INIT_NOPARACHUTE);
     if (ret < 0) {
         fprintf(stderr, "main: "

@@ -19,10 +19,11 @@
 #define KEYBOARD_KEY0                    0
 #define KEYBOARD_KEY1                    1
 #define KEYBOARD_KEY2                    2
-#define KEYBOARD_X                       3
-#define KEYBOARD_Y                       4
-#define KEYBOARD_BUTTON                  5
-#define KEYBOARD_SIZE                    6
+#define KEYBOARD_MOUSE_X                 3
+#define KEYBOARD_MOUSE_Y                 4
+#define KEYBOARD_MOUSE_BTN               5
+#define KEYBOARD_JOYSTICK                6
+#define KEYBOARD_SIZE                    7
 
 /* Keyboard keys */
 #define KEYBOARD_KEY0_A         0x00000001
@@ -117,10 +118,15 @@
 #define KEYBOARD_KEY2_QUIT      0x80000000
 
 /* mouse buttons */
-#define KEYBOARD_BTN_LEFT       0x00000001
-#define KEYBOARD_BTN_MIDDLE     0x00000002
-#define KEYBOARD_BTN_RIGHT      0x00000004
+#define KEYBOARD_MOUSE_LEFT     0x00000001
+#define KEYBOARD_MOUSE_MIDDLE   0x00000002
+#define KEYBOARD_MOUSE_RIGHT    0x00000004
 
+/* joystick buttons */
+#define KEYBOARD_JOY_LEFT       0x00001000
+#define KEYBOARD_JOY_RIGHT      0x00002000
+#define KEYBOARD_JOY_UP         0x00004000
+#define KEYBOARD_JOY_DOWN       0x00008000
 
 /* Data structures and types */
 /* A structure representing the keyboard device */
