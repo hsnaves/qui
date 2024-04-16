@@ -32,7 +32,7 @@ static SDL_Window *window;      /* the interface window */
 static SDL_Renderer *renderer;  /* the renderer for the window */
 static SDL_Texture *texture;    /* the texture for drawing */
 static SDL_AudioDeviceID audio_id; /* the id of the audio device */
-static int zoom = 3;            /* the zoom level */
+static int zoom = 1;            /* the zoom level */
 static int mouse_captured;      /* the mouse was captured */
 static SDL_Joystick *joystick;  /* the joystick device */
 #endif
@@ -578,6 +578,7 @@ void print_help(const char *execname)
     printf("  --target <addr>    The address of the target socket\n");
     printf("  --port <port>      The UDP port to bind to\n");
     printf("  --utc              To use UTC for the real time clock\n");
+    printf("  --zoom <zoom>      Set the initial zoom level\n");
     printf("  --joystick         To enable joystick use\n");
     printf("  -h|--help          Print this help\n");
 }
@@ -645,6 +646,11 @@ int main(int argc, char **argv, char **envp)
             if (i == argc - 1) goto missing_argument;
             target_address = argv[++i];
 #ifdef USE_SDL
+        } else if (strcmp(argv[i], "--zoom") == 0) {
+            if (i == argc - 1) goto missing_argument;
+            zoom = strtol(argv[++i], &end, 10);
+            if ((end[0] != '\0') || (zoom < 1) || (zoom > 4))
+                goto invalid_argument;
         } else if (strcmp(argv[i], "--joystick") == 0) {
             enable_joystick = 1;
 #endif
