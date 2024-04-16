@@ -22,9 +22,16 @@
 
 /* Display commands */
 #define DISPLAY_CMD_INIT                 1
-#define DISPLAY_CMD_SETBUF               2
-#define DISPLAY_CMD_FRAMECOUNT           3
-#define DISPLAY_CMD_BLT                  4
+#define DISPLAY_CMD_FRAMECOUNT           2
+#define DISPLAY_CMD_SETBUF               3
+#define DISPLAY_CMD_SETPALETTE           4
+#define DISPLAY_CMD_BLT                  5
+
+/* Display modes */
+#define MODE_1BPP                        1
+#define MODE_4BPP                        4
+#define MODE_8BPP                        8
+#define MODE_24BPP                      24
 
 /* Display return values */
 #define DISPLAY_SUCCESS                  0
@@ -39,6 +46,7 @@ struct display {
     uint32_t height;            /* display height */
     uint32_t buffer;            /* address of the framebuffer in memory */
     uint32_t stride;            /* the row stride for the framebuffer */
+    uint32_t palette;           /* the address of the palette in memory */
     uint32_t framecount;        /* counter for frames */
 
     uint32_t command;           /* the command */
