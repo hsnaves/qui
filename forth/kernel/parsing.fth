@@ -25,7 +25,6 @@ public
   (alloc) dup if exit then
   drop 1 channel c!
   [ swap ] lit lit type nl
-  type nl
   1 terminate tail
   ; noexit
 
