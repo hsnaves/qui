@@ -35,7 +35,7 @@
 /* A structure representing the display device */
 struct display {
     int initialized;            /* device was initialized */
-    uint32_t mode;              /* display mode */
+    uint32_t bpp;               /* bits per pixel */
     uint32_t width;             /* display width */
     uint32_t height;            /* display height */
     uint32_t buffer;            /* address of the framebuffer in memory */
@@ -81,5 +81,17 @@ uint32_t display_read_callback(struct display *dpl,
 void display_write_callback(struct display *dpl,  struct quivm *qvm,
                             uint32_t address, uint32_t v);
 
+/* Auxiliary function to check if a given two dimensional buffer fits
+ * the memory. The buffer is specified by the parameters:
+ *  - `address` : the starting address of the buffer;
+ *  - `stride` : the row stride of the buffer;
+ *  - `width` : the width of the buffer;
+ *  - `height` : the height of the buffer;
+ * and the memory size is given by `memsize`.
+ * Returns zero if the buffer is valid.
+ */
+int check_buffer2d(uint32_t address, uint32_t stride,
+                   uint32_t width, uint32_t height,
+                   uint32_t memsize);
 
 #endif /* __DEV_DISPLAY_H */

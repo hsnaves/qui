@@ -161,9 +161,10 @@ void update_screen(struct quivm *qvm)
     struct devio *io;
     struct display *dpl;
     uint32_t i, j;
-    uint32_t address, length, def_length;
+    uint32_t address, width;
     uint8_t *pixels;
     int stride, ret;
+    int valid;
 
     /* Check if texture and renderer are defined. */
     if (!texture || !renderer) return;
@@ -180,49 +181,41 @@ void update_screen(struct quivm *qvm)
     }
 
     address = dpl->buffer;
-    if (dpl->mode == 24) {
-        def_length = 3 * dpl->width;
-        for (i = 0; i < dpl->height; i++) {
-            if (!(address < qvm->memsize)) break;
+    if (dpl->bpp == 24) {
+        width = 3 * dpl->width;
+        valid = 1;
+    } else {
+        /* 8 bits per pixel */
+        width = dpl->width;
+        valid = (dpl->palette != 0);
+    }
+    valid = valid && (!check_buffer2d(address, dpl->stride,
+                                      width, dpl->height,
+                                      qvm->memsize));
 
-            length = def_length;
-            if (length > (qvm->memsize - address)) {
-                length = qvm->memsize - address;
-                memset(&pixels[length], 0, def_length - length);
+    if (valid) {
+        if (dpl->bpp == 24) {
+            for (i = 0; i < dpl->height; i++) {
+                memcpy(pixels, &qvm->mem[address], width);
+                pixels += stride;
+                address += dpl->stride;
             }
+        } else { /* 8 bits per pixel */
+            for (i = 0; i < dpl->height; i++) {
+                uint32_t palette_address;
+                uint32_t pos;
 
-            memcpy(pixels, &qvm->mem[address], length);
-
-            pixels += stride;
-            address += dpl->stride;
-        }
-    } else { /* 8-bit mode */
-        def_length = dpl->width;
-        if (!(dpl->palette < (qvm->memsize - 768)))
-            def_length = 0;
-        for (i = 0; i < dpl->height; i++) {
-            uint32_t palette_address, pos;
-            if (!(address < qvm->memsize)) break;
-
-            length = def_length;
-            if (length > (qvm->memsize - address))
-                length = qvm->memsize - address;
-
-            if (length < dpl->width)
-                memset(&pixels[3 * length], 0,
-                       3 * (dpl->width - length));
-
-            pos = 0;
-            for (j = 0; j < length; j++) {
-                palette_address = dpl->palette;
-                palette_address += 3 * ((uint32_t) qvm->mem[address + j]);
-                pixels[pos++] = qvm->mem[palette_address++];
-                pixels[pos++] = qvm->mem[palette_address++];
-                pixels[pos++] = qvm->mem[palette_address];
+                pos = 0;
+                for (j = 0; j < width; j++) {
+                    palette_address = dpl->palette;
+                    palette_address += 3 * ((uint32_t) qvm->mem[address + j]);
+                    pixels[pos++] = qvm->mem[palette_address++];
+                    pixels[pos++] = qvm->mem[palette_address++];
+                    pixels[pos++] = qvm->mem[palette_address];
+                }
+                pixels += stride;
+                address += dpl->stride;
             }
-
-            pixels += stride;
-            address += dpl->stride;
         }
     }
 
