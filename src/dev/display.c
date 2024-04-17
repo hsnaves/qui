@@ -27,8 +27,7 @@ void display_destroy(struct display *dpl)
 
 void display_update(struct display *dpl, struct quivm *qvm)
 {
-    /* resume the VM */
-    qvm->status &= ~STS_HALTED;
+    (void)(qvm); /* UNUSED */
     dpl->framecount++;
 }
 
@@ -71,20 +70,7 @@ void do_initialize(struct display *dpl, struct quivm *qvm)
     dpl->width = dpl->params[1];
     dpl->height = dpl->params[2];
 
-    switch (dpl->mode & 0xFF) {
-    case MODE_1BPP:
-        if ((dpl->width % 8) != 0)
-            goto invalid_mode;
-        break;
-    case MODE_4BPP:
-        if ((dpl->width % 2) != 0)
-            goto invalid_mode;
-        break;
-    case MODE_8BPP:
-    case MODE_24BPP:
-        break;
-    default:
-    invalid_mode:
+    if (dpl->mode != 8 && dpl->mode != 24) {
         dpl->params[0] = DISPLAY_ERROR;
         return;
     }

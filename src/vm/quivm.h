@@ -51,6 +51,8 @@
 #define STS_TERMINATED          0x00000001
 #define STS_HALTED              0x00000002
 #define STS_EXCEPTION           0x00000004
+/* Status bits only used internally */
+#define STS_REWIND              0x80000000
 
 /* Exception codes */
 #define EX_RESET                0x00000000

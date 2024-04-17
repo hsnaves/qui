@@ -160,11 +160,8 @@ void update_screen(struct quivm *qvm)
 {
     struct devio *io;
     struct display *dpl;
-    uint32_t i, j, k;
-    uint32_t address, length;
-    uint32_t palette_address, def_length;
-    uint32_t parts, shift, mask;
-    uint32_t data, pos;
+    uint32_t i, j;
+    uint32_t address, length, def_length;
     uint8_t *pixels;
     int stride, ret;
 
@@ -183,7 +180,7 @@ void update_screen(struct quivm *qvm)
     }
 
     address = dpl->buffer;
-    if (dpl->mode == MODE_24BPP) {
+    if (dpl->mode == 24) {
         def_length = 3 * dpl->width;
         for (i = 0; i < dpl->height; i++) {
             if (!(address < qvm->memsize)) break;
@@ -199,54 +196,29 @@ void update_screen(struct quivm *qvm)
             pixels += stride;
             address += dpl->stride;
         }
-    } else {
-        if (dpl->mode == MODE_8BPP) {
-            parts = 1;
-            shift = 0;
-            mask = 0xFF;
-        } else if (dpl->mode == MODE_4BPP) {
-            parts = 2;
-            shift = 4;
-            mask = 0xF;
-        } else {
-            parts = 8;
-            shift = 1;
-            mask = 1;
-        }
-
-        def_length = dpl->width / parts;
+    } else { /* 8-bit mode */
+        def_length = dpl->width;
+        if (!(dpl->palette < (qvm->memsize - 768)))
+            def_length = 0;
         for (i = 0; i < dpl->height; i++) {
+            uint32_t palette_address, pos;
             if (!(address < qvm->memsize)) break;
 
             length = def_length;
-            if (!(dpl->palette < qvm->memsize))
-                length = 0;
-            else if (length > (qvm->memsize - address))
+            if (length > (qvm->memsize - address))
                 length = qvm->memsize - address;
 
-            if (length < def_length) {
-                memset(&pixels[3 * parts * length], 0,
-                       3 * parts * (def_length - length));
-            }
+            if (length < dpl->width)
+                memset(&pixels[3 * length], 0,
+                       3 * (dpl->width - length));
 
             pos = 0;
             for (j = 0; j < length; j++) {
-                data = (uint32_t) qvm->mem[address + j];
-
-                for (k = 0; k < parts; k++) {
-                    palette_address = dpl->palette;
-                    palette_address += 3 * (data & mask);
-                    if (palette_address + 3 <= qvm->memsize) {
-                        pixels[pos++] = qvm->mem[palette_address];
-                        pixels[pos++] = qvm->mem[palette_address + 1];
-                        pixels[pos++] = qvm->mem[palette_address + 2];
-                    } else {
-                        pixels[pos++] = 0;
-                        pixels[pos++] = 0;
-                        pixels[pos++] = 0;
-                    }
-                    data >>= shift;
-                }
+                palette_address = dpl->palette;
+                palette_address += 3 * ((uint32_t) qvm->mem[address + j]);
+                pixels[pos++] = qvm->mem[palette_address++];
+                pixels[pos++] = qvm->mem[palette_address++];
+                pixels[pos++] = qvm->mem[palette_address];
             }
 
             pixels += stride;

@@ -133,9 +133,6 @@ void audio_update(struct audio *aud, struct quivm *qvm)
     float v, d, y0, y1, y;
     int active;
 
-    /* resume the VM */
-    qvm->status &= ~STS_HALTED;
-
     audi = (struct audio_internal *) aud->internal;
 
     num_samples = SAMPLES_PER_UPDATE;

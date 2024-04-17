@@ -323,6 +323,5 @@ void devio_update(struct devio *io)
     timer_update(io->tmr, io->qvm);
     display_update(io->dpl, io->qvm);
     audio_update(io->aud, io->qvm);
-    keyboard_update(io->kbd, io->qvm);
 }
 

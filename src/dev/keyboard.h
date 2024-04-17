@@ -13,7 +13,6 @@
 /* Addresses within the keyboard device */
 #define IO_KEYBOARD_SELECTOR    0xFFFFFF1C
 #define IO_KEYBOARD_STATE       0xFFFFFF18
-#define IO_KEYBOARD_PREV_STATE  0xFFFFFF14
 
 /* Possible values for the selector */
 #define KEYBOARD_KEY0                    0
@@ -132,7 +131,6 @@
 /* A structure representing the keyboard device */
 struct keyboard {
     uint32_t state[KEYBOARD_SIZE]; /* state of the keyboard keys */
-    uint32_t prev_state[KEYBOARD_SIZE]; /* previous state of keys */
     uint32_t selector;          /* to select which state to read */
 };
 
@@ -148,11 +146,6 @@ int keyboard_init(struct keyboard *kbd);
  */
 void keyboard_destroy(struct keyboard *kbd);
 
-/* Refreshes the keyboard data.
- * This is to take the snapshot of the keyboard state.
- */
-void keyboard_update(struct keyboard *kbd, struct quivm *qvm);
-
 /* Implementation of the read callback for the keyboard.
  * The parameter `address` is the address to read. A reference to
  * the QUI vm is given by `qvm`.
@@ -167,6 +160,5 @@ uint32_t keyboard_read_callback(struct keyboard *kbd,
  */
 void keyboard_write_callback(struct keyboard *kbd,  struct quivm *qvm,
                              uint32_t address, uint32_t v);
-
 
 #endif /* __DEV_KEYBOARD_H */

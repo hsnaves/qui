@@ -52,7 +52,7 @@ uint32_t console_read_callback(struct console *cns,
                 v = fgetc(stdin);
             } else {
                 /* halt the machine until it has data */
-                qvm->status |= STS_HALTED;
+                qvm->status |= STS_HALTED | STS_REWIND;
                 v = -1;
             }
             break;

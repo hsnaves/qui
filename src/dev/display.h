@@ -27,12 +27,6 @@
 #define DISPLAY_CMD_SETPALETTE           4
 #define DISPLAY_CMD_BLT                  5
 
-/* Display modes */
-#define MODE_1BPP                        1
-#define MODE_4BPP                        4
-#define MODE_8BPP                        8
-#define MODE_24BPP                      24
-
 /* Display return values */
 #define DISPLAY_SUCCESS                  0
 #define DISPLAY_ERROR                   -1
