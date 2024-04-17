@@ -12,8 +12,7 @@ public
   ; noexit
 
 : boot ( status -- )
-  dup
-  if onexcept @ exec tail then
+  dup if onexcept @ exec tail then
   drop
   0 -1 rstack ! 1 -1 dstack !
   onboot @ exec \ assumes onboot is non-zero
@@ -34,6 +33,14 @@ private
   quit tail
   ; noexit
 last @ >xt is error
+
+\ default implementation of fatal
+: default_fatal ( c-str n -- )
+  1 channel c!
+  type nl
+  bye tail
+  ; noexit
+last @ >xt is fatal
 
 \ default implementation of onexcept
 : default_onexcept ( status -- )

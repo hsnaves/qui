@@ -4,7 +4,7 @@ hex
 scope{
 public
 \ variable space
-align here @ 8 buf>end allot
+align 8 buf>end allot
 
 ephemeral
 : module-current [ dup ] lit            ; inl
@@ -58,7 +58,6 @@ last @ >xt onboot !
 \ allocate space in the global-buffer
 : allocate-space ( size -- addr )
   3 + -4 and                    \ round the size to multiple of 4
-  global-buffer buf>here @ swap
   global-buffer %allot tail
   ; noexit
 
@@ -73,7 +72,7 @@ last @ >xt onboot !
   global-buffer buf>here !
   ;
 
-," could not read "
+" could not read "
 : file-error ( addr -- )
   1 channel c!
   [ swap ] lit lit type
@@ -162,7 +161,7 @@ forth current !
 
 \ include a module (inline)
 : include" ( -- )
-  ," 0 c, drop
+  ", 0 c, drop
   dup (include) here !          \ restore here pointer
   ;
 }scope

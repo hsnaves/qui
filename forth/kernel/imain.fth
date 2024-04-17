@@ -43,7 +43,7 @@ public
 
 private
 \ shows an error for large literal string
-," large literal"
+" large literal"
 : literror ( -- )
   [ swap ] lit lit
   error tail

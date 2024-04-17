@@ -305,11 +305,7 @@ int quivm_step(struct quivm *qvm)
             break;
         case INSN_RD:
             v = quivm_read(qvm, qvm->acc);
-            if (qvm->status & STS_REWIND)
-                qvm->pc = old_pc;
-            else
-                qvm->acc = v;
-            break;
+            goto check_rewind;
         case INSN_WRT:
             v = quivm_stack_pop(qvm, 0);
             quivm_write(qvm, qvm->acc, v);
@@ -317,10 +313,13 @@ int quivm_step(struct quivm *qvm)
             break;
         case INSN_RDB:
             v = quivm_read_byte(qvm, qvm->acc);
-            if (qvm->status & STS_REWIND)
+        check_rewind:
+            if (qvm->status & STS_REWIND) {
                 qvm->pc = old_pc;
-            else
+                qvm->status &= ~STS_REWIND;
+            } else {
                 qvm->acc = v;
+            }
             break;
         case INSN_WRTB:
             v = quivm_stack_pop(qvm, 0);

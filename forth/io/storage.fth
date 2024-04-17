@@ -19,7 +19,7 @@ public
 \ set the name of the file to operate on
 \ based on a string
 : file-name" ( -- )
-  ," 0 c,
+  ", 0 c,
   drop dup
   file-name!
   here ! \ revert back the here

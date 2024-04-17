@@ -125,6 +125,9 @@ align defer getc ( -- c)
 \ prints an error message and restarts the interpreter
 align defer error ( c-str n  -- )
 
+\ prints an error message and quits
+align defer fatal ( c-str n  -- )
+
 ( *** helper words *** )
 
 \ returns true if min <= v <= max

@@ -9,9 +9,8 @@ ephemeral
 
 private
 \ obtains the xt of the exec word
-," exec"
 : exec-xt ( -- xt )
-  [ swap ] lit lit
+  " exec"
   swap addr>meta swap
   0 lookup
   >xt tail

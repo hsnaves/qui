@@ -7,12 +7,11 @@ extra current !
 scope{
 public
 ( the opcode table )
-here @
-," RET  JSR  JMP  JZ   EQ0  EQ   ULT  LT   " 2drop
-," NOP  AND  OR   XOR  ADD  SUB  UMUL UDIV " 2drop
-," RD   WRT  RDB  WRTB SIGNESHL  USHR SHR  " 2drop
-," DUP  DROP SWAP OVER ROT  RTO  RFROMRPEEK" 2drop
-," INVL " 2drop
+" RET  JSR  JMP  JZ   EQ0  EQ   ULT  LT   " drop
+" NOP  AND  OR   XOR  ADD  SUB  UMUL UDIV " 2drop
+" RD   WRT  RDB  WRTB SIGNESHL  USHR SHR  " 2drop
+" DUP  DROP SWAP OVER ROT  RTO  RFROMRPEEK" 2drop
+" INVL " 2drop
 
 ephemeral
 \ opcodes points to the table defined above
@@ -82,7 +81,7 @@ private
   ; noexit
 
 \ disassemble a literal shift instruction
-," LITS "
+" LITS "
 : disasm_lits ( addr opc -- )
    [ swap ] lit lit type
    b. space
@@ -90,7 +89,7 @@ private
    ; noexit
 
 \ disassemble a literal instruction
-," LIT  "
+" LIT  "
 : disasm_lit ( addr opc -- )
   [ swap ] lit lit type
   litval b. space

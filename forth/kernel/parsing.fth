@@ -20,12 +20,10 @@ public
 \ memory allocation function with validation
 \ if it returns, the address is guarateed to be non-zero
 \ otherwise it terminates the program
-," memory exhausted"
+" memory exhausted"
 : alloc ( size -- addr )
   (alloc) dup if exit then
-  drop 1 channel c!
-  [ swap ] lit lit type nl
-  1 terminate tail
+  drop [ swap ] lit lit fatal tail
   ; noexit
 
 ephemeral
@@ -54,7 +52,7 @@ ephemeral
 
 private
 \ prints an error messages that the TIB overflowed
-," TIB overflow"
+" TIB overflow"
 : tiboverflow ( -- )
   [ swap ] lit lit error tail
   ; noexit
@@ -204,7 +202,7 @@ public
 internal current !
 
 \ prints an error message of an unknown word
-," ? "
+" ? "
 : unknown ( c-str n -- )
   [ swap ] lit lit
   1 channel c! type

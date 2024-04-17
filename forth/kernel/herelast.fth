@@ -12,7 +12,7 @@ hex
   ;
 
 \ allocates a given number of bytes
-: allot ( n -- )
+: allot ( n -- addr )
   code %allot tail
   ; noexit
 

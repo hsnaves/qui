@@ -2,7 +2,7 @@ decimal
 
 scope{
 private
-align here @ 32 allot
+align 32 allot
 ephemeral
 : input-filename  [ dup ]     lit ; inl
 : input-offset    [ 4 + dup ] lit ; inl
@@ -15,7 +15,7 @@ ephemeral
 : buffer-size                  64 ; inl
 
 private
-align here @ 128 allot
+align 128 allot
 ephemeral
 : input-buffer    [ dup ]     lit ; inl
 : output-buffer   [ 64 + ]    lit ; inl
@@ -33,13 +33,12 @@ private
   [ defer-ptr (emit) ] lit !
   ;
 
-," error in file operation: "
 : error-fileio ( cstr -- )
   restore-prev-emit
   1 channel c!
-  [ swap ] lit lit type
+  " error in file operation: " type
   dup 0 char-find over -
-  type bye tail
+  fatal tail
   ; noexit
 
 : flush-output ( -- )
@@ -93,11 +92,10 @@ private
   if refresh-input then
   ;
 
-," ," ," 0x"
 : dump-entry ( -- )
-  [ swap ] lit lit type
+  " 0x" type
   fetch-character b.
-  [ swap ] lit lit type tail
+  " ," type tail
   ; noexit
 
 : dump-row ( -- )
@@ -115,7 +113,7 @@ private
   nl tail
   ; noexit
 
-," /* auto-generated binary code (do not edit it) */
+" /* auto-generated binary code (do not edit it) */
 
 static const uint8_t default_rom[] = {
 "
@@ -123,11 +121,10 @@ static const uint8_t default_rom[] = {
   [ swap ] lit lit type tail
   ; noexit
 
-," };
-
-"
 : dump-footer ( -- )
-  [ swap ] lit lit type tail
+  " };
+
+" type tail
   ; noexit
 
 public
@@ -152,8 +149,8 @@ public
 
 }scope
 
-," rom.bin" drop 0 c,
-," src/default_rom.c" drop 0 c,
+" rom.bin" drop 0 c,
+" src/default_rom.c" drop 0 c,
 
 dump-data
 bye

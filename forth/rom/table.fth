@@ -18,13 +18,12 @@ public
 
 \ word to create a variable
 : var ( size -- )
-  here @ swap allot
-  create lit, wrapup
+  allot create lit, wrapup
   inl tail
   ; noexit
 
 \ variable space
-align here @ 0C buf>end allot
+align 0C buf>end allot
 
 ephemeral
 : num-tables [ dup ] lit  ; inl
@@ -53,7 +52,7 @@ private
   [ main-buffer buf>end ] lit !
   indices ! 0 num-tables !
   [ max-tables 2 shl ] lit
-  main-buffer %allot tail
+  main-buffer %allot drop
   ;
 
 allocate-main-buffer

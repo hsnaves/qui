@@ -49,20 +49,12 @@ ephemeral
 : META_BUFFER_SIZE lit ; inl
 
 private
-," write outside meta-buffer"
-: INVALIDWRITE_STR ( -- c-str n )
-  [ swap ] lit lit
-  ; inl
-
 \ checks for write outside the buffer
 : check-write ( addr n -- )
   + META_BUFFER_SIZE swap u<
-  if
-    1 channel c!
-    INVALIDWRITE_STR type nl
-    1 terminate
-  then
-  ;
+  =0 if exit then
+  " write outside meta-buffer" fatal tail
+  ; noexit
 
 public
 ( read / write in meta system )
@@ -86,7 +78,7 @@ public
 }scope
 
 \ re-implementation of words in the meta address space
-: type ( -- c-str n )
+: type ( c-str n -- )
   swap addr>host swap
   type tail
   ; noexit

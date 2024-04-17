@@ -58,20 +58,20 @@ private
   ; noexit
 
 \ handles invalid instructions
-," invalid instruction at "
+" invalid instruction at "
 : invalid_insn ( status -- )
   [ swap ] lit lit
   general_exception tail
   ; noexit
 
 \ handles divide by zero errors
-," divide by zero at "
+" divide by zero at "
 : divide_by_zero ( status -- )
   [ swap ] lit lit
   general_exception tail
   ; noexit
 
-," stack overflow at "
+" stack overflow at "
 : stack_overflow ( status -- )
   [ swap ] lit lit
   general_exception tail

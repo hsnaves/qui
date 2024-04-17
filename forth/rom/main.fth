@@ -117,6 +117,13 @@ current @ over current !
 
 current !
 
+: " ( -- c-str n )
+  state c@ =0 if ", tail then
+  here @ dup litja, I_JMP c, ",
+  rot here @ swap here ! dup litja, here !
+  swap lit, lit, tail
+  ; noexit imm
+
 \ obtains the execution token of the next word
 : ' ( -- xt )
   find >xt tail

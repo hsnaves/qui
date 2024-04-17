@@ -42,7 +42,7 @@ hex
 scope{
 private
 \ shows the buffer overflow error
-," buffer overflow"
+" buffer overflow"
 : overflow ( -- )
   [ swap ] lit lit
   error tail
@@ -59,11 +59,10 @@ public
 }scope
 
 \ allocates a given number of bytes in the buffer
-: %allot ( n buf -- )
+: %allot ( n buf -- addr )
   2dup %overflow?
-  buf>here swap
-  over @
-  + swap !
+  buf>here dup @
+  rot over + rot !
   ;
 
 \ compile a value in a user-selected buffer
@@ -84,8 +83,7 @@ public
 
 \ compiles a string in a user-selected buffer
 : %str, ( c-str n buf -- )
-  dup buf>here @
-  >r over swap %allot r>
+  over swap %allot
   str-copy tail
   ; noexit
 
@@ -94,5 +92,5 @@ public
   dup buf>here @
   dup 3 + -4 and
   swap -
-  swap %allot tail
-  ; noexit
+  swap %allot drop
+  ;
