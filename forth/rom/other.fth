@@ -10,6 +10,11 @@ hex
   drop
   ;
 
+\ postpone the execution of an immediate word
+: postpone ( -- )
+  ' I_JSR jump, tail
+  ; noexit imm
+
 \ obtains the first character of the next word
 : char ( -- c )
   word
@@ -31,7 +36,7 @@ extra current !
 \ implementation of the pcg32 random number generator
 \ https://www.pcg-random.org/
 
-align 8 var seed
+align 8 allot const seed
 0 seed ! 0 seed 4 + !
 
 scope{

@@ -4,7 +4,7 @@ hex
 \ detect if the meta compiler is present
 \ the stack will contain the address of the internal
 \ dictionary or the meta dictionary
-word meta 0 lookup =0
+word meta 0 lookup nip nip =0
 dup internal and swap =0 current @ and or
 
 current @ over current !
@@ -121,11 +121,6 @@ current !
 : ' ( -- xt )
   find >xt tail
   ; noexit
-
-\ postpone the execution of an immediate word
-: postpone ( -- )
-  ' I_JSR jump, tail
-  ; noexit imm
 
 \ compiles a literal (immediate word)
 : lit ( n -- )

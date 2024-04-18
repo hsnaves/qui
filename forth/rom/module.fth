@@ -65,7 +65,7 @@ last @ >xt onboot !
 : uninstall-module ( addr -- )
   dup mod>pgetc @
   \ obtain the previous value of getc
-  [ defer-ptr getc ] lit !
+  [ find getc defer-ptr ] lit !
   \ link the module
   dup node>next @
   module-current !
@@ -117,7 +117,7 @@ last @ >xt onboot !
 \ install the current module
 : install-module ( addr -- )
   \ obtain the previous value of getc
-  [ defer-ptr getc ] lit
+  [ find getc defer-ptr ] lit
   2dup @
   swap mod>pgetc !
   [ ' module-getc ] lit

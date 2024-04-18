@@ -18,4 +18,4 @@ include" forth/meta/init.fth"
 
 forth current !
 meta use
-interpreter
+meta-interpreter

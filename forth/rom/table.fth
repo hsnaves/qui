@@ -16,19 +16,15 @@ public
   2drop r>
   ;
 
-\ word to create a variable
-: var ( size -- )
-  allot create lit, wrapup
-  inl tail
+\ word to embed a constant
+: const ( v -- )
+  create lit, wrapup inl tail
   ; noexit
 
-\ word to create rellocatable variable
-: rvar ( size -- )
-  allot create
-  0 lit, I_JSR c, here @
-  [ ' r> c@ ] lit c,
-  - lit,
-  [ ' + c@ ] lit c,
+\ word to embed a rellocatable constant (address)
+: rconst ( addr -- )
+  create 0 lit, I_JSR c, here @
+  [ ' r> c@ ] lit c, - lit, [ ' + c@ ] lit c,
   wrapup tail
   ; noexit
 
@@ -107,21 +103,17 @@ last @ >xt onboot !
   3 shl r@ table>data +
   swap 3 shl r> table>data +    \ d: start pos end | r: hash
   begin
-    over 4 + @
-    if
-      over @ r@ <>
-      if
+    over 4 + @ if
+      over @ r@ <> if
          swap 8 + swap
-         2dup =
-         if
+         2dup = if
             nip over swap
          then
          again
       then
     then
   end
-  drop nip
-  r> over !                     \ write the hash
+  drop nip r> over !            \ write the hash
   ;
 
 \ increments the counter of the hash table
@@ -190,13 +182,13 @@ last @ >xt onboot !
   ;
 
 \ looks up a given string in the hash table
-: i-lookup ( c-str n dict -- addr )
-  resolve-table dup =0
-  if nip nip exit then
+: i-lookup ( c-str n dict -- c-str n addr )
+  resolve-table
+  dup =0 if exit then
   >r 2dup hash r> find-slot
   4 + @                         \ d: c-str n addr
-  >r r@ >name compare r> swap
-  if drop 0 then
+  >r 2dup r@ >name compare
+  =0 r> and
   ;
 ' i-lookup is (i-lookup)
 
@@ -214,7 +206,8 @@ public
 
 \ word to create a dictionary
 : dictionary ( -- )
-  align here @ [ 4 dict>index ] lit var
+  align [ 4 dict>index ] lit
+  allot dup const
   0 over dict>last !
   0 over node>next !
   wordbuf over dict>code !

@@ -98,4 +98,5 @@ decimal
 
 file-name" rom.bin"
 0 0 here @ 2 file-do . nl
+cycles . nl
 bye

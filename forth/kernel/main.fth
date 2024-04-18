@@ -65,16 +65,8 @@ F_XT flags c!
 \ change the base to decimal
 : decimal ( -- ) 0A base c!  ;
 
-( *** exec trampoline *** )
-
-\ obtains the current value of the pc
-: pc ( -- pc ) [ DF c, ] ;
-
 \ executes a given function
-: exec ( addr -- ... )
-  pc 4 + -
-  [ I_JMP c, ]
-  ; noexit
+: exec ( addr -- ... ) >r ;
 
 ( *** implementation of basic system words *** )
 

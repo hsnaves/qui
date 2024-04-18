@@ -17,11 +17,6 @@ current @ currnext !
 : temp ( -- addr )     7C ; inl
 : tmpbuf ( -- addr )   90 ; inl
 
-\ obtains the xt of the exec word
-: exec-xt ( -- xt)
-  [ ' exec ] lit
-  ; inl
-
 \ go to public declarations
 currnext @ current !
 temp currnext !

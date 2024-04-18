@@ -6,9 +6,9 @@ dictionary meta
 
 ( saved words from the host environment )
 : h:F_IMM   [ F_IMM ] lit ; inl
-: h:>xt     [ ' >xt ] lit exec tail ; noexit
-: h:>flags  [ ' >flags ] lit exec tail ; noexit
-: h:lookup  [ ' lookup ] lit exec tail ; noexit
+: h:>xt     [ ' >xt ] lit >r ;
+: h:>flags  [ ' >flags ] lit >r ;
+: h:lookup  [ ' lookup ] lit >r ;
 
 scope{
 ephemeral
@@ -25,9 +25,9 @@ public
   meta discard tail
   ; noexit
 
-\ exit the meta-compilation dictionary and interpreter
+\ exit the meta-compilation dictionary and meta-interpreter
 : meta-exit ( -- )
-  rdrop \ drops from the meta interpreter
+  rdrop \ drops from the meta-interpreter
   meta-discard tail
   ; noexit
 
@@ -103,18 +103,3 @@ public
   word
   swap addr>meta swap
   ;
-
-: compare ( c-str1 n1 c-str2 n2 -- neq? )
-  >r >r >r
-  addr>host
-  r> r>
-  addr>host
-  r>
-  compare tail
-  ; noexit
-
-: number ( c-str n -- num rem )
-  swap addr>host swap
-  number tail
-  ; noexit
-

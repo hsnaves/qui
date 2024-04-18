@@ -23,8 +23,8 @@ hex
 : public ( -- )
   current @ temp =
   if
-     currnext @ current !
-     temp currnext !
+    currnext @ current !
+    temp currnext !
   then
   ;
 
@@ -52,29 +52,20 @@ hex
 
 \ creates a deferred word
 : defer ( -- )
-  here @
-  0 ,
-  create
-  lit,
-  D0 c,                        \ compile "@"
-  exec-xt
-  I_JMP jump,
+  here @ 0 ,
+  create lit,
+  D0 c, DD c,                  \ compile "@ >r"
   wrapup tail
   ; noexit
 
 \ swaps to the dictionary in the stack
 current @ swap current !
-
 \ finds the address of the pointer to the deferred word
-: defer-ptr ( -- addr )
-  1 (find) 4 -
-  ;
-
+: defer-ptr ( addr -- addr' ) 4 - ; inl
 current ! \ restore current
-
 \ sets the xt of a deferred word
 : is ( xt -- )
-  defer-ptr !
+  find defer-ptr !
   ;
 
 ephemeral
@@ -83,12 +74,12 @@ ephemeral
 private
 \ initializes the tmpbuf
 : scope_initialize ( -- )
-   [ onboot @ ] lit exec
-   TMPBUF_SIZE alloc
-   dup [ tmpbuf buf>here ] lit !
-   dup [ tmpbuf buf>start ] lit !
-   TMPBUF_SIZE + [ tmpbuf buf>end ] lit !
-   ;
+  [ onboot @ ] lit exec
+  TMPBUF_SIZE alloc
+  dup [ tmpbuf buf>here ] lit !
+  dup [ tmpbuf buf>start ] lit !
+  TMPBUF_SIZE + [ tmpbuf buf>end ] lit !
+  ;
 last @ >xt onboot !
 }scope
 

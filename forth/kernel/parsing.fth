@@ -134,22 +134,6 @@ public
   ;
 }scope
 
-( *** implementation of the compare word *** )
-\ compare two counted strings
-\ returns true when not equal
-: compare ( c-str1 n1 c-str2 n2 -- neq? )
-  swap >r over <>
-  if 2drop r> drop 1 exit then
-
-  begin \ d: c-str1 n1 | r: c-str2
-    dup if
-      over c@ r@ c@ =
-      if 1/str r> 1+ >r again then
-    then
-  end
-  nip rdrop
-  ;
-
 ( *** implementation of the number word *** )
 scope{
 private
@@ -158,41 +142,38 @@ private
   dup [ char 9 char 0 ] lit lit
   within if [ char 0 ] lit - exit then
   dup [ char Z char A ] lit lit
-  within =0 if drop -1 exit then
-  [ char A 0A - ] lit -
+  within if [ char A 0A - ] lit - exit then
+  drop -1
   ;
 
 \ counted string to unsigned number
-\ returns the parsed number together with the number of
-\ remaining characters in the counted string
 : unumber ( c-str n -- u rem )
-  swap 0
-  begin  \ d: n c-str u
+  0 >r
+  begin
     over c@ c>d
     base c@ 2dup u<
-    if                          \ d: n c-str u dig vbase
-      rot * + rot 1-
-      >r r@ rot 1+ rot r>       \ d: n c-str' u n
-      =0 until
+    if \ d: c-str n dig vbase | r: u
+      r> * + >r
+      1/str dup =0 until
       2dup
     then
     2drop
   end
-  nip swap
+  r> swap rot drop
   ;
 
 public
 \ counted string to signed number
-\ returns the parsed number and the number of remaining
-\ characters in the counted string
+\ returns the parsed number together with the number of
+\ remaining characters in the counted string
+\ this word assumes n is positive
 : number ( c-str n -- num rem )
   1 over u<
   if
     over c@ [ char - ] lit  =
     if
       1/str unumber
-      0 rot - swap
-      exit
+      0 rot - swap exit
     then
   then
   unumber tail
@@ -200,7 +181,6 @@ public
 }scope
 
 internal current !
-
 \ prints an error message of an unknown word
 " ? "
 : unknown ( c-str n -- )
@@ -208,5 +188,4 @@ internal current !
   1 channel c! type
   error tail
   ; noexit
-
 forth current !

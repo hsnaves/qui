@@ -1,6 +1,21 @@
 \ handling words in dictionary
 hex
 
+( *** implementation of the compare word *** )
+\ compare two counted strings
+\ returns true when not equal
+\ assumes n1 is positive
+: compare ( c-str1 n1 c-str2 n2 -- neq? )
+  swap >r over =
+  begin \ d: c-str1 n1 cont? | r: c-str2
+    if
+      over c@ r@ c@ =
+      if 1/str r> 1+ >r dup again then
+    then
+  end
+  nip rdrop
+  ;
+
 ( *** words for accessing parts of a word in the dictionary *** )
 \ obtains the flags for the word
 : >flags ( addr -- fl )
@@ -51,7 +66,7 @@ hex
 \ detect if the meta compiler is present
 \ the stack will contain the address of the internal
 \ dictionary or the meta dictionary
-word meta 0 lookup =0
+word meta 0 lookup nip nip =0
 dup internal and swap =0 current @ and or
 
 current @ over current !
@@ -59,77 +74,53 @@ align defer (i-lookup)
 align defer (i-insert)
 current !
 
+scope{
+private
 \ finds a word in the dictionary
-: lookup1 ( c-str n dict -- addr )
+: lookup1 ( c-str n dict -- c-str n addr )
   dup dict>index @
   if
-    >r 2dup r@ (i-lookup)
-    dup if rdrop nip nip exit then
+    >r r@ (i-lookup)
+    dup if rdrop exit then
     drop r>
   then
 
-  swap >r swap >r
   dict>last @
-  begin                         \ d: addr | r: n c-str
+  begin
     dup if
-      dup >name
-      r> r@ over >r
-      compare
-      if >link again then
+      >r 2dup r@ >name compare
+      if r> >link again then
+      r>
     then
-    rdrop rdrop
   end
   ;
 
-scope{
-private
-
-\ finds a word in the dictionary that is not immediate
-: lookup1-nonimm ( c-str n dict -- addr )
-  lookup1
-  dup if
-    dup c@                      \ small optimization instead of >flags
-    F_IMM and =0 and
-  then
-  ;
-
 \ finds a word in the current (and currnext) dictionaries
-: lookupcurrent ( c-str n -- addr )
-  2dup current @ lookup1-nonimm
-  dup if nip nip exit then
+: lookupcurrent ( c-str n -- c-str n addr )
+  current @ lookup1
+  dup if exit then
   drop currnext @
-  dup if lookup1-nonimm tail then
-  nip nip
+  dup if lookup1 tail then
   ;
 
 \ finds a word in the context
-: lookupcontext ( c-str n -- addr )
+: lookupcontext ( c-str n -- c-str n addr )
   context @
   begin
     dup if
-      >r 2dup r@ lookup1        \ d: c-str n addr | r: dict
-      dup if
-        nip nip rdrop exit
-      then
+      >r r@ lookup1             \ d: c-str n addr | r: dict
+      dup if rdrop exit then
       drop r> node>next @
       again
     then
   end
-  nip nip
   ;
 
 public
-\ finds a word in the context
-\ if include? is true, it also searches in the current dictionary
-\ and this search is done before searching the word in the context
-\ if the word is in the current dictionary, it is only returned
-\ if it is not immediate
-: lookup ( c-str n include? -- addr )
-  if
-    2dup lookupcurrent
-    dup if nip nip exit then
-    drop
-  then
+\ finds a word in current or context
+\ if current? is true search current, otherwise search context
+: lookup ( c-str n current? -- c-str n addr )
+  if lookupcurrent tail then
   lookupcontext tail
   ; noexit
 
@@ -138,7 +129,7 @@ public
 current @ swap current !
 \ finds the next word from TIB in the context
 : (find) ( include? -- addr )
-  >r word 2dup r> lookup
+  word rot lookup
   dup if nip nip exit then
   drop unknown tail
   ; noexit
@@ -213,10 +204,8 @@ public
 
 \ to end a word definition in the dictionary
 : wrapup ( addr -- )
-  exit,
-  this @ dup last !
+  exit, this @ dup last !
   current @ dup dict>index @
   if 2dup (i-insert) then
-  2drop
-  0 this !
+  2drop 0 this !
   ;

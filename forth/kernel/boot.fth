@@ -3,6 +3,17 @@ hex
 
 ( *** boot *** )
 scope{
+private
+\ main Forth interpreter
+\ it interprets all the words in an infinite loop
+: interpreter ( -- )
+  0 state c!
+  begin
+    word interpret
+    again
+  end
+  ;
+
 public
 \ goes back to the interpreter
 : quit ( -- )
@@ -12,7 +23,7 @@ public
   ; noexit
 
 : boot ( status -- )
-  dup if onexcept @ exec tail then
+  dup if onexcept @ >r exit then
   drop
   0 -1 rstack ! 1 -1 dstack !
   onboot @ exec \ assumes onboot is non-zero

@@ -30,7 +30,7 @@ private
 
 : restore-prev-emit ( -- )
   prev-emit @
-  [ defer-ptr (emit) ] lit !
+  [ find (emit) defer-ptr ] lit !
   ;
 
 : error-fileio ( cstr -- )
@@ -64,7 +64,7 @@ private
 
 : install-new-emit ( -- )
   [ ' new-emit ] lit
-  [ defer-ptr emit ] lit !
+  [ find emit defer-ptr ] lit !
   ;
 
 : refresh-input ( -- )
