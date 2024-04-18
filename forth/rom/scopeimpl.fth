@@ -12,6 +12,9 @@ hex
   tmpbuf [ temp dict>code ] lit !
   tmpbuf [ temp dict>data ] lit !
 
+  \ copy the offset of the code buffer into tmpbuf
+  code buf>off @ [ tmpbuf buf>off ] lit !
+
   temp currnext !
   temp use tail
   ; noexit

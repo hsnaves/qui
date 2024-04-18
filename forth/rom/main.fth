@@ -117,13 +117,6 @@ current @ over current !
 
 current !
 
-: " ( -- c-str n )
-  state c@ =0 if ", tail then
-  here @ dup litja, I_JMP c, ",
-  rot here @ swap here ! dup litja, here !
-  swap lit, lit, tail
-  ; noexit imm
-
 \ obtains the execution token of the next word
 : ' ( -- xt )
   find >xt tail
@@ -137,6 +130,13 @@ current !
 \ compiles a literal (immediate word)
 : lit ( n -- )
   lit, tail
+  ; noexit imm
+
+: " ( -- c-str n )
+  state c@ =0 if ", tail then
+  here @ dup litja, I_JSR c, ", swap drop
+  swap here @ swap here ! dup litja, here !
+  [ ' r> c@ ] lit c, lit, tail
   ; noexit imm
 
 \ uses a dictionary (appends to context)

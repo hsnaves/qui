@@ -76,7 +76,6 @@ F_XT flags c!
   [ I_JMP c, ]
   ; noexit
 
-
 ( *** implementation of basic system words *** )
 
 scope{
@@ -190,5 +189,4 @@ private
   SYS_MEMSIZE sysreg @ [ wordbuf buf>end ] lit !
   ;
 last @ >xt onboot !
-
 }scope

@@ -22,6 +22,16 @@ public
   inl tail
   ; noexit
 
+\ word to create rellocatable variable
+: rvar ( size -- )
+  allot create
+  0 lit, I_JSR c, here @
+  [ ' r> c@ ] lit c,
+  - lit,
+  [ ' + c@ ] lit c,
+  wrapup tail
+  ; noexit
+
 \ variable space
 align 0C buf>end allot
 
