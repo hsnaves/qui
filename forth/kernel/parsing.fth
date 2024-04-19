@@ -1,8 +1,6 @@
 \ implementation of parsing words
 hex
 
-( *** words related to the TIB *** )
-
 scope{
 private
 \ shrinks wordbuf and returns the address of the
@@ -11,8 +9,7 @@ private
 : (alloc) ( size -- addr )
   [ wordbuf buf>end ] lit @ tuck
   [ wordbuf buf>here ] lit @ -
-  over u<
-  if 2drop 0 exit then
+  over u< if 2drop 0 exit then
   - dup [ wordbuf buf>end ] lit !
   ;
 
@@ -44,14 +41,10 @@ last @ >xt onboot !
 
 scope{
 ephemeral
-\ checks for a end of line
 : eof? ( c -- b ) 0 < ; inl
-
-\ checks for a newline
 : nl? ( c -- b ) 0A = ; inl
 
 private
-\ prints an error messages that the TIB overflowed
 " TIB overflow"
 : tiboverflow ( -- )
   [ swap ] lit lit error tail
@@ -60,23 +53,21 @@ private
 public
 \ Obtains one line from the input
 : line ( -- )
-  \ reset the tib
-  [ tib buf>start ] lit @ dup
-  [ tib buf>here ] lit !
-  [ tib buf>off ] lit !
+  [ tib buf>end ] lit @ >r
+  [ tib buf>start ] lit @
+  dup [ tib buf>here ] lit !
+  dup [ tib buf>off ] lit !
   begin
-    getc [ tib buf>here ] lit @
-    2dup c!
-    1+ [ tib buf>here ] lit !
-    dup eof? if bye tail then
-    nl? =0
+    getc swap 2dup c! 1+
+    over eof? if bye tail then
+    swap nl? =0
     if
-      [ tib buf>here ] lit @
-      [ tib buf>end ] lit @
-      u< if again then
+      dup r@ u< if again then
       tiboverflow tail
     then
   end
+  [ tib buf>here ] lit !
+  rdrop
   ;
 }scope
 
@@ -92,20 +83,16 @@ private
   ;
 
 public
-
 \ Obtains a character from the TIB
 : key ( -- c )
   ensuretib
   [ tib buf>off ] lit
-  dup @ tuck 1+ swap !
-  c@
+  dup @ tuck 1+ swap ! c@
   ;
-
 }scope
 
 scope{
 ephemeral
-\ checks if a character is blank
 : blank? ( c -- b )
   [ char ! ] lit u<
   ; inl
@@ -113,28 +100,26 @@ ephemeral
 public
 \ Obtains a word from the TIB
 : word ( -- c-str n )
-  \ skip blanks
   begin
     key blank?
     if again then
   end
   [ tib buf>off ] lit @
   dup 1- swap
-  [ tib buf>here ] lit @
-  begin                         \ d: c-str voffset vhere
-    2dup u<
+  [ tib buf>here ] lit @ >r
+  begin
+    dup r@ u<
     if
-      over c@ blank? =0
-      if swap 1+ swap again then
+      dup c@ blank? =0
+      if 1+ again then
     then
   end
-  drop dup 1+
+  rdrop dup 1+
   [ tib buf>off ] lit !
   over -
   ;
 }scope
 
-( *** implementation of the number word *** )
 scope{
 private
 \ character to digit word
