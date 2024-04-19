@@ -156,9 +156,8 @@ void do_block_transfer(struct display *dpl, struct quivm *qvm)
 
     if (flip) {
         /* flip the order of the block transfer */
-        dst = - dst;
         src += (src_h - 1) * src_s;
-        mask += (src_h - 1) * mask_s;
+        if (mask) mask += (src_h - 1) * mask_s;
         dst += (dst_h - 1) * dst_s;
         src_s = -src_s;
         mask_s = -mask_s;
