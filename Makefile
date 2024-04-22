@@ -30,7 +30,7 @@ else
     TARGET := src/qui
 endif
 
-all: rom.bin $(TARGET)
+all: main.rom $(TARGET)
 
 src/qui-headless:
 	INCLUDE_DEFAULT_ROM=0 USE_SDL=0 BUILD_WASM=0 \
@@ -47,14 +47,14 @@ $(TARGET): src/default_rom.c
 	INCLUDE_DEFAULT_ROM=1 BUILD_WASM=0 $(MAKE) -C src
 endif
 
-rom.bin: $(ROM_DEPS) src/qui-headless
-	$(CAT) $(ROM_DEPS) | ./src/qui-headless -r kernel.bin
+main.rom: $(ROM_DEPS) src/qui-headless
+	$(CAT) $(ROM_DEPS) | ./src/qui-headless -r kernel.rom
 
-kernel.bin: $(KERNEL_DEPS) src/qui-headless
-	./src/qui-headless -r rom.bin < forth/kernel/build.fth
+kernel.rom: $(KERNEL_DEPS) src/qui-headless
+	./src/qui-headless -r main.rom < forth/kernel/build.fth
 
-src/default_rom.c: rom.bin
-	./src/qui-headless -r rom.bin < forth/utils/default_rom.fth
+src/default_rom.c: main.rom
+	./src/qui-headless -r main.rom < forth/utils/default_rom.fth
 
 ifneq ($(BUILD_WASM), 0)
 install:
@@ -67,7 +67,7 @@ endif
 
 clean:
 	$(MAKE) -C src clean
-	$(RM) rom.bin src/default_rom.c
+	$(RM) main.rom src/default_rom.c
 	$(RM) src/qui src/qui-headless src/qui.js src/qui.wasm
 
 .PHONY: all build install clean

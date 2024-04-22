@@ -149,7 +149,7 @@ public
 
 }scope
 
-" rom.bin" drop 0 c,
+" main.rom" drop 0 c,
 " src/default_rom.c" drop 0 c,
 
 dump-data

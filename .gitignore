@@ -4,5 +4,6 @@ src/qui-headless
 src/default_rom.c
 src/qui.js
 src/qui.wasm
-rom.bin
+main.rom
+
 

@@ -96,7 +96,7 @@ last @ >xt onexcept !
 decimal
 
 
-file-name" rom.bin"
+file-name" main.rom"
 0 0 here @ 2 file-do . nl
 cycles . nl
 bye
