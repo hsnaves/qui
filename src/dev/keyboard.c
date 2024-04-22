@@ -42,7 +42,7 @@ uint32_t keyboard_read_callback(struct keyboard *kbd,
     return v;
 }
 
-void keyboard_write_callback(struct keyboard *kbd,  struct quivm *qvm,
+void keyboard_write_callback(struct keyboard *kbd, struct quivm *qvm,
                              uint32_t address, uint32_t v)
 {
     (void)(qvm); /* UNUSED */

@@ -2,7 +2,6 @@
 #define __DEV_RTCLOCK_H
 
 #include <stdint.h>
-
 #include "vm/quivm.h"
 
 /* Constants */
@@ -33,6 +32,12 @@ int rtclock_init(struct rtclock *rtc);
  */
 void rtclock_destroy(struct rtclock *rtc);
 
+/* Configures the rtclock device.
+ * The `use_utc` is flag indicating to use UTC time instead
+ * of local time.
+ */
+void rtclock_configure(struct rtclock *rtc, int use_utc);
+
 /* Implementation of the read callback for the rtclock device.
  * The parameter `address` is the address to read. A reference to
  * the QUI vm is given by `qvm`.
@@ -45,7 +50,7 @@ uint32_t rtclock_read_callback(struct rtclock *rtc,
  * The parameter `address` is the address to write, and `v` is the value.
  * A reference to the QUI vm is given by `qvm`.
  */
-void rtclock_write_callback(struct rtclock *rtc,  struct quivm *qvm,
+void rtclock_write_callback(struct rtclock *rtc, struct quivm *qvm,
                             uint32_t address, uint32_t v);
 
 #endif /* __DEV_RTCLOCK_H */

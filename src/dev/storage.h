@@ -2,7 +2,6 @@
 #define __DEV_STORAGE_H
 
 #include <stdint.h>
-
 #include "vm/quivm.h"
 
 /* Constants */
@@ -50,6 +49,11 @@ int storage_init(struct storage *stg);
  */
 void storage_destroy(struct storage *stg);
 
+/* Configures the storage device.
+ * The `disable_write` is to disable write operations.
+ */
+void storage_configure(struct storage *stg, int disable_write);
+
 /* Implementation of the read callback for the storage device.
  * The parameter `address` is the address to read. A reference to
  * the QUI vm is given by `qvm`.
@@ -62,7 +66,7 @@ uint32_t storage_read_callback(struct storage *stg,
  * The parameter `address` is the address to write, and `v` is the value.
  * A reference to the QUI vm is given by `qvm`.
  */
-void storage_write_callback(struct storage *stg,  struct quivm *qvm,
+void storage_write_callback(struct storage *stg, struct quivm *qvm,
                             uint32_t address, uint32_t v);
 
 #endif /* __DEV_STORAGE_H */

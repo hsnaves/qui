@@ -2,7 +2,6 @@
 #define __DEV_TIMER_H
 
 #include <stdint.h>
-
 #include "vm/quivm.h"
 
 /* Constants */
@@ -52,7 +51,7 @@ uint32_t timer_read_callback(struct timer *tmr,
  * The parameter `address` is the address to write, and `v` is the value.
  * A reference to the QUI vm is given by `qvm`.
  */
-void timer_write_callback(struct timer *tmr,  struct quivm *qvm,
+void timer_write_callback(struct timer *tmr, struct quivm *qvm,
                           uint32_t address, uint32_t v);
 
 #endif /* __DEV_TIMER_H */

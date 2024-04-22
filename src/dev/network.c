@@ -23,6 +23,7 @@
 #define MAX_PACKET_SIZE               1024
 
 /* Data structures and types */
+/* Internal data structure for the network device */
 struct ntw_internal {
     int sockfd;                 /* socket file descriptor */
     struct sockaddr addr;       /* the address for sending data */
@@ -66,6 +67,15 @@ void network_destroy(struct network *ntw)
         free(ni);
     }
     ntw->internal = NULL;
+}
+
+void network_configure(struct network *ntw, const char *bind_address,
+                       const char *target_address, int port)
+{
+    ntw->bind_address = (bind_address) ? bind_address : BIND_ADDRESS;
+    ntw->target_address = (target_address) ? target_address
+                                           : TARGET_ADDRESS;
+    ntw->port = (port) ? port : PORT;
 }
 
 uint32_t network_read_callback(struct network *ntw,
@@ -276,7 +286,7 @@ void do_operation(struct network *ntw, struct quivm *qvm)
     }
 }
 
-void network_write_callback(struct network *ntw,  struct quivm *qvm,
+void network_write_callback(struct network *ntw, struct quivm *qvm,
                             uint32_t address, uint32_t v)
 {
     switch (address) {

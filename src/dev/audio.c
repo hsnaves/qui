@@ -354,7 +354,7 @@ void do_command(struct audio *aud, struct quivm *qvm)
     }
 }
 
-void audio_write_callback(struct audio *aud,  struct quivm *qvm,
+void audio_write_callback(struct audio *aud, struct quivm *qvm,
                           uint32_t address, uint32_t v)
 {
     switch (address) {

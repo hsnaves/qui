@@ -2,7 +2,6 @@
 #define __DEV_DISPLAY_H
 
 #include <stdint.h>
-
 #include "vm/quivm.h"
 
 /* Constants */
@@ -78,7 +77,7 @@ uint32_t display_read_callback(struct display *dpl,
  * The parameter `address` is the address to write, and `v` is the value.
  * A reference to the QUI vm is given by `qvm`.
  */
-void display_write_callback(struct display *dpl,  struct quivm *qvm,
+void display_write_callback(struct display *dpl, struct quivm *qvm,
                             uint32_t address, uint32_t v);
 
 /* Auxiliary function to check if a given two dimensional buffer fits

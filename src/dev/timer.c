@@ -48,7 +48,7 @@ uint32_t timer_read_callback(struct timer *tmr,
     return v;
 }
 
-void timer_write_callback(struct timer *tmr,  struct quivm *qvm,
+void timer_write_callback(struct timer *tmr, struct quivm *qvm,
                           uint32_t address, uint32_t v)
 {
     (void)(qvm); /* UNUSED */

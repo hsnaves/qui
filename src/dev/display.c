@@ -249,7 +249,7 @@ void do_command(struct display *dpl, struct quivm *qvm)
     }
 }
 
-void display_write_callback(struct display *dpl,  struct quivm *qvm,
+void display_write_callback(struct display *dpl, struct quivm *qvm,
                             uint32_t address, uint32_t v)
 {
     switch (address) {

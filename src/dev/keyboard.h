@@ -2,7 +2,6 @@
 #define __DEV_KEYBOARD_H
 
 #include <stdint.h>
-
 #include "vm/quivm.h"
 
 /* Constants */
@@ -158,7 +157,7 @@ uint32_t keyboard_read_callback(struct keyboard *kbd,
  * The parameter `address` is the address to write, and `v` is the value.
  * A reference to the QUI vm is given by `qvm`.
  */
-void keyboard_write_callback(struct keyboard *kbd,  struct quivm *qvm,
+void keyboard_write_callback(struct keyboard *kbd, struct quivm *qvm,
                              uint32_t address, uint32_t v);
 
 #endif /* __DEV_KEYBOARD_H */

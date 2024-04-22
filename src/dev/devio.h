@@ -2,7 +2,6 @@
 #define __DEV_DEVIO_H
 
 #include <stdint.h>
-
 #include "vm/quivm.h"
 #include "dev/console.h"
 #include "dev/storage.h"
@@ -12,7 +11,6 @@
 #include "dev/audio.h"
 #include "dev/keyboard.h"
 #include "dev/timer.h"
-
 
 /* Data structures and types */
 /* A structure for the VM I/O devices */

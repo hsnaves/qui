@@ -28,6 +28,11 @@ void storage_destroy(struct storage *stg)
     (void)(stg); /* UNUSED */
 }
 
+void storage_configure(struct storage *stg, int disable_write)
+{
+    stg->disable_write = disable_write;
+}
+
 uint32_t storage_read_callback(struct storage *stg,
                                struct quivm *qvm, uint32_t address)
 {
@@ -178,7 +183,7 @@ void do_operation(struct storage *stg, struct quivm *qvm)
     }
 }
 
-void storage_write_callback(struct storage *stg,  struct quivm *qvm,
+void storage_write_callback(struct storage *stg, struct quivm *qvm,
                             uint32_t address, uint32_t v)
 {
     switch (address) {

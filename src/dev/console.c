@@ -4,31 +4,60 @@
 
 #include <sys/time.h>
 #include <sys/types.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "vm/quivm.h"
 #include "dev/console.h"
 
+/* Data structures and types */
+/* Internal data structure for the console device */
+struct cns_internal {
+    struct termios old_state;   /* old terminal state */
+};
+
 /* Functions */
 
 int console_init(struct console *cns)
 {
-    cns->argc = 0;
-    cns->argv = NULL;
-    cns->envp = NULL;
+    struct cns_internal *ci;
 
-    cns->channel = 0;
-    cns->argi = cns->argii = 0;
-    cns->envi = cns->envii = 0;
+    cns->internal = NULL;
+    ci = (struct cns_internal *) malloc(sizeof(*ci));
+    if (!ci) {
+        fprintf(stderr, "console: init: memory exhausted\n");
+        return 1;
+    }
+    tcgetattr(STDIN_FILENO, &ci->old_state);
+    cns->internal = (void *) ci;
+
+    cns->channel = (CONSOLE_FLAGS_ECHO | CONSOLE_FLAGS_CANONICAL);
+    console_configure(cns, 0, NULL, NULL);
     setvbuf(stdin, NULL, _IONBF, 0);
     return 0;
 }
 
 void console_destroy(struct console *cns)
 {
-    cns->argc = 0;
-    cns->argv = NULL;
-    cns->envp = NULL;
+    struct cns_internal *ci;
+    if (cns->internal) {
+        ci = (struct cns_internal *) cns->internal;
+        tcsetattr(STDIN_FILENO, TCSANOW, &ci->old_state);
+        free(cns->internal);
+    }
+    cns->internal = NULL;
+}
+
+void console_configure(struct console *cns, int argc,
+                       const char * const *argv,
+                       const char * const *envp)
+{
+    cns->argc = argc;
+    cns->argv = argv;
+    cns->envp = envp;
+
+    cns->argi = cns->argii = 0;
+    cns->envi = cns->envii = 0;
 }
 
 uint32_t console_read_callback(struct console *cns,
@@ -41,15 +70,16 @@ uint32_t console_read_callback(struct console *cns,
 
     switch (address) {
     case IO_CONSOLE_IN:
-        switch ((cns->channel >> 8) & 0xFF) {
+        switch (cns->channel & CONSOLE_ICHANNEL_MASK) {
         case CONSOLE_ICHANNEL_STDIN:
             FD_ZERO(&rfds);
-            FD_SET(0, &rfds);
+            FD_SET(STDIN_FILENO, &rfds);
             tv.tv_sec = 0;
             tv.tv_usec = 0;
             ret = select(1, &rfds, NULL, NULL, &tv);
             if (ret > 0) {
-                v = fgetc(stdin);
+                v = 0;
+                read(STDIN_FILENO, &v, 1);
             } else {
                 /* halt the machine until it has data */
                 qvm->status |= STS_HALTED | STS_REWIND;
@@ -65,9 +95,9 @@ uint32_t console_read_callback(struct console *cns,
                     v = (cns->argi < cns->argc) ? ' ' : '\n';
                 }
             } else {
-                /* end of arguments */
+                /* end of arguments, switch to stdin */
                 v = '\0';
-                cns->channel &= 0xFFFF00FF;
+                cns->channel &= ~CONSOLE_ICHANNEL_MASK;
             }
             break;
         case CONSOLE_ICHANNEL_ENV:
@@ -79,9 +109,9 @@ uint32_t console_read_callback(struct console *cns,
                     v = '\n';
                 }
             } else {
-                /* end of enviroment variables */
+                /* end of enviroment variables, switch to stdin */
                 v = '\0';
-                cns->channel &= 0xFFFF00FF;
+                cns->channel &= ~CONSOLE_ICHANNEL_MASK;
             }
             break;
         default:
@@ -99,27 +129,41 @@ uint32_t console_read_callback(struct console *cns,
     return v;
 }
 
-void console_write_callback(struct console *cns,  struct quivm *qvm,
+/* Updates the value of the channel variable to `v` */
+static
+void update_channel(struct console *cns, uint32_t v)
+{
+    struct cns_internal *ci;
+    struct termios new_state;
+    if ((cns->channel & CONSOLE_FLAGS_MASK) != (v & CONSOLE_FLAGS_MASK)) {
+        /* change the terminal state according to the flags */
+        ci = (struct cns_internal *) cns->internal;
+        new_state = ci->old_state;
+        new_state.c_lflag &= ~(ICANON | ECHO);
+        if (v & CONSOLE_FLAGS_ECHO) new_state.c_lflag |= ECHO;
+        if (v & CONSOLE_FLAGS_CANONICAL) new_state.c_lflag |= ICANON;
+        tcsetattr(STDIN_FILENO, TCSANOW, &new_state);
+    }
+    cns->channel = v;
+}
+
+void console_write_callback(struct console *cns, struct quivm *qvm,
                             uint32_t address, uint32_t v)
 {
-    FILE *fp;
+    int fd;
     (void)(qvm); /* UNUSED */
 
     switch (address) {
     case IO_CONSOLE_OUT:
-        switch ((cns->channel & 0xFF)) {
-        case CONSOLE_OCHANNEL_STDOUT: fp = stdout; break;
-        case CONSOLE_OCHANNEL_STDERR: fp = stderr; break;
-        default: fp = NULL; break;
+        switch ((cns->channel & CONSOLE_OCHANNEL_MASK)) {
+        case CONSOLE_OCHANNEL_STDOUT: fd = STDOUT_FILENO; break;
+        case CONSOLE_OCHANNEL_STDERR: fd = STDERR_FILENO; break;
+        default: fd = -1; break;
         }
-
-        if (fp) {
-            fputc(v, fp);
-            fflush(fp);
-        }
+        if (fd >= 0) write(fd, &v, 1);
         break;
     case IO_CONSOLE_CHANNEL:
-        cns->channel = v;
+        update_channel(cns, v);
         break;
     }
 }

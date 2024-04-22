@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <signal.h>
 
 #ifdef USE_SDL
 #include <SDL.h>
@@ -247,8 +246,6 @@ void process_events(struct quivm *qvm)
     SDL_Keymod mod;
     int x, y;
 
-    if (!window) return;
-
     io = (struct devio *) qvm->arg;
     kbd = io->kbd;
     dpl = io->dpl;
@@ -256,6 +253,12 @@ void process_events(struct quivm *qvm)
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
+            if (!window) {
+               /* Ctrl-C was pressed and SDL captured the SIGINT */
+               qvm->status |= STS_TERMINATED;
+               qvm->termvalue = 1;
+               break;
+            }
             kbd->state[KEYBOARD_KEY2] |= KEYBOARD_KEY2_QUIT;
             break;
         case SDL_KEYDOWN:
@@ -265,9 +268,11 @@ void process_events(struct quivm *qvm)
             }
             if ((e.key.keysym.sym == SDLK_F2) && (mod & KMOD_CTRL)) {
                 zoom = (zoom == 4) ? 1 : zoom + 1;
-                SDL_SetWindowSize(window,
-                                  dpl->width * zoom,
-                                  dpl->height * zoom);
+                if (window) {
+                    SDL_SetWindowSize(window,
+                                      dpl->width * zoom,
+                                      dpl->height * zoom);
+                }
             }
             /* fall through */
         case SDL_KEYUP:
@@ -400,7 +405,7 @@ void start_audio(struct audio *aud)
  * Returns zero on success.
  */
 static
-int run_one_frame_implementation(struct quivm *qvm)
+int do_run_one_frame(struct quivm *qvm)
 {
     struct devio *io;
     struct display *dpl;
@@ -473,7 +478,7 @@ void run_one_frame(void *arg)
     qvm = (struct quivm *) arg;
     io = (struct devio *) qvm->arg;
 
-    if (run_one_frame_implementation(qvm)) {
+    if (do_run_one_frame(qvm)) {
 #ifdef __EMSCRIPTEN__
         emscripten_cancel_main_loop();
 #endif
@@ -630,12 +635,12 @@ int main(int argc, char **argv, char **envp)
 
     missing_argument:
         fprintf(stderr, "main: "
-                "missing argument for `%s`\n",
-                argv[i]);
+                "missing argument for `%s`\n", argv[i]);
         return 1;
 
     invalid_argument:
-        fprintf(stderr, "main: invalid argument for `%s`: `%s`\n",
+        fprintf(stderr, "main: "
+                "invalid argument for `%s`: `%s`\n",
                 argv[i - 1], argv[i]);
         return 1;
     }
@@ -672,7 +677,6 @@ int main(int argc, char **argv, char **envp)
     }
 
 #ifdef USE_SDL
-    SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
     ret = SDL_Init(SDL_INIT_VIDEO
                    | SDL_INIT_AUDIO
                    | ((enable_joystick) ? SDL_INIT_JOYSTICK : 0)
@@ -690,17 +694,13 @@ int main(int argc, char **argv, char **envp)
     SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_SCALING, "1");
 #endif
 
-    /* set up the options */
-    io.stg->disable_write = disable_write;
-    io.rtc->use_utc = use_utc;
-    if (port != 0) io.ntw->port = port;
-    if (bind_address) io.ntw->bind_address = bind_address;
-    if (target_address) io.ntw->target_address = target_address;
-
-    /* set up the arguments and enviroment variables */
-    io.cns->argc = argc;
-    io.cns->argv = argv;
-    io.cns->envp = envp;
+    /* configure the devices */
+    storage_configure(io.stg, disable_write);
+    rtclock_configure(io.rtc, use_utc);
+    network_configure(io.ntw, bind_address, target_address, port);
+    console_configure(io.cns, argc,
+                      (const char * const *) argv,
+                      (const char * const *) envp);
 
     ret = run(&qvm);
     return ret;

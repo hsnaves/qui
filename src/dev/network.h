@@ -2,7 +2,6 @@
 #define __DEV_NETWORK_H
 
 #include <stdint.h>
-
 #include "vm/quivm.h"
 
 /* Constants */
@@ -18,7 +17,6 @@
 /* The possible operations */
 #define NETWORK_OP_RECEIVE               1
 #define NETWORK_OP_SEND                  2
-
 
 /* Data structures and types */
 /* A structure representing the external network device */
@@ -45,6 +43,14 @@ int network_init(struct network *ntw);
  */
 void network_destroy(struct network *ntw);
 
+/* Configures the network device.
+ * The `bind_address` and `port` specify which UDP address and port
+ * to bind and listen for connections. The `target_address` specifies
+ * which address to connect (including the port specified by `port`).
+ */
+void network_configure(struct network *ntw, const char *bind_address,
+                       const char *target_address, int port);
+
 /* Implementation of the read callback for the network device.
  * The parameter `address` is the address to read. A reference to
  * the QUI vm is given by `qvm`.
@@ -57,7 +63,7 @@ uint32_t network_read_callback(struct network *ntw,
  * The parameter `address` is the address to write, and `v` is the value.
  * A reference to the QUI vm is given by `qvm`.
  */
-void network_write_callback(struct network *ntw,  struct quivm *qvm,
+void network_write_callback(struct network *ntw, struct quivm *qvm,
                             uint32_t address, uint32_t v);
 
 #endif /* __DEV_NETWORK_H */

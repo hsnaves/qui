@@ -2,7 +2,6 @@
 #define __DEV_AUDIO_H
 
 #include <stdint.h>
-
 #include "vm/quivm.h"
 
 /* Constants */
@@ -72,7 +71,7 @@ uint32_t audio_read_callback(struct audio *aud,
  * The parameter `address` is the address to write, and `v` is the value.
  * A reference to the QUI vm is given by `qvm`.
  */
-void audio_write_callback(struct audio *aud,  struct quivm *qvm,
+void audio_write_callback(struct audio *aud, struct quivm *qvm,
                           uint32_t address, uint32_t v);
 
 /* Callback to generate the samples for playback.

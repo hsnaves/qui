@@ -18,6 +18,11 @@ void rtclock_destroy(struct rtclock *rtc)
     (void)(rtc); /* UNUSED */
 }
 
+void rtclock_configure(struct rtclock *rtc, int use_utc)
+{
+    rtc->use_utc = use_utc;
+}
+
 uint32_t rtclock_read_callback(struct rtclock *rtc,
                                struct quivm *qvm, uint32_t address)
 {
@@ -55,7 +60,7 @@ uint32_t rtclock_read_callback(struct rtclock *rtc,
     return v;
 }
 
-void rtclock_write_callback(struct rtclock *rtc,  struct quivm *qvm,
+void rtclock_write_callback(struct rtclock *rtc, struct quivm *qvm,
                             uint32_t address, uint32_t v)
 {
     (void)(rtc); /* UNUSED */
@@ -63,4 +68,3 @@ void rtclock_write_callback(struct rtclock *rtc,  struct quivm *qvm,
     (void)(address); /* UNUSED */
     (void)(v); /* UNUSED */
 }
-
