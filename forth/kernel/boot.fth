@@ -3,17 +3,6 @@ hex
 
 ( *** boot *** )
 scope{
-private
-\ main Forth interpreter
-\ it interprets all the words in an infinite loop
-: interpreter ( -- )
-  0 state c!
-  begin
-    word interpret
-    again
-  end
-  ;
-
 public
 \ goes back to the interpreter
 : quit ( -- )

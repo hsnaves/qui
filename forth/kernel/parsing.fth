@@ -148,11 +148,20 @@ private
   ;
 
 public
+internal current !
+\ prints an error message of an unknown word
+" ? "
+: unknown ( c-str n -- )
+  [ swap ] lit lit
+  1 channel c! type
+  error tail
+  ; noexit
+
 \ counted string to signed number
 \ returns the parsed number together with the number of
 \ remaining characters in the counted string
 \ this word assumes n is positive
-: number ( c-str n -- num rem )
+: (number) ( c-str n -- num rem )
   1 over u<
   if
     over c@ [ char - ] lit  =
@@ -163,14 +172,12 @@ public
   then
   unumber tail
   ; noexit
-}scope
-
-internal current !
-\ prints an error message of an unknown word
-" ? "
-: unknown ( c-str n -- )
-  [ swap ] lit lit
-  1 channel c! type
-  error tail
-  ; noexit
 forth current !
+
+\ like (number) but with validation
+: number ( c-str n -- num )
+  2dup (number)
+  if drop unknown tail then
+  nip nip
+  ;
+}scope

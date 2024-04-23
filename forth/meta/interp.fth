@@ -3,19 +3,12 @@ hex
 
 scope{
 private
-\ parses a number with error validation
-: (number) ( c-str n -- num )
-  2dup number
-  if drop unknown tail then
-  nip nip
-  ;
-
 \ word to use when interpreting
 : (interpret) ( c-str n -- )
   swap addr>host swap
   0 h:lookup
   dup if h:>xt >r 2drop exit then
-  drop (number) tail
+  drop number tail
   ; noexit
 
 \ word to compile using host dictionaries
@@ -26,7 +19,7 @@ private
     dup h:>flags h:F_IMM and
     if h:>xt >r 2drop exit then
   then
-  drop (number) lit, tail
+  drop number lit, tail
   ; noexit
 
 \ word to use when compiling

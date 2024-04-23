@@ -1,27 +1,27 @@
 \ Implementation of colon and related words
 hex
 
-\ to start a word definition in the meta dictionary
-: : ( -- addr )
-  create
-  1 state c!
-  ;
-
-\ to end a word definition in the meta dictionary
-: ; ( addr -- )
-  0 state c!
-  wrapup tail
-  ; noexit imm
-
-\ the word to enter the interpreter
-: [ ( -- )
-  0 state c!
-  ; imm
-
 \ the word to exit the interpreter
 : ] ( -- )
   1 state c!
   ;
+
+\ to start a word definition in the meta dictionary
+: : ( -- addr )
+  ] create tail
+  ; noexit
+
+\ the word to enter the interpreter
+: [ ( -- )
+  0 state c!
+  ;
+last @
+
+\ to end a word definition in the meta dictionary
+: ; ( addr -- )
+  [ wrapup tail
+  ; noexit imm
+F_IMM swap toggle \ make [ immediate
 
 \ changes the last opcode from a call to a jump
 : tail ( -- )
