@@ -33,40 +33,6 @@ extra current !
   7 sysreg @
   ;
 
-\ implementation of the pcg32 random number generator
-\ https://www.pcg-random.org/
-
-align 8 allot const seed
-0 seed ! 0 seed 4 + !
-
-scope{
-ephemeral
-: pcg32-mult-low  4C957F2D ; inl
-: pcg32-mult-high 5851F42D ; inl
-: pcg32-inc              3 ; inl
-
-private
-\ updates the state of the pcg32 random number generator
-: update-seed ( -- )
-  seed >r r@ @ dup
-  pcg32-mult-low du* swap
-  pcg32-inc + dup pcg32-inc u< if swap 1+ swap then
-  r> ! swap pcg32-mult-high * +
-  [ seed 4 + ] lit >r r@ @
-  pcg32-mult-low * + r> !
-  ;
-public
-\ generates a random number
-: rand ( -- v )
-  seed @ 1B ushr
-  [ seed 4 + ] lit @ >r r@ 5 shl or
-  r@ 0D ushr xor
-  r> 1B ushr
-  2dup 0 swap - shl rrot ushr or
-  update-seed tail
-  ; noexit
-}scope
-
 \ prints a given number of spaces
 : spaces ( n -- )
   begin
