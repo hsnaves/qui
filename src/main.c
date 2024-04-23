@@ -237,6 +237,7 @@ void update_screen(struct quivm *qvm)
 static
 void process_events(struct quivm *qvm)
 {
+    static int quit_counter;
     struct devio *io;
     struct keyboard *kbd;
     struct display *dpl;
@@ -250,10 +251,12 @@ void process_events(struct quivm *qvm)
     kbd = io->kbd;
     dpl = io->dpl;
 
+    if (quit_counter > 0) quit_counter--;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
-            if (!window) {
+            quit_counter += 30;
+            if (!window || (quit_counter > 30)) {
                /* Ctrl-C was pressed and SDL captured the SIGINT */
                qvm->status |= STS_TERMINATED;
                qvm->termvalue = 1;
