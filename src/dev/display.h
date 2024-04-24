@@ -22,9 +22,13 @@
 /* Display commands */
 #define DISPLAY_CMD_INIT                 1
 #define DISPLAY_CMD_FRAMECOUNT           2
-#define DISPLAY_CMD_SETBUF               3
-#define DISPLAY_CMD_SETPALETTE           4
-#define DISPLAY_CMD_BLT                  5
+#define DISPLAY_CMD_SET_BUFFER           3
+#define DISPLAY_CMD_SET_PALETTE          4
+#define DISPLAY_CMD_SET_SOURCE           5
+#define DISPLAY_CMD_SET_DESTINATION      6
+#define DISPLAY_CMD_BLT                  7
+#define DISPLAY_CMD_TILED_BLT            8
+#define DISPLAY_CMD_MASKED_BLT           9
 
 /* Display return values */
 #define DISPLAY_SUCCESS                  0
@@ -34,13 +38,18 @@
 /* A structure representing the display device */
 struct display {
     int initialized;            /* device was initialized */
+    uint32_t framecount;        /* counter for frames */
+
     uint32_t bpp;               /* bits per pixel */
     uint32_t width;             /* display width */
     uint32_t height;            /* display height */
     uint32_t buffer;            /* address of the framebuffer in memory */
     uint32_t stride;            /* the row stride for the framebuffer */
     uint32_t palette;           /* the address of the palette in memory */
-    uint32_t framecount;        /* counter for frames */
+
+    uint32_t src, src_s;        /* source buffer and stride */
+    uint32_t src_w, src_h;      /* the dimensions of the source */
+    uint32_t dst, dst_s;        /* destination buffer and stride */
 
     uint32_t command;           /* the command */
     uint32_t params[7];         /* the parameters for the command */

@@ -1,4 +1,6 @@
 - Improve the bit resolution of the audio and
   use integers instead of floating point;
+- Improve the table implementation (maybe separate
+  hashes from values);
 - Add floating point support to the VM;
 

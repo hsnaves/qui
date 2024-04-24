@@ -8,16 +8,7 @@
 
 int display_init(struct display *dpl)
 {
-    dpl->initialized = 0;
-    dpl->bpp = 0;
-    dpl->width = 0;
-    dpl->height = 0;
-    dpl->buffer = 0;
-    dpl->stride = 0;
-    dpl->palette = 0;
-    dpl->framecount = 0;
-    dpl->command = 0;
-    memset(dpl->params, 0, sizeof(dpl->params));
+    memset(dpl, 0, sizeof(*dpl));
     return 0;
 }
 
@@ -77,8 +68,8 @@ void do_initialize(struct display *dpl, struct quivm *qvm)
     }
 
     dpl->bpp = bpp;
-    dpl->width = (dpl->params[1] & 0xFFFF);
-    dpl->height = (dpl->params[1] >> 16);
+    dpl->width = dpl->params[1];
+    dpl->height = dpl->params[2];
 
     dpl->initialized = 1;
     dpl->params[0] = DISPLAY_SUCCESS;
@@ -95,9 +86,7 @@ void do_set_buffer(struct display *dpl, struct quivm *qvm)
         return;
     }
     dpl->buffer = buffer;
-    dpl->stride = (dpl->params[1] & 0xFFFF);
-    if (dpl->stride & 0x8000)
-        dpl->stride |= 0xFFFF0000;
+    dpl->stride = dpl->params[1];
     dpl->params[0] = DISPLAY_SUCCESS;
 }
 
@@ -115,108 +104,209 @@ void do_set_palette(struct display *dpl, struct quivm *qvm)
     dpl->params[0] = DISPLAY_SUCCESS;
 }
 
+/* sets the source buffer */
+static
+void do_set_source(struct display *dpl, struct quivm *qvm)
+{
+    uint32_t src, src_s;
+    uint32_t src_w, src_h;
+
+    src = dpl->params[0];
+    src_s = dpl->params[1];
+    src_w = dpl->params[2];
+    src_h = dpl->params[3];
+
+    /* check if the buffer fits in memory */
+    if (check_buffer2d(src, src_s, src_w, src_h, qvm->memsize)) {
+        dpl->params[0] = DISPLAY_ERROR;
+        return;
+    }
+
+    dpl->src = src;
+    dpl->src_s = src_s;
+    dpl->src_w = src_w;
+    dpl->src_h = src_h;
+    dpl->params[0] = DISPLAY_SUCCESS;
+}
+
+/* sets the destination buffer */
+static
+void do_set_destination(struct display *dpl, struct quivm *qvm)
+{
+    (void)(qvm); /* UNUSED */
+    dpl->dst = dpl->params[0];
+    dpl->dst_s = dpl->params[1];
+    dpl->params[0] = DISPLAY_SUCCESS;
+}
+
 /* perform a block transfer operation */
 static
 void do_block_transfer(struct display *dpl, struct quivm *qvm)
 {
     uint32_t src, src_s;
-    uint32_t src_w, src_h;
-    uint32_t mask, mask_w, mask_s;
     uint32_t dst, dst_s;
-    uint32_t dst_w, dst_h;
-    uint32_t orig_src, orig_mask;
-    uint32_t quot, rem;
-    uint32_t i, j, pos;
-    uint32_t row, count;
+    uint32_t i;
     int flip;
 
-    src = dpl->params[0];
-    mask = dpl->params[1];
-    src_w = (dpl->params[2] & 0xFFFF);
-    src_h = (dpl->params[2] >> 16);
-    mask_w = (mask) ? (src_w + 7) >> 3 : 0;
-    src_s = (dpl->params[3] & 0xFFFF);
-    mask_s = (dpl->params[3] >> 16);
-    dst = dpl->params[4];
-    dst_w = (dpl->params[5] & 0xFFFF);
-    dst_h = (dpl->params[5] >> 16);
-    dst_s = (dpl->params[6] & 0xFFFF);
-    flip = (dpl->params[6] & 0x80000000);
+    flip = dpl->params[0];
+    src = dpl->src;
+    src_s = dpl->src_s;
+    dst = dpl->dst;
+    dst_s = dpl->dst_s;
 
-    /* if there is nothing to do, terminate the operation */
-    if (dst_w == 0 || dst_h == 0) {
-        dpl->params[0] = DISPLAY_SUCCESS;
+    /* check if the buffer fits in memory */
+    if (check_buffer2d(dst, dst_s, dpl->src_w, dpl->src_h, qvm->memsize)) {
+        dpl->params[0] = DISPLAY_ERROR;
         return;
     }
 
-    /* sign extend the strides */
-    if (src_s & 0x8000) src_s |= 0xFFFF0000;
-    if (mask_s & 0x8000) mask_s |= 0xFFFF0000;
-    if (dst_s & 0x8000) dst_s |= 0xFFFF0000;
+    if (flip) {
+        /* flip the order of the block transfer */
+        src += (dpl->src_h - 1) * src_s;
+        dst += (dpl->src_h - 1) * dst_s;
+        src_s = -src_s;
+        dst_s = -dst_s;
+    }
+
+    for (i = 0; i < dpl->src_h; i++) {
+        memcpy(&qvm->mem[dst], &qvm->mem[src], dpl->src_w);
+        dst += dst_s;
+        src += src_s;
+    }
+
+    dpl->params[0] = DISPLAY_SUCCESS;
+}
+
+/* perform a tiled block transfer operation */
+static
+void do_tiled_block_transfer(struct display *dpl, struct quivm *qvm)
+{
+    uint32_t src, src_s;
+    uint32_t dst, dst_s;
+    uint32_t dst_w, dst_h;
+    uint32_t orig_src;
+    uint32_t i, row;
+    int flip;
+
+    flip = dpl->params[0];
+    dst_w = dpl->params[1];
+    dst_h = dpl->params[2];
+    src = dpl->src;
+    src_s = dpl->src_s;
+    dst = dpl->dst;
+    dst_s = dpl->dst_s;
+
+    /* check if the buffer fits in memory */
+    if (check_buffer2d(dst, dst_s, dst_w, dst_h, qvm->memsize)) {
+        dpl->params[0] = DISPLAY_ERROR;
+        return;
+    }
 
     if (flip) {
         /* flip the order of the block transfer */
-        src += (src_h - 1) * src_s;
-        if (mask) mask += (src_h - 1) * mask_s;
+        src += (dpl->src_h - 1) * src_s;
         dst += (dst_h - 1) * dst_s;
+        src_s = -src_s;
+        dst_s = -dst_s;
+    }
+
+    orig_src = src;
+    row = 0;
+
+    if (dpl->src_w == 1) {
+        /* handle special case */
+        for (i = 0; i < dst_h; i++) {
+            memset(&qvm->mem[dst], qvm->mem[src], dst_w);
+            dst += dst_s;
+            if (++row == dpl->src_h) {
+                src = orig_src;
+                row = 0;
+            } else {
+                src += src_s;
+            }
+        }
+    } else {
+        uint32_t quot, rem;
+        uint32_t j, pos, count;
+
+        quot = dst_w / dpl->src_w;
+        rem = dst_w % dpl->src_w;
+        for (i = 0; i < dst_h; i++) {
+            pos = dst;
+            for (j = 0; j <= quot; j++) {
+                count = (j < quot) ? dpl->src_w : rem;
+                memcpy(&qvm->mem[pos], &qvm->mem[src], count);
+                pos += count;
+            }
+
+            dst += dst_s;
+            if (++row == dpl->src_h) {
+                src = orig_src;
+                row = 0;
+            } else {
+                src += src_s;
+            }
+        }
+    }
+
+    dpl->params[0] = DISPLAY_SUCCESS;
+}
+
+/* perform a masked block transfer operation */
+static
+void do_masked_block_transfer(struct display *dpl, struct quivm *qvm)
+{
+    uint32_t src, src_s;
+    uint32_t mask, mask_s, mask_w;
+    uint32_t dst, dst_s;
+    uint32_t i;
+    int flip;
+
+    flip = dpl->params[0];
+    mask = dpl->params[1];
+    mask_s = dpl->params[2];
+    mask_w = (dpl->src_w + 7) >> 3;
+    src = dpl->src;
+    src_s = dpl->src_s;
+    dst = dpl->dst;
+    dst_s = dpl->dst_s;
+
+    /* check if the buffers fit in memory */
+    if (check_buffer2d(mask, mask_s, mask_w, dpl->src_h, qvm->memsize)
+        || check_buffer2d(dst, dst_s, dpl->src_w, dpl->src_h,
+                          qvm->memsize)) {
+        dpl->params[0] = DISPLAY_ERROR;
+        return;
+    }
+
+    if (flip) {
+        /* flip the order of the block transfer */
+        src += (dpl->src_h - 1) * src_s;
+        mask += (dpl->src_h - 1) * mask_s;
+        dst += (dpl->src_h - 1) * dst_s;
         src_s = -src_s;
         mask_s = -mask_s;
         dst_s = -dst_s;
     }
 
-    /* check if the buffers fit in memory */
-    if (check_buffer2d(dst, dst_s, dst_w, dst_h, qvm->memsize)
-        || check_buffer2d(src, src_s, src_w, src_h, qvm->memsize)
-        || check_buffer2d(mask, mask_s, mask_w, src_h, qvm->memsize)
-        || ((src_w == 0) || (src_h == 0))) {
-        dpl->params[0] = DISPLAY_ERROR;
-        return;
-    }
+    for (i = 0; i < dpl->src_h; i++) {
+        uint32_t j, k;
+        uint32_t pos, bitmask;
 
-    orig_src = src;
-    orig_mask = mask;
-    quot = dst_w / src_w;
-    rem = dst_w % src_w;
-    row = 0;
-    for (i = 0; i < dst_h; i++) {
         pos = dst;
-        if (src_w == 1) {
-            /* handle special case */
-            if (!mask || (qvm->mem[mask] & 1)) {
-                memset(&qvm->mem[pos], qvm->mem[src], dst_w);
-            }
-        } else if (mask) {
-            uint32_t k, l;
-            uint32_t bitmask;
-            for (j = 0; j <= quot; j++) {
-                bitmask = 0;
-                count = (j < quot) ? src_w : rem;
-                for (k = l = 0; k < count; k++) {
-                    if ((k & 7) == 0)
-                        bitmask = qvm->mem[mask + (l++)];
-                    if (bitmask & 1)
-                        qvm->mem[pos] = qvm->mem[src + k];
-                    bitmask >>= 1;
-                    pos++;
-                }
-            }
-        } else {
-            for (j = 0; j <= quot; j++) {
-                count = (j < quot) ? src_w : rem;
-                memcpy(&qvm->mem[pos], &qvm->mem[src], count);
-                pos += count;
-            }
+        bitmask = 0;
+        k = 0;
+        for (j = 0; j < dpl->src_w; j++) {
+            if ((j & 7) == 0)
+                bitmask = qvm->mem[mask + (k++)];
+            if (bitmask & 1)
+                qvm->mem[pos] = qvm->mem[src + j];
+            bitmask >>= 1;
+            pos++;
         }
-
         dst += dst_s;
-        if (++row == src_h) {
-            src = orig_src;
-            mask = orig_mask;
-            row = 0;
-        } else {
-            src += src_s;
-            mask += mask_s;
-        }
+        src += src_s;
+        mask += mask_s;
     }
 
     dpl->params[0] = DISPLAY_SUCCESS;
@@ -234,14 +324,26 @@ void do_command(struct display *dpl, struct quivm *qvm)
         dpl->params[1] = dpl->framecount;
         dpl->params[0] = DISPLAY_SUCCESS;
         break;
-    case DISPLAY_CMD_SETBUF:
+    case DISPLAY_CMD_SET_BUFFER:
         do_set_buffer(dpl, qvm);
         break;
-    case DISPLAY_CMD_SETPALETTE:
+    case DISPLAY_CMD_SET_PALETTE:
         do_set_palette(dpl, qvm);
+        break;
+    case DISPLAY_CMD_SET_SOURCE:
+        do_set_source(dpl, qvm);
+        break;
+    case DISPLAY_CMD_SET_DESTINATION:
+        do_set_destination(dpl, qvm);
         break;
     case DISPLAY_CMD_BLT:
         do_block_transfer(dpl, qvm);
+        break;
+    case DISPLAY_CMD_TILED_BLT:
+        do_tiled_block_transfer(dpl, qvm);
+        break;
+    case DISPLAY_CMD_MASKED_BLT:
+        do_masked_block_transfer(dpl, qvm);
         break;
     default:
         dpl->params[0] = DISPLAY_ERROR;
