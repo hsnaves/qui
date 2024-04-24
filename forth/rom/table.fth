@@ -105,11 +105,11 @@ last @ >xt onboot !
   begin
     over 4 + @ if
       over @ r@ <> if
-         swap 8 + swap
-         2dup = if
-            nip over swap
-         then
-         again
+        swap 8 + swap
+        2dup = if
+          nip over swap
+        then
+        again
       then
     then
   end
