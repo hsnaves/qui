@@ -56,7 +56,7 @@ F_XT flags c!
 : >=    ( n1 n2 -- {n1>=n2} )        <   =0  ; inl
 : u<=   ( u1 u2 -- {u1<=u2} )       u>   =0  ; inl
 : <=    ( n1 n2 -- {n1<=n2} )        >   =0  ; inl
-: urem  ( u1 u2 -- rem )         u/mod drop  ; inl
+: umod  ( u1 u2 -- rem )         u/mod drop  ; inl
 : u/    ( u1 u2 -- quot )        u/mod  nip  ; inl
 
 ( *** words to change base *** )
