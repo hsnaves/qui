@@ -123,11 +123,7 @@ void do_operation(struct storage *stg, struct quivm *qvm)
         return;
     }
 
-    if (stg->data < qvm->memsize) {
-        if (stg->len > (qvm->memsize - stg->data))
-            stg->len = qvm->memsize - stg->data;
-        if (stg->len == 0) return;
-    } else {
+    if (check_buffer(stg->data, stg->len, qvm->memsize)) {
         stg->len = -1;
         return;
     }

@@ -149,11 +149,9 @@ void quivm_load_array(struct quivm *qvm, const uint8_t *data,
 {
     uint32_t len;
     len = *length;
-    if (address < qvm->memsize) {
-        if (len > (qvm->memsize - address))
-            len = qvm->memsize - address;
-    } else {
-        len = 0;
+    if (check_buffer(address, len, qvm->memsize)) {
+        *length = 0;
+        return;
     }
     memcpy(&qvm->mem[address], data, len);
     *length = len;
@@ -654,4 +652,9 @@ uint32_t quivm_stack_pop(struct quivm *qvm, int use_rstack)
     sp = (use_rstack) ? &qvm->rsp : &qvm->dsp;
     if (sp[0]-- == 0) sp[0] = qvm->stacksize - 1;
     return quivm_stack_read(qvm, use_rstack, sp[0]);
+}
+
+int check_buffer(uint32_t address, uint32_t length, uint32_t memsize)
+{
+    return !((address < memsize) && (length < (memsize - address)));
 }

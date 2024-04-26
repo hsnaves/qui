@@ -225,5 +225,14 @@ void quivm_stack_push(struct quivm *qvm, int use_rstack, uint32_t v);
  */
 uint32_t quivm_stack_pop(struct quivm *qvm, int use_rstack);
 
+/* Auxiliary function to check if a given a buffer fits the memory.
+ * The buffer is specified by the parameters:
+ *  - `address` : the starting address of the buffer;
+ *  - `length` : the length of the buffer;
+ * and the memory size is given by `memsize`.
+ * Returns zero if the buffer is valid.
+ */
+int check_buffer(uint32_t address, uint32_t length, uint32_t memsize);
+
 
 #endif /* __VM_QUIVM_H */

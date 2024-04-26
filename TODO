@@ -1,4 +1,3 @@
-- Improve the bit resolution of the audio and
-  use integers instead of floating point;
+- Improve the bit resolution of the audio and stereo mode;
 - Add floating point support to the VM;
 
