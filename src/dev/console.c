@@ -77,9 +77,11 @@ uint32_t console_read_callback(struct console *cns,
             tv.tv_sec = 0;
             tv.tv_usec = 0;
             ret = select(1, &rfds, NULL, NULL, &tv);
+
             if (ret > 0) {
                 v = 0;
-                read(STDIN_FILENO, &v, 1);
+                ret = read(STDIN_FILENO, &v, 1);
+                if (ret <= 0) v = -1;
             } else {
                 /* halt the machine until it has data */
                 qvm->status |= STS_HALTED | STS_REWIND;
@@ -92,11 +94,11 @@ uint32_t console_read_callback(struct console *cns,
                 if (v == 0) {
                     cns->argi++;
                     cns->argii = 0;
-                    v = (cns->argi < cns->argc) ? ' ' : '\n';
+                    v = '\n';
                 }
             } else {
                 /* end of arguments, switch to stdin */
-                v = '\0';
+                v = '\n';
                 cns->channel &= ~CONSOLE_ICHANNEL_MASK;
             }
             break;
@@ -110,7 +112,7 @@ uint32_t console_read_callback(struct console *cns,
                 }
             } else {
                 /* end of enviroment variables, switch to stdin */
-                v = '\0';
+                v = '\n';
                 cns->channel &= ~CONSOLE_ICHANNEL_MASK;
             }
             break;

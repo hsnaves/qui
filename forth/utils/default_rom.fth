@@ -21,7 +21,6 @@ ephemeral
 : output-buffer   [ 64 + ]    lit ; inl
 
 private
-
 : reset-vars ( -- )
   0 input-offset !
   0 output-offset !
@@ -130,8 +129,14 @@ static const uint8_t default_rom[] = {
 public
 
 : dump-data ( input output -- )
-  output-filename !
-  input-filename !
+  1 channel 1+ c!
+  " input: " type
+  here @ input-filename !
+  word 2dup type nl str, 0 c,
+  " output: " type
+  here @ output-filename !
+  word 2dup type nl str, 0 c,
+
   reset-vars
   install-new-emit
   refresh-input
@@ -145,13 +150,12 @@ public
   dump-footer
   flush-output
   restore-prev-emit
-  ;
+  bye tail
+  ; noexit
 
 }scope
 
-" main.rom" drop 0 c,
-" src/default_rom.c" drop 0 c,
+\ " main.rom" drop 0 c,
+\ " src/default_rom.c" drop 0 c,
 
 dump-data
-bye
-

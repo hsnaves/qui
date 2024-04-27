@@ -1,8 +1,6 @@
 \ last words of rom
 hex
 
-( *** implementation of stack words *** )
-
 scope{
 ephemeral
 \ fix the implementation of the word
@@ -93,9 +91,25 @@ private
 last @ >xt onexcept !
 }scope
 
+\ new onboot
+scope{
+private
+: check-args ( -- )
+  [ onboot @ ] lit exec
+  1 channel 1+ c! line 0 channel 1+ c!
+  [ tib buf>off ] lit @
+  [ tib buf>here ] lit @
+  dup [ tib buf>off ] lit !
+  over - 1- dup if
+    here @ >r str, 0 c, r>
+    (include) interpreter bye tail
+  then
+  2drop
+  ;
+last @ >xt onboot !
+}scope
+
 decimal
-
-
 file-name" main.rom"
 0 0 here @ 2 file-do . nl
 cycles . nl

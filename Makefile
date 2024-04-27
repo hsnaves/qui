@@ -51,10 +51,10 @@ main.rom: $(ROM_DEPS) src/qui-headless
 	$(CAT) $(ROM_DEPS) | ./src/qui-headless -r kernel.rom
 
 kernel.rom: $(KERNEL_DEPS) src/qui-headless
-	./src/qui-headless -r main.rom < forth/kernel/build.fth
+	./src/qui-headless -r main.rom forth/kernel/build.fth
 
 src/default_rom.c: main.rom
-	./src/qui-headless -r main.rom < forth/utils/default_rom.fth
+	./src/qui-headless -r main.rom forth/utils/default_rom.fth main.rom src/default_rom.c
 
 ifneq ($(BUILD_WASM), 0)
 install:

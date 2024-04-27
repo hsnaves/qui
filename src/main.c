@@ -541,7 +541,7 @@ static
 void print_help(const char *execname)
 {
     printf("Usage:\n");
-    printf("  %s [OPTIONS] args...\n", execname);
+    printf("  %s [OPTIONS] [--] args ...\n", execname);
     printf("where the available options are:\n");
     printf("  -r <romfile>       Specify the rom file to use\n");
     printf("  --stackize <size>  The stack size in cells\n");
@@ -631,6 +631,8 @@ int main(int argc, char **argv, char **envp)
                    || (strcmp(argv[i], "--help") == 0)) {
             print_help(argv[0]);
             return 0;
+        } else if (strcmp(argv[i], "--") == 0) {
+            i++; break;
         } else {
             break;
         }
