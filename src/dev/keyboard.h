@@ -17,11 +17,12 @@
 #define KEYBOARD_KEY0                    0
 #define KEYBOARD_KEY1                    1
 #define KEYBOARD_KEY2                    2
-#define KEYBOARD_MOUSE_X                 3
-#define KEYBOARD_MOUSE_Y                 4
-#define KEYBOARD_MOUSE_BTN               5
-#define KEYBOARD_JOYSTICK                6
-#define KEYBOARD_SIZE                    7
+#define KEYBOARD_KEY3                    3
+#define KEYBOARD_MOUSE_X                 4
+#define KEYBOARD_MOUSE_Y                 5
+#define KEYBOARD_MOUSE_BTN               6
+#define KEYBOARD_JOYSTICK                7
+#define KEYBOARD_SIZE                    8
 
 /* Keyboard keys */
 #define KEYBOARD_KEY0_A         0x00000001
@@ -105,15 +106,33 @@
 #define KEYBOARD_KEY2_LEFT      0x00001000
 #define KEYBOARD_KEY2_DOWN      0x00002000
 #define KEYBOARD_KEY2_UP        0x00004000
-#define KEYBOARD_KEY2_LCTRL     0x00008000
-#define KEYBOARD_KEY2_LSHIFT    0x00010000
-#define KEYBOARD_KEY2_LALT      0x00020000
-#define KEYBOARD_KEY2_LGUI      0x00040000
-#define KEYBOARD_KEY2_RCTRL     0x00080000
-#define KEYBOARD_KEY2_RSHIFT    0x00100000
-#define KEYBOARD_KEY2_RALT      0x00200000
-#define KEYBOARD_KEY2_RGUI      0x00400000
-#define KEYBOARD_KEY2_QUIT      0x80000000
+#define KEYBOARD_KEY2_NUMLOCK   0x00008000
+#define KEYBOARD_KEY2_NSLASH    0x00010000
+#define KEYBOARD_KEY2_NSTAR     0x00020000
+#define KEYBOARD_KEY2_NMINUS    0x00040000
+#define KEYBOARD_KEY2_NPLUS     0x00080000
+#define KEYBOARD_KEY2_NENTER    0x00100000
+#define KEYBOARD_KEY2_N1        0x00200000
+#define KEYBOARD_KEY2_N2        0x00400000
+#define KEYBOARD_KEY2_N3        0x00800000
+#define KEYBOARD_KEY2_N4        0x01000000
+#define KEYBOARD_KEY2_N5        0x02000000
+#define KEYBOARD_KEY2_N6        0x04000000
+#define KEYBOARD_KEY2_N7        0x08000000
+#define KEYBOARD_KEY2_N8        0x10000000
+#define KEYBOARD_KEY2_N9        0x20000000
+#define KEYBOARD_KEY2_N0        0x40000000
+#define KEYBOARD_KEY2_NPERIOD   0x80000000
+
+#define KEYBOARD_KEY3_LCTRL     0x00000001
+#define KEYBOARD_KEY3_LSHIFT    0x00000002
+#define KEYBOARD_KEY3_LALT      0x00000004
+#define KEYBOARD_KEY3_LGUI      0x00000008
+#define KEYBOARD_KEY3_RCTRL     0x00000010
+#define KEYBOARD_KEY3_RSHIFT    0x00000020
+#define KEYBOARD_KEY3_RALT      0x00000040
+#define KEYBOARD_KEY3_RGUI      0x00000080
+#define KEYBOARD_KEY3_QUIT      0x80000000
 
 /* mouse buttons */
 #define KEYBOARD_MOUSE_LEFT     0x00000001

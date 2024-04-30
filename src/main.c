@@ -262,7 +262,7 @@ void process_events(struct quivm *qvm)
                qvm->termvalue = 1;
                break;
             }
-            kbd->state[KEYBOARD_KEY2] |= KEYBOARD_KEY2_QUIT;
+            kbd->state[KEYBOARD_KEY3] |= KEYBOARD_KEY3_QUIT;
             break;
         case SDL_KEYDOWN:
             mod = SDL_GetModState();
@@ -282,17 +282,18 @@ void process_events(struct quivm *qvm)
             if (!mouse_captured) break;
 
             if (e.key.keysym.scancode >= 0x04
-                && e.key.keysym.scancode <= 0x52) {
+                && e.key.keysym.scancode <= 0x63) {
                 idx = (e.key.keysym.scancode - 04) / 32;
                 bit = 1 << ((e.key.keysym.scancode - 04) % 32);
             } else if (e.key.keysym.scancode >= 0xE0
                        && e.key.keysym.scancode <= 0xE7) {
-                idx = (e.key.keysym.scancode - 0x91) / 32;
-                bit = 1 << ((e.key.keysym.scancode - 0x91) % 32);
+                idx = 3;
+                bit = 1 << ((e.key.keysym.scancode - 0xE0) % 32);
             } else {
                 break;
             }
 
+            idx += KEYBOARD_KEY0;
             if (e.type == SDL_KEYDOWN) {
                 kbd->state[idx] |= bit;
             } else {
@@ -352,9 +353,9 @@ void process_events(struct quivm *qvm)
             break;
         case SDL_JOYAXISMOTION:
             if (e.jaxis.axis < 2) {
-                if (e.jaxis.value < -3200) {
+                if (e.jaxis.value < -5200) {
                     button = 1;
-                } else if (e.jaxis.value > 3200) {
+                } else if (e.jaxis.value > 5200) {
                     button = 2;
                 } else {
                     button = 0;
