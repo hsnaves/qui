@@ -128,7 +128,7 @@ public
 
 current @ swap current !
 \ finds the next word from TIB in the context
-: (find) ( include? -- addr )
+: (find) ( current? -- addr )
   word rot lookup
   dup if nip nip exit then
   drop unknown tail

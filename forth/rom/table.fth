@@ -21,13 +21,6 @@ public
   create lit, wrapup inl tail
   ; noexit
 
-\ word to embed a rellocatable constant (address)
-: rconst ( addr -- )
-  create 0 lit, I_JSR c, here @
-  [ ' r> c@ ] lit c, - lit, [ ' + c@ ] lit c,
-  wrapup tail
-  ; noexit
-
 \ variable space
 align 0C buf>end allot
 
