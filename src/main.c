@@ -241,17 +241,20 @@ void process_events(struct quivm *qvm)
     struct devio *io;
     struct keyboard *kbd;
     struct display *dpl;
-    uint32_t idx, bit;
-    uint32_t button, mask;
+    uint32_t bit;
     SDL_Event e;
     SDL_Keymod mod;
-    int x, y;
+    int dx, dy, mx, my;
+    int skip_mouse_move;
 
     io = (struct devio *) qvm->arg;
     kbd = io->kbd;
     dpl = io->dpl;
 
+    keyboard_clear_mouse(kbd);
+    skip_mouse_move = 0;
     if (quit_counter > 0) quit_counter--;
+
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
         case SDL_QUIT:
@@ -262,7 +265,7 @@ void process_events(struct quivm *qvm)
                qvm->termvalue = 1;
                break;
             }
-            kbd->state[KEYBOARD_KEY3] |= KEYBOARD_KEY3_QUIT;
+            keyboard_set_bit(kbd, KEYBOARD_QUIT, 1);
             break;
         case SDL_KEYDOWN:
             mod = SDL_GetModState();
@@ -283,37 +286,33 @@ void process_events(struct quivm *qvm)
 
             if (e.key.keysym.scancode >= 0x04
                 && e.key.keysym.scancode <= 0x63) {
-                idx = (e.key.keysym.scancode - 04) / 32;
-                bit = 1 << ((e.key.keysym.scancode - 04) % 32);
+                bit = (e.key.keysym.scancode - 04);
+                bit += KEYBOARD_KEY_A;
             } else if (e.key.keysym.scancode >= 0xE0
                        && e.key.keysym.scancode <= 0xE7) {
-                idx = 3;
-                bit = 1 << ((e.key.keysym.scancode - 0xE0) % 32);
+                bit = (e.key.keysym.scancode - 0xE0);
+                bit += KEYBOARD_KEY_LCTRL;
             } else {
                 break;
             }
 
-            idx += KEYBOARD_KEY0;
-            if (e.type == SDL_KEYDOWN) {
-                kbd->state[idx] |= bit;
-            } else {
-                kbd->state[idx] &= ~bit;
-            }
+            keyboard_set_bit(kbd, bit, (e.type == SDL_KEYDOWN));
             break;
         case SDL_MOUSEMOTION:
             if (!mouse_captured) break;
+            if (skip_mouse_move) {
+                skip_mouse_move = 0;
+                break;
+            }
 
-            x = e.motion.x;
-            if (x < 0) x = 0;
-            if (x >= ((int) dpl->width))
-                x = dpl->width - 1;
-            kbd->state[KEYBOARD_MOUSE_X] = x;
+            mx = dpl->width / 2;
+            my = dpl->height / 2;
+            dx = e.motion.x - mx;
+            dy = e.motion.y - my;
+            keyboard_move_mouse(kbd, dx, dy);
 
-            y = e.motion.y;
-            if (y < 0) y = 0;
-            if (y >= ((int) dpl->height))
-                y = dpl->height - 1;
-            kbd->state[KEYBOARD_MOUSE_Y] = y;
+            SDL_WarpMouseInWindow(window, mx, my);
+            skip_mouse_move = 1;
             break;
         case SDL_MOUSEBUTTONDOWN:
             if (!mouse_captured) {
@@ -325,47 +324,37 @@ void process_events(struct quivm *qvm)
             if (!mouse_captured) break;
 
             if (e.button.button == SDL_BUTTON_LEFT) {
-                button = KEYBOARD_MOUSE_LEFT;
+                bit = KEYBOARD_MOUSE_LEFT;
             } else if (e.button.button == SDL_BUTTON_RIGHT) {
-                button = KEYBOARD_MOUSE_RIGHT;
+                bit = KEYBOARD_MOUSE_RIGHT;
             } else if (e.button.button == SDL_BUTTON_MIDDLE) {
-                button = KEYBOARD_MOUSE_MIDDLE;
+                bit = KEYBOARD_MOUSE_MIDDLE;
             } else {
-                button = 0;
+                break;
             }
 
-            if (e.type == SDL_MOUSEBUTTONDOWN) {
-                kbd->state[KEYBOARD_MOUSE_BTN] |= button;
-            } else {
-                kbd->state[KEYBOARD_MOUSE_BTN] &= ~button;
-            }
+            keyboard_set_bit(kbd, bit, (e.type == SDL_MOUSEBUTTONDOWN));
             break;
         case SDL_JOYBUTTONDOWN:
         case SDL_JOYBUTTONUP:
             if (e.jbutton.button < 12) {
-                button = (1 << ((uint32_t) e.jbutton.button));
-                if (e.type == SDL_JOYBUTTONDOWN) {
-                    kbd->state[KEYBOARD_JOYSTICK] |= button;
-                } else {
-                    kbd->state[KEYBOARD_JOYSTICK] &= ~button;
-                }
+                bit = e.jbutton.button;
+                bit += KEYBOARD_JOY_BTN0;
+                keyboard_set_bit(kbd, bit, (e.type == SDL_JOYBUTTONDOWN));
             }
             break;
         case SDL_JOYAXISMOTION:
             if (e.jaxis.axis < 2) {
-                if (e.jaxis.value < -5200) {
-                    button = 1;
-                } else if (e.jaxis.value > 5200) {
-                    button = 2;
-                } else {
-                    button = 0;
-                }
+                bit = 140 + 2 * e.jaxis.axis;
+                keyboard_set_bit(kbd, bit, 0);
+                keyboard_set_bit(kbd, bit + 1, 0);
 
-                idx = 12 + 2 * e.jaxis.axis;
-                mask = 3 << idx;
-                button <<= idx;
-                kbd->state[KEYBOARD_JOYSTICK] &= ~mask;
-                kbd->state[KEYBOARD_JOYSTICK] |= button;
+                if (e.jaxis.value > 5200) {
+                    bit++;
+                } else if (e.jaxis.value >= -5200) {
+                    break;
+                }
+                keyboard_set_bit(kbd, bit, 1);
             }
             break;
         }
