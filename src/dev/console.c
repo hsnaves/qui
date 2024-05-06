@@ -33,7 +33,6 @@ int console_init(struct console *cns)
 
     cns->channel = (CONSOLE_FLAGS_ECHO | CONSOLE_FLAGS_CANONICAL);
     console_configure(cns, 0, NULL, NULL);
-    setvbuf(stdin, NULL, _IONBF, 0);
     return 0;
 }
 
