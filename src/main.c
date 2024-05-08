@@ -70,14 +70,12 @@ static
 void capture_mouse(int capture)
 {
     if (capture) {
-        SDL_ShowCursor(0);
-        SDL_SetWindowGrab(window, SDL_TRUE);
+        SDL_SetRelativeMouseMode(1);
         SDL_SetWindowTitle(window,
                            "QUIVM - Mouse captured. "
                            "Press 'Ctrl+Alt' to release.");
     } else {
-        SDL_ShowCursor(1);
-        SDL_SetWindowGrab(window, SDL_FALSE);
+        SDL_SetRelativeMouseMode(0);
         SDL_SetWindowTitle(window, "QUIVM");
     }
 
@@ -244,15 +242,12 @@ void process_events(struct quivm *qvm)
     uint32_t bit;
     SDL_Event e;
     SDL_Keymod mod;
-    int dx, dy, mx, my;
-    int skip_mouse_move;
 
     io = (struct devio *) qvm->arg;
     kbd = io->kbd;
     dpl = io->dpl;
 
     keyboard_clear_mouse(kbd);
-    skip_mouse_move = 0;
     if (quit_counter > 0) quit_counter--;
 
     while (SDL_PollEvent(&e)) {
@@ -300,19 +295,7 @@ void process_events(struct quivm *qvm)
             break;
         case SDL_MOUSEMOTION:
             if (!mouse_captured) break;
-            if (skip_mouse_move) {
-                skip_mouse_move = 0;
-                break;
-            }
-
-            mx = dpl->width / 2;
-            my = dpl->height / 2;
-            dx = e.motion.x - mx;
-            dy = e.motion.y - my;
-            keyboard_move_mouse(kbd, dx, dy);
-
-            SDL_WarpMouseInWindow(window, mx, my);
-            skip_mouse_move = 1;
+            keyboard_move_mouse(kbd, e.motion.xrel, e.motion.yrel);
             break;
         case SDL_MOUSEBUTTONDOWN:
             if (!mouse_captured) {
