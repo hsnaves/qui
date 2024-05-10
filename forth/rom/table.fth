@@ -1,5 +1,5 @@
 \ implementation of hash tables for dictionaries
-hex
+decimal
 
 scope{
 public
@@ -9,7 +9,7 @@ public
   begin
     dup if
       over c@
-      r> 1036685 * + >r
+      r> 17000069 * + >r
       1/str again
     then
   end
@@ -22,36 +22,39 @@ public
   ; noexit
 
 \ variable space
-align 0C buf>end allot
+align 12 buf>off allot
 
 ephemeral
 : num-tables [ dup ] lit  ; inl
 : indices [ 4 + dup ] lit ; inl
 : main-buffer [ 4 + ] lit ; inl
 
-: max-tables                                         10 ; inl
-: table-capacity                                    200 ; inl
-: table>count ( addr -- addr' )                         ; inl
-: table>dict ( addr -- addr' )                      4 + ; inl
-: table>data  ( addr -- addr' )                     8 + ; inl
-: table-bytes [ table-capacity 3 shl table>data ]   lit ; inl
+: max-tables           16 ; inl
+: table-capacity      512 ; inl
+: table>count             ; inl
+: table>dict          4 + ; inl
+: table>data          8 + ; inl
+: entry>hash              ; inl
+: entry>value         4 + ; inl
+: next-entry          8 + ; inl
+
+: table-bytes [ table-capacity 3 shl table>data ] lit ; inl
 : main-buffer-size [ table-bytes 4 + max-tables * ] lit ; inl
 
 private
-
 \ initialize the variables
 0 main-buffer buf>off !
 
 \ initializes the main-buffer
 : allocate-main-buffer ( -- )
   main-buffer-size alloc
-  dup [ main-buffer buf>here ] lit !
+  dup indices !
   dup [ main-buffer buf>start ] lit !
   dup main-buffer-size +
   [ main-buffer buf>end ] lit !
-  indices ! 0 num-tables !
-  [ max-tables 2 shl ] lit
-  main-buffer %allot drop
+  [ max-tables 2 shl ] lit +
+  [ main-buffer buf>here ] lit !
+  0 num-tables !
   ;
 
 allocate-main-buffer
@@ -81,14 +84,14 @@ last @ >xt onboot !
   if drop 0 exit then
   main-buffer dup %align
   dup buf>here @ swap
-  [ table-capacity 1 shl 1+ ] lit
+  [ table-bytes 2 ushr ] lit
   zero-fill-slots
   >r r@ over 2 shl indices @ + !
   1+ num-tables ! r>
   ;
 
 \ finds the address of the slot containing a given hash
-: find-slot ( hash table -- addr )
+: find-slot ( hash table -- slot )
   over >r
   dup >r table>data swap
   table-capacity
@@ -96,9 +99,9 @@ last @ >xt onboot !
   3 shl r@ table>data +
   swap 3 shl r> table>data +    \ d: start pos end | r: hash
   begin
-    over 4 + @ if
-      over @ r@ <> if
-        swap 8 + swap
+    over entry>value @ if
+      over entry>hash @ r@ <> if
+        swap next-entry swap
         2dup = if
           nip over swap
         then
@@ -106,7 +109,7 @@ last @ >xt onboot !
       then
     then
   end
-  drop nip r> over !            \ write the hash
+  drop nip r> over entry>hash !
   ;
 
 \ increments the counter of the hash table
@@ -118,20 +121,20 @@ last @ >xt onboot !
   ;
 
 \ checks if the given hash is occupied
-: word-slot ( addr table -- slot )
-  >r >name hash r> find-slot tail
+: word-slot ( table addr -- slot )
+  >name hash swap find-slot tail
   ; noexit
 
 \ set the value of a slot
 : slot-set ( addr slot table -- )
-  over 4 + @
+  over entry>value @
   if
     drop
   else
     increment-count
     if 2drop exit then
   then
-  4 + !
+  entry>value !
   ;
 
 \ builds the index of a dictionary
@@ -143,8 +146,8 @@ last @ >xt onboot !
   dict>last @
   begin
     dup if
-      dup r@ word-slot
-      dup 4 + @ =0
+      r@ over word-slot
+      dup entry>value @ =0
       if 2dup r@ slot-set then
       drop
       >link again
@@ -179,7 +182,7 @@ last @ >xt onboot !
   resolve-table
   dup =0 if exit then
   >r 2dup hash r> find-slot
-  4 + @                         \ d: c-str n addr
+  entry>value @                 \ d: c-str n addr
   >r 2dup r@ >name compare
   =0 r> and
   ;
@@ -189,14 +192,13 @@ last @ >xt onboot !
 : i-insert ( addr dict -- )
   resolve-table dup =0
   if nip exit then
-  >r dup r@
+  >r r@ over
   word-slot                     \ d: addr slot | r: table
   r> slot-set tail
   ; noexit
 ' i-insert is (i-insert)
 
 public
-
 \ word to create a dictionary
 : dictionary ( -- )
   align [ 4 dict>index ] lit
@@ -207,7 +209,7 @@ public
   wordbuf over dict>data !
   0 over dict>index !
   build-index tail
-  ; \ noexit
+  ; noexit
 
 }scope
 
