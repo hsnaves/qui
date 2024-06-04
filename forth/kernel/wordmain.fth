@@ -126,7 +126,7 @@ public
 
 }scope
 
-current @ swap current !
+current @ over current !
 \ finds the next word from TIB in the context
 : (find) ( current? -- addr )
   word rot lookup
@@ -176,9 +176,10 @@ private
   ;
 
 public
-\ creates a word in the current dictionary
-: create ( -- addr )
-  flags c@ word swap >r >r r@
+current @ swap current !
+\ private implementation of create word
+: (create) ( fl c-str n -- )
+  swap >r >r r@
   updateflags                   \ d: fl' fb | r: c-str n
   data buf>here
   dup @ this !
@@ -200,6 +201,12 @@ public
   then
   drop
   ;
+current !
+
+\ creates a word in the current dictionary
+: create ( -- addr )
+  flags c@ word (create) tail
+  ; noexit
 }scope
 
 \ to end a word definition in the dictionary

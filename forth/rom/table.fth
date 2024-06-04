@@ -30,7 +30,7 @@ ephemeral
 : main-buffer [ 4 + ] lit ; inl
 
 : max-tables           16 ; inl
-: table-capacity      512 ; inl
+: table-capacity      512 ; inl \ must be a power of 2
 : table>count             ; inl
 : table>dict          4 + ; inl
 : table>data          8 + ; inl
@@ -94,8 +94,7 @@ last @ >xt onboot !
 : find-slot ( hash table -- slot )
   over >r
   dup >r table>data swap
-  table-capacity
-  tuck u/mod drop
+  table-capacity tuck 1- and
   3 shl r@ table>data +
   swap 3 shl r> table>data +    \ d: start pos end | r: hash
   begin
@@ -114,8 +113,9 @@ last @ >xt onboot !
 
 \ increments the counter of the hash table
 : increment-count ( table -- err? )
-  table>count dup @
-  dup table-capacity u<
+  table>count dup @ dup
+  [ table-capacity 1- ] lit u<  \ always keep 1 slot free to avoid
+                                \ infinite loops in find-slot
   if 1+ swap ! 0 exit then
   2drop 1
   ;
@@ -160,17 +160,16 @@ last @ >xt onboot !
 : resolve-table-simple ( dict -- table )
   dup dict>index @
   num-tables @ over u<
-  \ try to rebuild the index
   if 2drop 0 exit then
   1- 2 shl indices @ + @
-  tuck table>dict @ <>
-  if drop 0 then
+  tuck table>dict @ = and
   ;
 
 \ resolve the table from an index
 : resolve-table ( dict -- table )
   dup resolve-table-simple dup =0
   if
+    \ try to rebuild the index
     drop dup build-index
     dup resolve-table-simple
   then
@@ -207,10 +206,19 @@ public
   0 over node>next !
   wordbuf over dict>code !
   wordbuf over dict>data !
-  0 over dict>index !
-  build-index tail
-  ; noexit
+  max-tables swap dict>index !
+  ;
 
+internal current !
+\ drop the last table from the index
+: (drop-table) ( -- )
+  num-tables @
+  dup =0 if drop exit then
+  1- num-tables !
+  [ main-buffer buf>here ] lit
+  dup @ table-bytes - swap !
+  ;
+forth current !
 }scope
 
 1 forth dict>index !

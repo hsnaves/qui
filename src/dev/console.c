@@ -74,7 +74,7 @@ uint32_t console_read_callback(struct console *cns,
             FD_ZERO(&rfds);
             FD_SET(STDIN_FILENO, &rfds);
             tv.tv_sec = 0;
-            tv.tv_usec = 0;
+            tv.tv_usec = 1000;
             ret = select(1, &rfds, NULL, NULL, &tv);
 
             if (ret > 0) {
