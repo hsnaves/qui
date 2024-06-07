@@ -31,5 +31,10 @@ public
 
 \ selects the channel for output
 : channel ( -- addr ) IO_CONSOLE_CHANNEL ; inl
-}scope
 
+\ to use the standard error channel for output
+: ch_err ( -- ) 1 channel c! ;
+
+\ to use the standard arguments for input
+: ch_args  ( -- ) 1 channel 1+ c! ;
+}scope

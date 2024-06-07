@@ -32,10 +32,9 @@ private
   [ find (emit) defer-ptr ] lit !
   ;
 
-: error-fileio ( cstr -- )
+: error-fileio ( c-str -- )
   restore-prev-emit
-  1 channel c!
-  " error in file operation: " type
+  ch_err " error in file operation: " type
   dup 0 char-find over -
   fatal tail
   ; noexit
@@ -129,8 +128,7 @@ static const uint8_t default_rom[] = {
 public
 
 : dump-data ( input output -- )
-  1 channel 1+ c!
-  " input: " type
+  ch_args " input: " type
   here @ input-filename !
   word 2dup type nl str, 0 c,
   " output: " type

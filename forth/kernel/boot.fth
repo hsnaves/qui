@@ -8,9 +8,15 @@ public
 : quit ( -- )
   0 -1 rstack !
   0 channel c!
-  interpreter tail
+  interpreter bye tail
   ; noexit
 
+\ leaves the interpreter
+: leave ( r: addr1 addr2 addr3 -- r: addr1 )
+  rdrop
+  ;
+
+\ performs the boot
 : boot ( status -- )
   dup if onexcept @ >r exit then
   drop
@@ -27,8 +33,7 @@ here !  \ restore here
 private
 \ default implementation of error
 : default_error ( c-str n -- )
-  1 channel c!
-  type nl
+  ch_err type nl
   line  \ flush the current line
   quit tail
   ; noexit
@@ -36,8 +41,7 @@ last @ >xt is error
 
 \ default implementation of fatal
 : default_fatal ( c-str n -- )
-  1 channel c!
-  type nl
+  ch_err type nl
   bye tail
   ; noexit
 last @ >xt is fatal

@@ -3,7 +3,7 @@ hex
 
 scope{
 ephemeral
-\ fix the implementation of the word
+\ fix the implementation of a given word
 : fix_implementation ( -- )
   last @ >xt
   find tuck >name + !
@@ -48,8 +48,7 @@ private
 
 \ handles general exceptions
 : general_exception ( status c-str n -- )
-  1 channel c!
-  type r>                       \ d: status pc
+  ch_err type r>                \ d: status pc
   dup w. space
   c@ b. nl
   terminate tail
@@ -96,13 +95,14 @@ scope{
 private
 : check-args ( -- )
   [ onboot @ ] lit exec
-  1 channel 1+ c! line 0 channel 1+ c!
+  ch_args line
+  0 channel 1+ c! \ restore input
   [ tib buf>off ] lit @
   [ tib buf>here ] lit @
   dup [ tib buf>off ] lit !
   over - 1- dup if
-    here @ >r str, 0 c, r>
-    (include) interpreter bye tail
+    2dup here @ >r
+    str, 0 c, r> (include)
   then
   2drop
   ;
@@ -110,6 +110,7 @@ last @ >xt onboot !
 }scope
 
 decimal
+2 janum c!
 file-name" main.rom"
 0 0 here @ 2 file-do . nl
 cycles . nl

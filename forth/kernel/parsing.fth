@@ -152,8 +152,7 @@ internal current !
 \ prints an error message of an unknown word
 " ? "
 : unknown ( c-str n -- )
-  [ swap ] lit lit
-  1 channel c! type
+  ch_err [ swap ] lit lit type
   error tail
   ; noexit
 

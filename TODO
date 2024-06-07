@@ -1,4 +1,7 @@
+Short term goals:
 - Improve the bit resolution of the audio and stereo mode;
 - Division should be of 64-bit dividend by 32-bit divisor;
-- Add floating point support to the VM;
+
+Long term goals:
+- Decide whether or not to add floating point support to the VM;
 

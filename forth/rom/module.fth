@@ -74,8 +74,7 @@ last @ >xt onboot !
 
 " could not read "
 : file-error ( addr -- )
-  1 channel c!
-  [ swap ] lit lit type
+  ch_err [ swap ] lit lit type
   dup uninstall-module
   mod>filename @ dup 0 char-find
   error tail
