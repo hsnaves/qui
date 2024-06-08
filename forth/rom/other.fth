@@ -102,6 +102,46 @@ forth current !
   ; noexit
 }scope
 
+scope{
+private
+\ compares the word with the current best
+: compare-word-and-advance ( bword offset word addr -- bword' offset' word' addr )
+  tuck >r >r r@ >xt -
+  dup 0 >= if
+    2dup >= if
+      nip nip r@ swap 0
+    then
+  then
+  drop r> >link r>
+  ;
+
+\ find the location of the address within the current dictionary
+: find-address-dict ( bword offset addr dict -- bword' offset' addr dict )
+  dup >r dict>last @ swap
+  begin
+    over if
+      compare-word-and-advance
+      again
+    then
+  end
+  nip r>
+  ;
+public
+internal current !
+\ finds the location of the word nearest to a given address
+: find-address ( addr -- word offset )
+  0 swap dup context @
+  begin
+    dup if
+      find-address-dict
+      node>next @
+      again
+    then
+  end
+  2drop
+  ;
+}scope
+
 extra current !
 
 ( *** implementation of the stack printing words *** )
@@ -120,6 +160,17 @@ extra current !
   dup . nl tail                 \ print accumulator
   ; noexit
 
+scope{
+private
+\ prints the relative address of a word
+: print-address ( addr -- )
+  find-address
+  over if
+    over >name type [ char + ] lit emit
+  then
+  . drop
+  ;
+public
 \ prints the contents of the return stack
 : rs. ( -- )
   -1 rstack @ 0
@@ -127,13 +178,14 @@ extra current !
     2dup u>                     \ d: num idx rem?
     if
       dup rstack @
-      . space 1+
+      print-address space 1+
       again
     then
   end
   2drop
   nl tail
   ; noexit
+}scope
 
 forth current !
 
