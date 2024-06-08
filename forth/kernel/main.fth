@@ -166,7 +166,7 @@ align defer fatal ( c-str n  -- )
 
 ( *** words related to printing *** )
 \ prints space
-: space ( -- )  20 emit tail  ; noexit
+: space ( -- )  20 emit tail ; noexit
 
 \ prints a newline to the console
 : nl ( -- ) 0A emit tail ; noexit

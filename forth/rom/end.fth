@@ -42,15 +42,41 @@ fix_implementation r@
 fix_implementation rdrop
 }scope
 
+( simple debugger )
+internal current !
+align here @ ' (getc) , 1 ,
+dup const (debug-getc)
+4 + const enable-debugger
+forth current !
+
 scope{
 private
-( words for handling exceptions )
+\ swap between debug-getc and getc
+: swap-getc ( -- )
+  (debug-getc) [ find getc defer-ptr ] lit
+  2dup @ swap @ rot ! swap !
+  ;
 
+public
+\ enter the debugger
+: debug ( -- )
+  0 channel 2dup 1+ c! c!
+  swap-getc interpreter swap-getc tail
+  ; noexit
+}scope
+
+( words for handling exceptions )
+scope{
+private
 \ handles general exceptions
 : general_exception ( status c-str n -- )
-  ch_err type r>                \ d: status pc
+  ch_err type r@                \ d: status pc
   dup w. space
   c@ b. nl
+  enable-debugger @
+  if
+    drop debug tail
+  then
   terminate tail
   ; noexit
 

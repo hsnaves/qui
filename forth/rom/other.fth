@@ -1,4 +1,4 @@
-\ implementation of the dot "."  and related words
+\ implementation of the dot "." and related words
 hex
 
 \ set the context
@@ -17,8 +17,7 @@ hex
 
 \ obtains the first character of the next word
 : char ( -- c )
-  word
-  drop c@
+  word drop c@
   ;
 
 extra current !
