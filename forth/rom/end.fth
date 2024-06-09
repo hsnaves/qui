@@ -42,26 +42,25 @@ fix_implementation r@
 fix_implementation rdrop
 }scope
 
-( simple debugger )
+( simple debugger implementation )
 internal current !
-align here @ ' (getc) , 1 ,
-dup const (debug-getc)
-4 + const enable-debugger
+align here @ ' (getc) , const debug-getc
 forth current !
 
 scope{
 private
 \ swap between debug-getc and getc
-: swap-getc ( -- )
-  (debug-getc) [ find getc defer-ptr ] lit
+: swap-debug-getc ( -- )
+  debug-getc [ find getc defer-ptr ] lit
   2dup @ swap @ rot ! swap !
   ;
 
 public
 \ enter the debugger
 : debug ( -- )
+  debug-getc @ =0 if bye tail then
   0 channel 2dup 1+ c! c!
-  swap-getc interpreter swap-getc tail
+  swap-debug-getc interpreter swap-debug-getc tail
   ; noexit
 }scope
 
@@ -73,7 +72,7 @@ private
   ch_err type r@                \ d: status pc
   dup w. space
   c@ b. nl
-  enable-debugger @
+  debug-getc @
   if
     drop debug tail
   then

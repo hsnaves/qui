@@ -65,6 +65,7 @@ private
   swap r> 2drop
   ;
 
+\ prints the value of a literal
 : print-literal ( addr -- )
   dup lastliteral?
   =0 if 2drop exit then
@@ -73,11 +74,12 @@ private
   . [ char ) ] lit emit tail
   ; noexit
 
+\ print the jump target
 : print-jump ( addr -- )
   dup dup jumpliteral?
   =0 if 2drop drop exit then
   swap 1- literal + 1+
-  w. tail
+  a. tail
   ; noexit
 
 \ disassemble a literal shift instruction
@@ -114,25 +116,67 @@ private
   disasm_reg tail
   ;
 
+\ print the resolved address
+" \ "
+: print-resolved-address ( addr -- )
+  [ swap ] lit lit nl type
+  a. nl tail
+  ; noexit
+
+\ print the dump of the word
+: print-word-dump ( word -- n )
+  dup >name +
+  over >flags F_XT and if 4 + then
+  over - tuck dump tail
+  ; noexit
+
+\ check if this is the address of a word
+: check-word ( best -- n )
+  dup 1 and =0 if
+    1 ushr print-word-dump tail
+  then
+  drop 0
+  ;
+
+\ print the new resolved address
+: print-new-resolved-address ( addr -- n )
+  dup resolve =0 if
+    swap print-resolved-address
+    check-word tail
+  then
+  2drop 0
+  ;
+
 \ fully disassemble a single instruction at given address
-: disasm1 ( addr -- )
-  dup
-  [ wordbuf buf>off ] lit @ -
+: disasm1 ( addr -- n )
+  dup print-new-resolved-address
+  dup if nip exit then drop
+  dup [ wordbuf buf>off ] lit @ -
   w. 2 spaces
   dup c@ dup b.
   5 spaces
   disasm_insn
-  nl tail
+  1 nl tail
   ; noexit
+
+\ print the first resolved address
+: print-first-resolved-address ( addr -- )
+  dup resolve if
+    drop print-resolved-address tail
+  then
+  2drop
+  ;
 
 public
 \ disassembles many instructions at a given address
 \ returns the address after the last decoded instruction
 : disasm ( addr n -- addr' )
+  over print-first-resolved-address
   begin
-    dup if
+    0 over < if
       over disasm1
-      1/str again
+      rot over + rrot -
+      again
     then
   end
   drop

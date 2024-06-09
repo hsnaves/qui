@@ -21,7 +21,6 @@ hex
   ;
 
 extra current !
-
 \ halts the machine
 : halt ( -- )
   -1 1 sysreg !
@@ -76,8 +75,8 @@ public
   dup 10 ushr
   h. h. tail
   ; noexit
-forth current !
 
+forth current !
 \ prints an unsigned word to the output in the current
 \ base (no space at end)
 : u. ( u -- )
@@ -102,48 +101,111 @@ forth current !
   ; noexit
 }scope
 
+( *** implementation of the "words" word *** )
 scope{
 private
-\ compares the word with the current best
-: compare-word-and-advance ( bword offset word addr -- bword' offset' word' addr )
-  tuck >r >r r@ >xt -
-  dup 0 >= if
-    2dup >= if
-      nip nip r@ swap 0
-    then
-  then
-  drop r> >link r>
-  ;
-
-\ find the location of the address within the current dictionary
-: find-address-dict ( bword offset addr dict -- bword' offset' addr dict )
-  dup >r dict>last @ swap
+\ calls the xt on each word of the dictionary
+\ and one with the zero address ( to signal the end of list )
+: process-dict ( dict xt -- dict' xt )
+  over >r >r dict>last @
   begin
-    over if
-      compare-word-and-advance
-      again
+    r@ exec
+    dup if
+      >link again
     then
   end
-  nip r>
+  drop r> r> node>next @ swap
   ;
+
 public
 internal current !
-\ finds the location of the word nearest to a given address
-: find-address ( addr -- word offset )
-  0 swap dup context @
+\ implementation of words with a callback
+: (words) ( xt -- )
+  context @ swap
   begin
-    dup if
-      find-address-dict
-      node>next @
-      again
+    over if
+      process-dict again
     then
   end
   2drop
   ;
+forth current !
+
+private
+\ print a word
+: print-word ( word -- word )
+  dup if
+     dup >name type space tail
+  then
+  nl nl tail
+  ; noexit
+
+public
+\ prints the words in the context
+: words ( -- )
+  [ ' print-word ] lit
+  (words) tail
+  ; noexit
+}scope
+
+scope{
+private
+\ auxiliary word to compare-word-and-advance
+: compare-auxiliary ( best offset new-offset new-best -- best' offset'  )
+  >r dup 0 >= if
+    2dup >= if
+      nip nip r@ swap 0
+    then
+  then
+  drop rdrop
+  ;
+
+\ compares the word and the xt of the word with the current best
+: compare-word-and-advance ( best offset addr word -- best' offset' addr word )
+  dup =0 if exit then
+  over >r >r r@ - r@ 1 shl
+  compare-auxiliary
+  r> r@ over >xt - swap dup >r 1 shl 1+
+  compare-auxiliary
+  r> r> swap
+  ;
+
+public
+internal current !
+\ resolve the location of the word nearest to a given address
+\ the value of best is 2 times the address of the word
+\ or 2 times the address of the word plus 1 (for the >xt part)
+: resolve ( addr -- best offset )
+  0 swap dup
+  [ ' compare-word-and-advance ] lit
+  (words) drop
+  ;
+forth current !
+
+private
+\ print the ">xt" suffix
+" >xt"
+: print-xt ( -- )
+  [ swap ] lit lit type tail
+  ; noexit
+
+\ print the relative address
+: print-relative-address ( best offset -- )
+  swap dup 1 ushr >name type
+  1 and if print-xt then
+  [ char + ] lit emit . tail
+  ;
+
+public
+\ prints the address relative to the nearest word (before address)
+: a. ( addr -- )
+  resolve
+  over if print-relative-address tail then
+  nip w. tail
+  ; noexit
 }scope
 
 extra current !
-
 ( *** implementation of the stack printing words *** )
 \ prints the contents of the data stack
 : ds. ( -- )
@@ -160,17 +222,6 @@ extra current !
   dup . nl tail                 \ print accumulator
   ; noexit
 
-scope{
-private
-\ prints the relative address of a word
-: print-address ( addr -- )
-  find-address
-  over if
-    over >name type [ char + ] lit emit
-  then
-  . drop
-  ;
-public
 \ prints the contents of the return stack
 : rs. ( -- )
   -1 rstack @ 0
@@ -178,14 +229,13 @@ public
     2dup u>                     \ d: num idx rem?
     if
       dup rstack @
-      print-address space 1+
+      a. space 1+
       again
     then
   end
   2drop
   nl tail
   ; noexit
-}scope
 
 forth current !
 
@@ -250,55 +300,4 @@ extra current !
   2drop
   ;
 forth current !
-}scope
-
-( *** implementation of the words word *** )
-
-scope{
-private
-\ calls the xt on each word of the dictionary
-\ and one with the zero address ( to signal the end of list )
-: process-dict ( xt dict -- )
-  dict>last @
-  begin
-    2dup swap exec
-    dup if
-      >link
-      again
-    then
-  end
-  2drop
-  ;
-
-\ print a word
-: print-word ( word -- )
-  dup if
-     >name type space tail
-  then
-  drop nl nl tail
-  ; noexit
-
-public
-internal current !
-
-\ implementation of words with a callback
-: (words) ( xt -- )
-  context @
-  begin
-    dup if
-      2dup process-dict
-      node>next @
-      again
-    then
-  end
-  2drop
-  ;
-
-forth current !
-
-\ prints the words in the context
-: words ( -- )
-  [ ' print-word ] lit
-  (words) tail
-  ; noexit
 }scope

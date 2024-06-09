@@ -70,8 +70,8 @@ word meta 0 lookup nip nip =0
 dup internal and swap =0 current @ and or
 
 current @ over current !
-align defer (i-lookup)
-align defer (i-insert)
+align defer i-lookup
+align defer i-insert
 current !
 
 scope{
@@ -80,7 +80,7 @@ private
 : lookup1 ( c-str n dict -- c-str n addr )
   dup dict>index @
   if
-    >r r@ (i-lookup)
+    >r r@ i-lookup
     dup if rdrop exit then
     drop r>
   then
@@ -213,6 +213,6 @@ current !
 : wrapup ( addr -- )
   exit, this @ dup last !
   current @ dup dict>index @
-  if 2dup (i-insert) then
+  if 2dup i-insert then
   2drop 0 this !
   ;

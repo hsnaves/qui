@@ -177,7 +177,7 @@ last @ >xt onboot !
   ;
 
 \ looks up a given string in the hash table
-: i-lookup ( c-str n dict -- c-str n addr )
+: (i-lookup) ( c-str n dict -- c-str n addr )
   resolve-table
   dup =0 if exit then
   >r 2dup hash r> find-slot
@@ -185,17 +185,17 @@ last @ >xt onboot !
   >r 2dup r@ >name compare
   =0 r> and
   ;
-' i-lookup is (i-lookup)
+' (i-lookup) is i-lookup
 
 \ inserts a given string in the hash table
-: i-insert ( addr dict -- )
+: (i-insert) ( addr dict -- )
   resolve-table dup =0
   if nip exit then
   >r r@ over
   word-slot                     \ d: addr slot | r: table
   r> slot-set tail
   ; noexit
-' i-insert is (i-insert)
+' (i-insert) is i-insert
 
 public
 \ word to create a dictionary
@@ -211,7 +211,7 @@ public
 
 internal current !
 \ drop the last table from the index
-: (drop-table) ( -- )
+: drop-table ( -- )
   num-tables @
   dup =0 if drop exit then
   1- num-tables !
