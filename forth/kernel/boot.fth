@@ -31,6 +31,11 @@ here @ 0 here !
 here !  \ restore here
 
 private
+\ default implementation of prompt
+: default_prompt ( -- )
+  ;
+last @ >xt is prompt
+
 \ default implementation of error
 : default_error ( c-str n -- )
   ch_err type nl

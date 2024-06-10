@@ -53,6 +53,7 @@ private
 public
 \ Obtains one line from the input
 : line ( -- )
+  prompt
   [ tib buf>end ] lit @ >r
   [ tib buf>start ] lit @
   dup [ tib buf>here ] lit !

@@ -115,6 +115,9 @@ align defer type ( c-str n -- )
 \ obtains an input character from standard input
 align defer getc ( -- c)
 
+\ prompt shown before any given input line
+align defer prompt ( -- )
+
 \ prints an error message and restarts the interpreter
 align defer error ( c-str n  -- )
 

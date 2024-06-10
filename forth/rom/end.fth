@@ -44,13 +44,32 @@ fix_implementation rdrop
 
 ( simple debugger implementation )
 internal current !
-align here @ ' (getc) , const debug-getc
+align here @ ' (getc) , 0 , dup const debug-getc
 forth current !
 
 scope{
+ephemeral
+: debugger-enabled [ 4 + ] lit ; inl
+
+public
+\ banner printed as initial message
+align defer banner ( -- )
+
 private
+\ default implementation of the banner
+"  free bytes out of "
+" QUI Forth v0.1a"
+: my_banner ( -- )
+  [ swap ] lit lit type nl
+  wordbuf dup buf>end @ swap buf>here @ - .
+  [ swap ] lit lit type
+  4 sysreg @ . tail
+  ; noexit
+last @ >xt is banner
+
 \ swap between debug-getc and getc
-: swap-debug-getc ( -- )
+: swap-debug-getc ( diff -- )
+  debugger-enabled dup @ rot + swap !
   debug-getc [ find getc defer-ptr ] lit
   2dup @ swap @ rot ! swap !
   ;
@@ -60,12 +79,10 @@ public
 : debug ( -- )
   debug-getc @ =0 if bye tail then
   0 channel 2dup 1+ c! c!
-  swap-debug-getc interpreter swap-debug-getc tail
+  1 swap-debug-getc interpreter
+  -1 swap-debug-getc tail
   ; noexit
-}scope
 
-( words for handling exceptions )
-scope{
 private
 \ handles general exceptions
 : general_exception ( status c-str n -- )
@@ -113,11 +130,21 @@ private
   terminate tail
   ; noexit
 last @ >xt onexcept !
-}scope
+
+" > "
+\ default prompt implementation
+: default_prompt ( -- )
+  state c@ if exit then \ not show prompt when compiling
+  channel 1+ c@ if exit then \ not show when not from stdin
+  [ find getc defer-ptr ] lit @
+  [ ' (getc) ] lit - if exit then
+  nl debugger-enabled @
+  if [ char # ] lit else [ char > ] lit then
+  emit space tail
+  ; noexit
+last @ >xt
 
 \ new onboot
-scope{
-private
 : check-args ( -- )
   [ onboot @ ] lit exec
   ch_args line
@@ -128,15 +155,15 @@ private
   over - 1- dup if
     2dup here @ >r
     str, 0 c, r> (include)
+  else
+    banner
   then
   2drop
   ;
 last @ >xt onboot !
 }scope
 
-decimal
-2 janum c!
+decimal 2 janum c!
 file-name" main.rom"
-0 0 here @ 2 file-do . nl
-cycles . nl
-bye
+is prompt 0 0 here @ 2 file-do . nl cycles . nl bye
+
