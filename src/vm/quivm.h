@@ -64,7 +64,7 @@
  * to the stack limit to declarate stack
  * overflow.
  */
-#define STACK_THRESHOLD                  8
+#define STACK_THRESHOLD                 16
 
 /* The I/O address for the system device */
 #define IO_BASE                 0xFFF00000

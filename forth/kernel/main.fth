@@ -128,9 +128,9 @@ align defer fatal ( c-str n  -- )
 
 \ returns true if min <= v <= max
 : within ( v min max -- t )
-  rot tuck u<
+  rot tuck <
   if 2drop 0 exit then
-  swap u>=
+  swap >=
   ;
 
 \ advances the counted string by a given number of characters

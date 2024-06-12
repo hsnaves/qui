@@ -206,10 +206,17 @@ public
 }scope
 
 extra current !
+scope{
+ephemeral
+: SYS_STACKSIZE         3 ; inl
+
+public
 ( *** implementation of the stack printing words *** )
 \ prints the contents of the data stack
 : ds. ( -- )
-  -1 dstack @ 1- 0
+  -1 dstack @
+  dup =0 if SYS_STACKSIZE sysreg @ + then
+  1- 0
   begin
     2dup u>                     \ d: num idx rem?
     if
@@ -236,7 +243,7 @@ extra current !
   2drop
   nl tail
   ; noexit
-
+}scope
 forth current !
 
 ( *** implementation of the dump word *** )
