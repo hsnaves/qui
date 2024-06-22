@@ -136,8 +136,9 @@ struct quivm {
 
 /* Creates and initializes the QUI vm.
  * The stack size (in cells) is specified in `stacksize` and the
- * memory size (in bytes) is specified in `memsize`. The `memsize`
- * parameter must be a multiple of 4.
+ * memory size (in bytes) is specified in `memsize`. The `stacksize`
+ * must be a power of 2, and the `memsize` parameter must be a
+ * multiple of 4.
  * Returns zero on success.
  */
 int quivm_init(struct quivm *qvm, uint32_t stacksize, uint32_t memsize);
@@ -173,33 +174,13 @@ int quivm_load(struct quivm *qvm, const char *filename,
 void quivm_load_array(struct quivm *qvm, const uint8_t *data,
                       uint32_t address, uint32_t *length);
 
-/* Runs one step of the virtual machine.
- * Returns positive number if the machine has not yet terminated
- * or halted. Returns zero if it has halted, and a negative number
- * if it has terminated.
- */
-int quivm_step(struct quivm *qvm);
-
-/* Runs the virtual machine for `max_steps`.
+/* Runs the virtual machine for `num_cycles`.
+ * The virtual machine may run for a little longer, as the
+ * cycle count is only compared in a jump or in the return
+ * instructions.
  * Returns nonzero if the machine has not yet terminated.
  */
-int quivm_run(struct quivm *qvm, uint32_t max_steps);
-
-/* Reads a value from one of the stack memories.
- * The appropriate stack is selected by the parameter `use_rstack`.
- * The cell to read is given by `cell`.
- * Returns the value.
- */
-uint32_t quivm_stack_read(const struct quivm *qvm,
-                          int use_rstack, uint32_t cell);
-
-/* Writes a value to one of the stack memories.
- * The appropriate stack is selected by the parameter `use_rstack`.
- * The cell to write is given by `cell`, and the value
- * to write is given by `v`.
- */
-void quivm_stack_write(struct quivm *qvm, int use_rstack,
-                       uint32_t cell, uint32_t v);
+int quivm_run(struct quivm *qvm, uint32_t num_cycles);
 
 /* Reads the value of a cell in memory at `address`.
  * Returns the value read.
@@ -217,22 +198,31 @@ uint8_t quivm_read_byte(struct quivm *qvm, uint32_t address);
 /* Writes a byte `v` to  memory at `address`. */
 void quivm_write_byte(struct quivm *qvm, uint32_t address, uint8_t b);
 
-/* Pushes a value `v` onto a stack selected by `use_rstack`. */
-void quivm_stack_push(struct quivm *qvm, int use_rstack, uint32_t v);
+/* Pushes a value `v` onto the data stack. */
+void quivm_dstack_push(struct quivm *qvm, uint32_t v);
 
-/* Pops a value from the selected by `use_rstack`.
+/* Pushes a value `v` onto the return stack. */
+void quivm_rstack_push(struct quivm *qvm, uint32_t v);
+
+/* Pops a value from the data stack.
  * Returns the popped value.
  */
-uint32_t quivm_stack_pop(struct quivm *qvm, int use_rstack);
+uint32_t quivm_dstack_pop(struct quivm *qvm);
 
-/* Auxiliary function to check if a given a buffer fits the memory.
+/* Pops a value from the return stack.
+ * Returns the popped value.
+ */
+uint32_t quivm_rstack_pop(struct quivm *qvm);
+
+/* Auxiliary macro to check if a given a buffer fits the memory.
  * The buffer is specified by the parameters:
  *  - `address` : the starting address of the buffer;
  *  - `length` : the length of the buffer;
  * and the memory size is given by `memsize`.
  * Returns zero if the buffer is valid.
  */
-int check_buffer(uint32_t address, uint32_t length, uint32_t memsize);
+#define check_buffer(address, length, memsize) \
+    (!(((address) < (memsize)) && ((length) < ((memsize) - (address)))))
 
 
 #endif /* __VM_QUIVM_H */
