@@ -54,4 +54,4 @@ uint32_t timer_read_callback(struct timer *tmr,
 void timer_write_callback(struct timer *tmr, struct quivm *qvm,
                           uint32_t address, uint32_t v);
 
-#endif /* __DEV_TIMER_H */
+#endif

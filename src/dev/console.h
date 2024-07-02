@@ -75,4 +75,4 @@ uint32_t console_read_callback(struct console *cns,
 void console_write_callback(struct console *cns, struct quivm *qvm,
                             uint32_t address, uint32_t v);
 
-#endif /* __DEV_CONSOLE_H */
+#endif

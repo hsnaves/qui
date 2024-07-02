@@ -102,4 +102,4 @@ int check_buffer2d(uint32_t address, uint32_t stride,
                    uint32_t width, uint32_t height,
                    uint32_t memsize);
 
-#endif /* __DEV_DISPLAY_H */
+#endif

@@ -81,5 +81,4 @@ void audio_write_callback(struct audio *aud, struct quivm *qvm,
  */
 void audio_stream_callback(void *arg, uint8_t *stream, int len);
 
-
-#endif /* __DEV_AUDIO_H */
+#endif

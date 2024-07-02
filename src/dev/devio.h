@@ -48,4 +48,4 @@ void devio_configure(struct devio *io, struct quivm *qvm);
  */
 void devio_update(struct devio *io);
 
-#endif /* __DEV_DEVIO_H */
+#endif
