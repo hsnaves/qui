@@ -34,9 +34,9 @@ ephemeral
 \ size of the global buffer
 : global-buffer-size               1000 ; inl
 
-0 module-current ! \ set it to zero
-
 private
+
+0 module-current ! \ set it to zero
 
 \ initialize the global buffer
 0 global-buffer buf>here !
@@ -67,8 +67,7 @@ last @ >xt onboot !
   \ obtain the previous value of getc
   [ find getc defer-ptr ] lit !
   \ link the module
-  dup node>next @
-  module-current !
+  dup node>next @ module-current !
   global-buffer buf>here !
   ;
 
@@ -132,11 +131,11 @@ last @ >xt onboot !
 \ except for the filename
 : init-struct ( addr -- )
   dup mod>strbuf
-  dup mod>bufstart swap
+  over mod>bufstart swap
   2dup buf>start !
   2dup buf>here !
   buf>off !
-  \ buf>end was already initialized in allocate-space
+  \ no need to initialize buf>end
   0 over mod>offset !
   install-module tail
   ; noexit
@@ -154,14 +153,14 @@ internal current !
   dup struct-size +
   swap over swap
   mod>filename !
-  str-copy
-  ;
+  str-copy tail
+  ; noexit
 forth current !
 
 \ include a module (inline)
 : include" ( -- )
-  ", 0 c, drop
-  dup (include) here !          \ restore here pointer
-  ;
+  ", 0 c, drop dup here !
+  (include) tail
+  ; noexit
 }scope
 

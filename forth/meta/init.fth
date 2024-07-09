@@ -7,6 +7,7 @@ meta use
 \ initialize global variables
 forth current !
 extra context !
+0 currnext !
 0 this !
 0 flags c!
 0 state c!

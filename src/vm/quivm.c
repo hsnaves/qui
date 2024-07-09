@@ -66,10 +66,10 @@ int quivm_init(struct quivm *qvm, uint32_t memsize)
     qvm->read_cb = NULL;
     qvm->write_cb = NULL;
 
-    /* zero the memory, the stack and the device memory */
-    memset(qvm->dstack, 0, STACK_SIZE * sizeof(uint32_t));
-    memset(qvm->rstack, 0, STACK_SIZE * sizeof(uint32_t));
-    memset(qvm->mem, 0, qvm->memsize);
+    /* reset the memory, and the stacks (with -1) */
+    memset(qvm->dstack, -1, STACK_SIZE * sizeof(uint32_t));
+    memset(qvm->rstack, -1, STACK_SIZE * sizeof(uint32_t));
+    memset(qvm->mem, -1, qvm->memsize);
 
     quivm_reset(qvm);
     return 0;
