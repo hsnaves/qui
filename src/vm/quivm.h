@@ -60,6 +60,9 @@
 #define EX_DIVIDE_BY_ZERO       0x00000002
 #define EX_STACK_OVERFLOW       0x00000003
 
+/* The stack size */
+#define STACK_SIZE                     256
+
 /* Threshold number of stack cells close
  * to the stack limit to declarate stack
  * overflow.
@@ -115,8 +118,7 @@ struct quivm {
     uint8_t *mem;                   /* VM memory */
     uint32_t pc;                    /* program counter */
     uint32_t acc;                   /* accumulator */
-    uint32_t dsp, rsp;              /* data and return stack pointers */
-    uint32_t stacksize;             /* stack size (in cells) */
+    uint8_t dsp, rsp;               /* data and return stack pointers */
     uint32_t memsize;               /* memory size (in bytes)
                                      * note: must be a multiple of 4
                                      */
@@ -135,13 +137,11 @@ struct quivm {
 /* Functions */
 
 /* Creates and initializes the QUI vm.
- * The stack size (in cells) is specified in `stacksize` and the
- * memory size (in bytes) is specified in `memsize`. The `stacksize`
- * must be a power of 2, and the `memsize` parameter must be a
- * multiple of 4.
+ * The memory size (in bytes) is specified in `memsize`.
+ * The `memsize` parameter must be a multiple of 4.
  * Returns zero on success.
  */
-int quivm_init(struct quivm *qvm, uint32_t stacksize, uint32_t memsize);
+int quivm_init(struct quivm *qvm, uint32_t memsize);
 
 /* Destroys the QUI vm and release the resources. */
 void quivm_destroy(struct quivm *qvm);

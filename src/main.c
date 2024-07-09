@@ -546,7 +546,7 @@ int main(int argc, char **argv, char **envp)
     const char *filename;
     const char *bind_address;
     const char *target_address;
-    uint32_t stacksize, memsize;
+    uint32_t memsize;
     uint32_t length;
     int use_utc;
     int disable_write;
@@ -557,7 +557,6 @@ int main(int argc, char **argv, char **envp)
     int i, ret;
     char *end;
 
-    stacksize = 0x0400;
     memsize = 0x100000;
 
     filename = NULL;
@@ -577,10 +576,6 @@ int main(int argc, char **argv, char **envp)
         if (strcmp(argv[i], "-r") == 0) {
             if (i == argc - 1) goto missing_argument;
             filename = argv[++i];
-        } else if (strcmp(argv[i], "--stacksize") == 0) {
-            if (i == argc - 1) goto missing_argument;
-            stacksize = strtol(argv[++i], &end, 10);
-            if (end[0] != '\0') goto invalid_argument;
         } else if (strcmp(argv[i], "--memsize") == 0) {
             if (i == argc - 1) goto missing_argument;
             memsize = strtol(argv[++i], &end, 10);
@@ -639,7 +634,7 @@ int main(int argc, char **argv, char **envp)
     argc -= i;
     argv = &argv[i];
 
-    if (quivm_init(&qvm, stacksize, memsize)) {
+    if (quivm_init(&qvm, memsize)) {
         fprintf(stderr, "main: could not initialize the VM\n");
         return 1;
     }

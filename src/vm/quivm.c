@@ -21,26 +21,11 @@
 
 /* Functions */
 
-int quivm_init(struct quivm *qvm, uint32_t stacksize, uint32_t memsize)
+int quivm_init(struct quivm *qvm, uint32_t memsize)
 {
     qvm->dstack = NULL;
     qvm->rstack = NULL;
     qvm->mem = NULL;
-
-    /* validate the stacksize parameter */
-    if (stacksize & (stacksize - 1)) {
-        quivm_destroy(qvm);
-        fprintf(stderr, "vm/quivm: init: "
-                "stacksize is not a power of 2\n");
-        return 1;
-    }
-
-    if (stacksize < 4 * STACK_THRESHOLD) {
-        quivm_destroy(qvm);
-        fprintf(stderr, "vm/quivm: init: "
-                "stacksize is too small\n");
-        return 1;
-    }
 
     /* validate the memsize parameter */
     if ((memsize % 4) != 0) {
@@ -64,11 +49,10 @@ int quivm_init(struct quivm *qvm, uint32_t stacksize, uint32_t memsize)
         return 1;
     }
 
-    qvm->stacksize = stacksize;
     qvm->memsize = memsize;
 
-    qvm->dstack = (uint32_t *) malloc(qvm->stacksize * sizeof(uint32_t));
-    qvm->rstack = (uint32_t *) malloc(qvm->stacksize * sizeof(uint32_t));
+    qvm->dstack = (uint32_t *) malloc(STACK_SIZE * sizeof(uint32_t));
+    qvm->rstack = (uint32_t *) malloc(STACK_SIZE * sizeof(uint32_t));
     qvm->mem = (uint8_t *) malloc(qvm->memsize);
 
     if (!qvm->dstack || !qvm->rstack || !qvm->mem) {
@@ -83,8 +67,8 @@ int quivm_init(struct quivm *qvm, uint32_t stacksize, uint32_t memsize)
     qvm->write_cb = NULL;
 
     /* zero the memory, the stack and the device memory */
-    memset(qvm->dstack, 0, qvm->stacksize * sizeof(uint32_t));
-    memset(qvm->rstack, 0, qvm->stacksize * sizeof(uint32_t));
+    memset(qvm->dstack, 0, STACK_SIZE * sizeof(uint32_t));
+    memset(qvm->rstack, 0, STACK_SIZE * sizeof(uint32_t));
     memset(qvm->mem, 0, qvm->memsize);
 
     quivm_reset(qvm);
@@ -406,8 +390,8 @@ int quivm_run(struct quivm *qvm, uint32_t num_cycles)
          * instruction halted or terminated the VM
          */
         if (!(qvm->status & STS_EXCEPTION)
-            && ((qvm->dsp >= qvm->stacksize - STACK_THRESHOLD)
-                || (qvm->rsp >= qvm->stacksize - STACK_THRESHOLD))) {
+            && ((qvm->dsp >= STACK_SIZE - STACK_THRESHOLD)
+                || (qvm->rsp >= STACK_SIZE - STACK_THRESHOLD))) {
 
             err_cond = EX_STACK_OVERFLOW;
             goto check_exception;
@@ -469,7 +453,7 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
         case IO_SYS_DSTACK:
             if (qvm->scell == CELL_STACK_POINTER) {
                 v = qvm->dsp;
-            } else if (qvm->scell < qvm->stacksize) {
+            } else if (qvm->scell < STACK_SIZE) {
                 v = qvm->dstack[qvm->scell];
             } else {
                 v = -1;
@@ -478,7 +462,7 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
         case IO_SYS_RSTACK:
             if (qvm->scell == CELL_STACK_POINTER) {
                 v = qvm->rsp;
-            } else if (qvm->scell < qvm->stacksize) {
+            } else if (qvm->scell < STACK_SIZE) {
                 v = qvm->rstack[qvm->scell];
             } else {
                 v = -1;
@@ -490,7 +474,7 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
         case IO_SYS_VALUE:
             switch (qvm->selector) {
             case SYS_STATUS:    v = qvm->status; break;
-            case SYS_STACKSIZE: v = qvm->stacksize; break;
+            case SYS_STACKSIZE: v = STACK_SIZE; break;
             case SYS_MEMSIZE:   v = qvm->memsize; break;
             case SYS_CELLSIZE:  v = 4; break;
             case SYS_ID:        v = 0; break; /* TODO: set proper value */
@@ -533,15 +517,15 @@ void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
             break;
         case IO_SYS_DSTACK:
             if (qvm->scell == CELL_STACK_POINTER) {
-                qvm->dsp = v % qvm->stacksize;
-            } else if (qvm->scell < qvm->stacksize) {
+                qvm->dsp = (uint8_t) v;
+            } else if (qvm->scell < STACK_SIZE) {
                 qvm->dstack[qvm->scell] = v;
             }
             break;
         case IO_SYS_RSTACK:
             if (qvm->scell == CELL_STACK_POINTER) {
-                qvm->rsp = v % qvm->stacksize;
-            } else if (qvm->scell < qvm->stacksize) {
+                qvm->rsp = (uint8_t) v;
+            } else if (qvm->scell < STACK_SIZE) {
                 qvm->rstack[qvm->scell] = v;
             }
             break;
@@ -660,23 +644,19 @@ void quivm_write_byte(struct quivm *qvm, uint32_t address, uint8_t b)
 void quivm_dstack_push(struct quivm *qvm, uint32_t v)
 {
     qvm->dstack[qvm->dsp++] = v;
-    qvm->dsp &= (qvm->stacksize - 1); /* assume power of 2 */
 }
 
 void quivm_rstack_push(struct quivm *qvm, uint32_t v)
 {
     qvm->rstack[qvm->rsp++] = v;
-    qvm->rsp &= (qvm->stacksize - 1); /* assume power of 2 */
 }
 
 uint32_t quivm_dstack_pop(struct quivm *qvm)
 {
-    qvm->dsp = (qvm->dsp - 1) & (qvm->stacksize - 1);
-    return qvm->dstack[qvm->dsp];
+    return qvm->dstack[--qvm->dsp];
 }
 
 uint32_t quivm_rstack_pop(struct quivm *qvm)
 {
-    qvm->rsp = (qvm->rsp - 1) & (qvm->stacksize - 1);
-    return qvm->rstack[qvm->rsp];
+    return qvm->rstack[--qvm->rsp];
 }
