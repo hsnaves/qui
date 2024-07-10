@@ -16,8 +16,12 @@
 
 /* Global variables */
 
+#ifdef INCLUDE_DEFAULT_ROM
+#    include "default_rom.c"
+#else
 /* Default rom contains just an infinite loop */
 static const uint8_t default_rom[] = { 0xBE, 0xC2 };
+#endif
 
 /* Functions */
 

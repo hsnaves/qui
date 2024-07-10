@@ -34,6 +34,8 @@ kernel.rom: $(KERNEL_DEPS) src/qui
 
 src/default_rom.c: main.rom
 	./src/qui -r main.rom forth/utils/default_rom.fth main.rom src/default_rom.c
+	$(RM) src/qui src/main.o
+	$(MAKE) -C src qui
 
 install:
 	$(MAKE) -C src install

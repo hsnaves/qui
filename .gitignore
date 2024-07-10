@@ -1,9 +1,9 @@
 *.o
 src/qui
-src/qui-headless
+src/qui-sdl
 src/default_rom.c
-src/qui.js
-src/qui.wasm
+src/qui-sdl.js
+src/qui-sdl.wasm
 main.rom
 
 

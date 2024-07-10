@@ -39,6 +39,12 @@ ifneq ($(DEBUG), 0)
     LDFLAGS := $(LDFLAGS) -g
 endif
 
+ifneq ("$(wildcard default_rom.c)","")
+    MAIN_CFLAGS := $(CFLAGS) -DINCLUDE_DEFAULT_ROM
+else
+    MAIN_CFLAGS := $(CFLAGS)
+endif
+
 SDL_CFLAGS := $(CFLAGS) $(shell sdl2-config --cflags)
 SDL_LDFLAGS := $(LDFLAGS) $(shell sdl2-config --libs)
 
@@ -59,6 +65,9 @@ qui-sdl: $(OBJS) main-sdl.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+
+main.o: main.c
+	$(CC) $(MAIN_CFLAGS) $(INCLUDES) -c $< -o $@
 
 main-sdl.o: main-sdl.c
 	$(CC) $(SDL_CFLAGS) $(INCLUDES) -c $< -o $@
