@@ -1,4 +1,4 @@
-# makefile for building qui and qui-sdl
+# makefile for building qui-sdl.js
 
 # Set the defaults
 
@@ -18,8 +18,7 @@ endif
 # General definitions
 
 RM := rm -f
-INSTALL := install
-CC ?= gcc
+CC := emcc
 
 CFLAGS := -Wall -Wextra -pedantic $(EXTRA_CFLAGS)
 LDFLAGS :=
@@ -39,22 +38,17 @@ ifneq ($(DEBUG), 0)
     LDFLAGS := $(LDFLAGS) -g
 endif
 
-SDL_CFLAGS := $(CFLAGS) $(shell sdl2-config --cflags)
-SDL_LDFLAGS := $(LDFLAGS) $(shell sdl2-config --libs)
+SDL_CFLAGS := $(CFLAGS) -sUSE_SDL=2
+SDL_LDFLAGS := $(LDFLAGS) -sUSE_SDL=2
 
 # Main targets
-TARGETS := qui qui-sdl
-
-all: $(TARGETS)
+all: qui-sdl.js
 
 include module.mk
 
 # Pattern rules
 
-qui: $(OBJS) main.o
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-qui-sdl: $(OBJS) main-sdl.o
+qui-sdl.js: $(OBJS) main-sdl.o
 	$(CC) $(SDL_LDFLAGS) -o $@ $^ $(LIBS)
 
 %.o: %.c
@@ -63,12 +57,8 @@ qui-sdl: $(OBJS) main-sdl.o
 main-sdl.o: main-sdl.c
 	$(CC) $(SDL_CFLAGS) $(INCLUDES) -c $< -o $@
 
-install: $(TARGETS)
-	$(INSTALL) -d $(DESTDIR)$(PREFIX)/bin/
-	$(INSTALL) -m 755 $(TARGETS) $(DESTDIR)$(PREFIX)/bin/
-
 clean:
-	$(RM) $(OBJS) main.o main-sdl.o
-	$(RM) $(TARGETS)
+	$(RM) $(OBJS) main-sdl.o
+	$(RM) qui-sdl.js qui-sdl.wasm
 
-.PHONY: all install clean
+.PHONY: all clean
