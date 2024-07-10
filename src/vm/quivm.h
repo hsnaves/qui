@@ -87,7 +87,6 @@
 #define SYS_MEMSIZE                      4
 #define SYS_CELLSIZE                     5
 #define SYS_ID                           6
-#define SYS_CYCLES                       7
 
 /* Data structures and types */
 
@@ -127,7 +126,6 @@ struct quivm {
     uint32_t selector;              /* The selector for internal registers */
     uint32_t status;                /* The status of the VM */
     int termvalue;                  /* termination value */
-    uint32_t cycles;                /* counter for cycles */
 
     void *arg;                      /* extra argument for callbacks */
     quivm_read_cb read_cb;          /* read callback function */
@@ -174,13 +172,10 @@ int quivm_load(struct quivm *qvm, const char *filename,
 void quivm_load_array(struct quivm *qvm, const uint8_t *data,
                       uint32_t address, uint32_t *length);
 
-/* Runs the virtual machine for `num_cycles`.
- * The virtual machine may run for a little longer, as the
- * cycle count is only compared in a jump or in the return
- * instructions.
+/* Runs the virtual machine until halted or terminated.
  * Returns nonzero if the machine has not yet terminated.
  */
-int quivm_run(struct quivm *qvm, uint32_t num_cycles);
+int quivm_run(struct quivm *qvm);
 
 /* Reads the value of a cell in memory at `address`.
  * Returns the value read.

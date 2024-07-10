@@ -22,9 +22,6 @@
 #include "dev/keyboard.h"
 #include "dev/timer.h"
 
-/* Constants */
-#define NUM_INSN_PER_FRAME         1000000
-
 /* Global variables */
 #ifdef USE_SDL
 static SDL_Window *window;      /* the interface window */
@@ -34,9 +31,6 @@ static SDL_AudioDeviceID audio_id; /* the id of the audio device */
 static int zoom = 1;            /* the zoom level */
 static int mouse_captured;      /* the mouse was captured */
 static SDL_Joystick *joystick;  /* the joystick device */
-#ifndef __EMSCRIPTEN__
-static int disable_throttle;    /* to disable the cpu throttle */
-#endif
 #endif
 
 #ifdef INCLUDE_DEFAULT_ROM
@@ -392,7 +386,7 @@ int do_run_one_frame(struct quivm *qvm)
     dpl = io->dpl;
     aud = io->aud;
 
-    if (!quivm_run(qvm, NUM_INSN_PER_FRAME))
+    if (!quivm_run(qvm))
         return 1;
 
 #ifdef USE_SDL
@@ -496,7 +490,7 @@ int run(struct quivm *qvm)
         delta = (3 * SDL_GetTicks()) - time0;
         time0 += delta;
 
-        if (!disable_throttle && (delta < (3 * 1000 / FPS))) {
+        if (delta < (3 * 1000 / FPS)) {
             /* For 60 FPS, 1000 / 60 = 50 / 3 = 16.666ms */
             SDL_Delay(((3 * 1000 / FPS) - delta + 2) / 3);
             time0 += ((3 * 1000 / FPS) - delta);
@@ -517,7 +511,6 @@ void print_help(const char *execname)
     printf("  %s [OPTIONS] [--] args ...\n", execname);
     printf("where the available options are:\n");
     printf("  -r <romfile>       Specify the rom file to use\n");
-    printf("  --stackize <size>  The stack size in cells\n");
     printf("  --memsize <size>   The memory size in bytes\n");
     printf("  --readonly         To not allow writes in the storage device\n");
     printf("  --bind <addr>      Binds the UDP socket to a given address\n");
@@ -527,9 +520,6 @@ void print_help(const char *execname)
 #ifdef USE_SDL
     printf("  --zoom <zoom>      Set the initial zoom level\n");
     printf("  --joystick         To enable joystick use\n");
-#ifndef __EMSCRIPTEN__
-    printf("  --nothrottle       To disable speed throttle\n");
-#endif
 #endif /* USE_SDL */
     printf("  -h|--help          Print this help\n");
 }
@@ -567,9 +557,6 @@ int main(int argc, char **argv, char **envp)
     port = 0;
 #ifdef USE_SDL
     enable_joystick = 0;
-#ifndef __EMSCRIPTEN__
-    disable_throttle = 0;
-#endif
 #endif
 
     for (i = 1; i < argc; i++) {
@@ -602,10 +589,6 @@ int main(int argc, char **argv, char **envp)
                 goto invalid_argument;
         } else if (strcmp(argv[i], "--joystick") == 0) {
             enable_joystick = 1;
-#ifndef __EMSCRIPTEN__
-        } else if (strcmp(argv[i], "--nothrottle") == 0) {
-            disable_throttle = 1;
-#endif
 #endif
         } else if ((strcmp(argv[i], "-h") == 0)
                    || (strcmp(argv[i], "--help") == 0)) {

@@ -165,5 +165,5 @@ last @ >xt onboot !
 
 decimal 2 janum c!
 file-name" main.rom"
-is prompt 0 0 here @ 2 file-do . nl cycles . nl bye
+is prompt 0 0 here @ 2 file-do . nl bye
 

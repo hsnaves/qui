@@ -27,5 +27,4 @@ decimal
 
 file-name" kernel.rom"
 meta-buffer swap 2 file-do . nl
-cycles . nl
 bye

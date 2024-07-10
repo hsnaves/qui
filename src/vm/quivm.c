@@ -104,7 +104,6 @@ void quivm_reset(struct quivm *qvm)
     qvm->selector = 0;
     qvm->status = 0;
     qvm->termvalue = 0;
-    qvm->cycles = 0;
 }
 
 int quivm_load(struct quivm *qvm, const char *filename,
@@ -148,11 +147,10 @@ void quivm_load_array(struct quivm *qvm, const uint8_t *data,
     *length = len;
 }
 
-int quivm_run(struct quivm *qvm, uint32_t num_cycles)
+int quivm_run(struct quivm *qvm)
 {
     uint32_t v, w;
     uint64_t dv, dw;
-    uint32_t cyc, first_pc;
     uint32_t err_cond;
     uint8_t insn;
 
@@ -161,15 +159,10 @@ int quivm_run(struct quivm *qvm, uint32_t num_cycles)
         return 0;
 
     /* If halted, update the cycle count. */
-    if (qvm->status & STS_HALTED) {
-        qvm->cycles += num_cycles;
+    if (qvm->status & STS_HALTED)
         return 1;
-    }
-
-    if (num_cycles == 0) return 1;
 
     err_cond = 0;
-    first_pc = qvm->pc;
 
     while (1) {
         if (qvm->pc < qvm->memsize) {
@@ -199,19 +192,16 @@ int quivm_run(struct quivm *qvm, uint32_t num_cycles)
         /* process regular instructions */
         switch (insn) {
         case INSN_RET:
-            cyc = qvm->pc - first_pc;
             qvm->pc = quivm_rstack_pop(qvm);
             goto check_branch;
         case INSN_JSR:
             quivm_rstack_push(qvm, qvm->pc);
             /* fall through */
         case INSN_JMP:
-            cyc = qvm->pc - first_pc;
             qvm->pc += qvm->acc;
             qvm->acc = quivm_dstack_pop(qvm);
             goto check_branch;
         case INSN_JZ:
-            cyc = qvm->pc - first_pc;
             v = quivm_dstack_pop(qvm);
             if (v == 0) qvm->pc += qvm->acc;
             qvm->acc = quivm_dstack_pop(qvm);
@@ -263,7 +253,7 @@ int quivm_run(struct quivm *qvm, uint32_t num_cycles)
         case INSN_UDIV:
             /* check for division by zero */
             if (qvm->acc == 0) {
-                qvm->pc--; first_pc--;
+                qvm->pc--;
                 err_cond = EX_DIVIDE_BY_ZERO;
                 goto check_exception;
             }
@@ -355,35 +345,20 @@ int quivm_run(struct quivm *qvm, uint32_t num_cycles)
             break;
         case INSN_INVL: /* fall through */
         default:
-            qvm->pc--; first_pc--;
+            qvm->pc--;
             err_cond = EX_INVALID_INSN;
             goto check_exception;
         }
         continue;
 
     check_read_write:
-        cyc = qvm->pc - first_pc;
-        if (qvm->status & STS_TERMINATED) {
-            qvm->cycles += cyc;
+        if (qvm->status & STS_TERMINATED)
             return 0;
-        }
 
-        if (qvm->status & STS_HALTED) {
-            if (num_cycles > cyc) {
-                qvm->cycles += num_cycles;
-            } else {
-                qvm->cycles += cyc;
-            }
+        if (qvm->status & STS_HALTED)
             return 1;
-        }
 
     check_branch:
-        qvm->cycles += cyc;
-        first_pc = qvm->pc;
-        if (num_cycles > cyc)
-            num_cycles -= cyc;
-        else
-            break;
 
         /* Detect stack overflow
          * Overflows are detected even if the last
@@ -399,8 +374,6 @@ int quivm_run(struct quivm *qvm, uint32_t num_cycles)
         continue;
 
     check_exception:
-        cyc = qvm->pc - first_pc + 1;
-        qvm->cycles += cyc;
         if (qvm->status & STS_EXCEPTION) {
             fprintf(stderr, "vm/quivm: on_exception: "
                     "unhandled exception: %d at 0x%08X\n",
@@ -415,14 +388,9 @@ int quivm_run(struct quivm *qvm, uint32_t num_cycles)
 
         /* rstack points to the faulting instruction */
         quivm_rstack_push(qvm, qvm->pc);
-        qvm->pc = first_pc = INITIAL_PC;
+        qvm->pc = INITIAL_PC;
         qvm->status |= STS_EXCEPTION;
 
-        if (num_cycles > cyc)
-            num_cycles -= cyc;
-        else
-            break;
-        continue;
     }
 
     return 1;
@@ -478,7 +446,6 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
             case SYS_MEMSIZE:   v = qvm->memsize; break;
             case SYS_CELLSIZE:  v = 4; break;
             case SYS_ID:        v = 0; break; /* TODO: set proper value */
-            case SYS_CYCLES:    v=  qvm->cycles; break;
             default: v = -1; break;
             }
             break;

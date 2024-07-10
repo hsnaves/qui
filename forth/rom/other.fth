@@ -26,11 +26,6 @@ extra current !
   -1 1 sysreg !
   ;
 
-\ counts the number of VM cycles
-: cycles ( -- )
-  7 sysreg @
-  ;
-
 \ prints a given number of spaces
 : spaces ( n -- )
   begin
