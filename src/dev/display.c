@@ -8,7 +8,7 @@
 
 int display_init(struct display *dpl)
 {
-    memset(dpl, 0, sizeof(*dpl));
+    memset(dpl, 0, sizeof(struct display));
     return 0;
 }
 
@@ -49,11 +49,10 @@ uint32_t display_read_callback(struct display *dpl,
 
 /* perform the initialization of the display */
 static
-void do_initialize(struct display *dpl, struct quivm *qvm)
+void do_initialize(struct display *dpl)
 {
     uint32_t bpp;
 
-    (void)(qvm); /* UNUSED */
     if (dpl->initialized) {
         /* already initialized */
         dpl->params[0] = DISPLAY_ERROR;
@@ -77,11 +76,11 @@ void do_initialize(struct display *dpl, struct quivm *qvm)
 
 /* perform the set buffer command */
 static
-void do_set_buffer(struct display *dpl, struct quivm *qvm)
+void do_set_buffer(struct display *dpl)
 {
     uint32_t buffer;
     buffer = dpl->params[0];
-    if (!(buffer < qvm->memsize)) {
+    if (!(buffer < MEMORY_SIZE)) {
         dpl->params[0] = DISPLAY_ERROR;
         return;
     }
@@ -92,11 +91,11 @@ void do_set_buffer(struct display *dpl, struct quivm *qvm)
 
 /* perform the set palette command */
 static
-void do_set_palette(struct display *dpl, struct quivm *qvm)
+void do_set_palette(struct display *dpl)
 {
     uint32_t palette;
     palette = dpl->params[0];
-    if (!(palette < qvm->memsize) || !((palette + 768) < qvm->memsize)) {
+    if (!(palette < MEMORY_SIZE) || !((palette + 768) < MEMORY_SIZE)) {
         dpl->params[0] = DISPLAY_ERROR;
         return;
     }
@@ -106,7 +105,7 @@ void do_set_palette(struct display *dpl, struct quivm *qvm)
 
 /* sets the source buffer */
 static
-void do_set_source(struct display *dpl, struct quivm *qvm)
+void do_set_source(struct display *dpl)
 {
     uint32_t src, src_s;
     uint32_t src_w, src_h;
@@ -117,7 +116,7 @@ void do_set_source(struct display *dpl, struct quivm *qvm)
     src_h = dpl->params[3];
 
     /* check if the buffer fits in memory */
-    if (check_buffer2d(src, src_s, src_w, src_h, qvm->memsize)) {
+    if (check_buffer2d(src, src_s, src_w, src_h, MEMORY_SIZE)) {
         dpl->params[0] = DISPLAY_ERROR;
         return;
     }
@@ -131,9 +130,8 @@ void do_set_source(struct display *dpl, struct quivm *qvm)
 
 /* sets the destination buffer */
 static
-void do_set_destination(struct display *dpl, struct quivm *qvm)
+void do_set_destination(struct display *dpl)
 {
-    (void)(qvm); /* UNUSED */
     dpl->dst = dpl->params[0];
     dpl->dst_s = dpl->params[1];
     dpl->params[0] = DISPLAY_SUCCESS;
@@ -155,7 +153,7 @@ void do_block_transfer(struct display *dpl, struct quivm *qvm)
     dst_s = dpl->dst_s;
 
     /* check if the buffer fits in memory */
-    if (check_buffer2d(dst, dst_s, dpl->src_w, dpl->src_h, qvm->memsize)) {
+    if (check_buffer2d(dst, dst_s, dpl->src_w, dpl->src_h, MEMORY_SIZE)) {
         dpl->params[0] = DISPLAY_ERROR;
         return;
     }
@@ -197,7 +195,7 @@ void do_tiled_block_transfer(struct display *dpl, struct quivm *qvm)
     dst_s = dpl->dst_s;
 
     /* check if the buffer fits in memory */
-    if (check_buffer2d(dst, dst_s, dst_w, dst_h, qvm->memsize)) {
+    if (check_buffer2d(dst, dst_s, dst_w, dst_h, MEMORY_SIZE)) {
         dpl->params[0] = DISPLAY_ERROR;
         return;
     }
@@ -272,9 +270,8 @@ void do_masked_block_transfer(struct display *dpl, struct quivm *qvm)
     dst_s = dpl->dst_s;
 
     /* check if the buffers fit in memory */
-    if (check_buffer2d(mask, mask_s, mask_w, dpl->src_h, qvm->memsize)
-        || check_buffer2d(dst, dst_s, dpl->src_w, dpl->src_h,
-                          qvm->memsize)) {
+    if (check_buffer2d(mask, mask_s, mask_w, dpl->src_h, MEMORY_SIZE)
+        || check_buffer2d(dst, dst_s, dpl->src_w, dpl->src_h, MEMORY_SIZE)) {
         dpl->params[0] = DISPLAY_ERROR;
         return;
     }
@@ -318,23 +315,23 @@ void do_command(struct display *dpl, struct quivm *qvm)
 {
     switch (dpl->command) {
     case DISPLAY_CMD_INIT:
-        do_initialize(dpl, qvm);
+        do_initialize(dpl);
         break;
     case DISPLAY_CMD_FRAMECOUNT:
         dpl->params[1] = dpl->framecount;
         dpl->params[0] = DISPLAY_SUCCESS;
         break;
     case DISPLAY_CMD_SET_BUFFER:
-        do_set_buffer(dpl, qvm);
+        do_set_buffer(dpl);
         break;
     case DISPLAY_CMD_SET_PALETTE:
-        do_set_palette(dpl, qvm);
+        do_set_palette(dpl);
         break;
     case DISPLAY_CMD_SET_SOURCE:
-        do_set_source(dpl, qvm);
+        do_set_source(dpl);
         break;
     case DISPLAY_CMD_SET_DESTINATION:
-        do_set_destination(dpl, qvm);
+        do_set_destination(dpl);
         break;
     case DISPLAY_CMD_BLT:
         do_block_transfer(dpl, qvm);

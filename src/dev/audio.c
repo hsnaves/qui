@@ -285,7 +285,7 @@ uint32_t audio_read_callback(struct audio *aud,
 
 /* runs a command in aud->command */
 static
-void do_command(struct audio *aud, struct quivm *qvm)
+void do_command(struct audio *aud)
 {
     struct audio_internal *audi;
     struct channel *chn;
@@ -315,7 +315,7 @@ void do_command(struct audio *aud, struct quivm *qvm)
 
         /* validate the parameters of the command */
         if ((ch >= NUM_CHANNELS) || (pitch >= 108)
-            || (check_buffer(address, length, qvm->memsize))) {
+            || (check_buffer(address, length, MEMORY_SIZE))) {
             aud->params[0] = AUDIO_ERROR;
             break;
         }
@@ -383,10 +383,12 @@ void do_command(struct audio *aud, struct quivm *qvm)
 void audio_write_callback(struct audio *aud, struct quivm *qvm,
                           uint32_t address, uint32_t v)
 {
+    (void)(qvm); /* UNUSED */
+
     switch (address) {
     case IO_AUDIO_COMMAND:
         aud->command = v;
-        do_command(aud, qvm);
+        do_command(aud);
         break;
     default:
         if (((IO_AUDIO_PARAM0 - address) % 4 == 0)

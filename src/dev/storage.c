@@ -79,7 +79,7 @@ int get_filename(struct storage *stg, struct quivm *qvm,
     address = stg->name;
     for (i = 0; i < size - 1; i++) {
         /* Check if reading from memory */
-        if (!(address < qvm->memsize)) break;
+        if (!(address < MEMORY_SIZE)) break;
 
         filename[i] = quivm_read_byte(qvm, address++);
         if (filename[i] == '\0') break;
@@ -123,7 +123,7 @@ void do_operation(struct storage *stg, struct quivm *qvm)
         return;
     }
 
-    if (check_buffer(stg->data, stg->len, qvm->memsize)) {
+    if (check_buffer(stg->data, stg->len, MEMORY_SIZE)) {
         stg->len = -1;
         return;
     }

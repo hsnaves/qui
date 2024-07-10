@@ -60,7 +60,8 @@
 #define EX_DIVIDE_BY_ZERO       0x00000002
 #define EX_STACK_OVERFLOW       0x00000003
 
-/* The stack size */
+/* The constants for memory and stack */
+#define MEMORY_SIZE             0x00400000
 #define STACK_SIZE                     256
 
 /* Threshold number of stack cells close
@@ -118,9 +119,6 @@ struct quivm {
     uint32_t pc;                    /* program counter */
     uint32_t acc;                   /* accumulator */
     uint8_t dsp, rsp;               /* data and return stack pointers */
-    uint32_t memsize;               /* memory size (in bytes)
-                                     * note: must be a multiple of 4
-                                     */
 
     uint32_t scell;                 /* The cell for the stack read/write */
     uint32_t selector;              /* The selector for internal registers */
@@ -135,11 +133,9 @@ struct quivm {
 /* Functions */
 
 /* Creates and initializes the QUI vm.
- * The memory size (in bytes) is specified in `memsize`.
- * The `memsize` parameter must be a multiple of 4.
  * Returns zero on success.
  */
-int quivm_init(struct quivm *qvm, uint32_t memsize);
+int quivm_init(struct quivm *qvm);
 
 /* Destroys the QUI vm and release the resources. */
 void quivm_destroy(struct quivm *qvm);

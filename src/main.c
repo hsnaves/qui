@@ -182,8 +182,7 @@ void update_screen(struct quivm *qvm)
         valid = (dpl->palette != 0);
     }
     valid = valid && (!check_buffer2d(address, dpl->stride,
-                                      width, dpl->height,
-                                      qvm->memsize));
+                                      width, dpl->height, MEMORY_SIZE));
 
     if (valid) {
         if (dpl->bpp == 24) {
@@ -511,7 +510,6 @@ void print_help(const char *execname)
     printf("  %s [OPTIONS] [--] args ...\n", execname);
     printf("where the available options are:\n");
     printf("  -r <romfile>       Specify the rom file to use\n");
-    printf("  --memsize <size>   The memory size in bytes\n");
     printf("  --readonly         To not allow writes in the storage device\n");
     printf("  --bind <addr>      Binds the UDP socket to a given address\n");
     printf("  --target <addr>    The address of the target socket\n");
@@ -536,7 +534,6 @@ int main(int argc, char **argv, char **envp)
     const char *filename;
     const char *bind_address;
     const char *target_address;
-    uint32_t memsize;
     uint32_t length;
     int use_utc;
     int disable_write;
@@ -546,8 +543,6 @@ int main(int argc, char **argv, char **envp)
 #endif
     int i, ret;
     char *end;
-
-    memsize = 0x100000;
 
     filename = NULL;
     bind_address = NULL;
@@ -563,10 +558,6 @@ int main(int argc, char **argv, char **envp)
         if (strcmp(argv[i], "-r") == 0) {
             if (i == argc - 1) goto missing_argument;
             filename = argv[++i];
-        } else if (strcmp(argv[i], "--memsize") == 0) {
-            if (i == argc - 1) goto missing_argument;
-            memsize = strtol(argv[++i], &end, 10);
-            if (end[0] != '\0') goto invalid_argument;
         } else if (strcmp(argv[i], "--readonly") == 0) {
             disable_write = 1;
         } else if (strcmp(argv[i], "--utc") == 0) {
@@ -617,7 +608,7 @@ int main(int argc, char **argv, char **envp)
     argc -= i;
     argv = &argv[i];
 
-    if (quivm_init(&qvm, memsize)) {
+    if (quivm_init(&qvm)) {
         fprintf(stderr, "main: could not initialize the VM\n");
         return 1;
     }

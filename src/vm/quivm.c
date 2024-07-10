@@ -21,39 +21,15 @@
 
 /* Functions */
 
-int quivm_init(struct quivm *qvm, uint32_t memsize)
+int quivm_init(struct quivm *qvm)
 {
     qvm->dstack = NULL;
     qvm->rstack = NULL;
     qvm->mem = NULL;
 
-    /* validate the memsize parameter */
-    if ((memsize % 4) != 0) {
-        quivm_destroy(qvm);
-        fprintf(stderr, "vm/quivm: init: "
-                "memsize is not multiple of 4\n");
-        return 1;
-    }
-
-    if (memsize < 0x80000) {
-        quivm_destroy(qvm);
-        fprintf(stderr, "vm/quivm: init: "
-                "memsize too small\n");
-        return 1;
-    }
-
-    if (memsize > IO_BASE) {
-        quivm_destroy(qvm);
-        fprintf(stderr, "vm/quivm: init: "
-                "memsize too large\n");
-        return 1;
-    }
-
-    qvm->memsize = memsize;
-
     qvm->dstack = (uint32_t *) malloc(STACK_SIZE * sizeof(uint32_t));
     qvm->rstack = (uint32_t *) malloc(STACK_SIZE * sizeof(uint32_t));
-    qvm->mem = (uint8_t *) malloc(qvm->memsize);
+    qvm->mem = (uint8_t *) malloc(MEMORY_SIZE);
 
     if (!qvm->dstack || !qvm->rstack || !qvm->mem) {
         quivm_destroy(qvm);
@@ -69,7 +45,7 @@ int quivm_init(struct quivm *qvm, uint32_t memsize)
     /* reset the memory, and the stacks (with -1) */
     memset(qvm->dstack, -1, STACK_SIZE * sizeof(uint32_t));
     memset(qvm->rstack, -1, STACK_SIZE * sizeof(uint32_t));
-    memset(qvm->mem, -1, qvm->memsize);
+    memset(qvm->mem, -1, MEMORY_SIZE);
 
     quivm_reset(qvm);
     return 0;
@@ -126,7 +102,7 @@ int quivm_load(struct quivm *qvm, const char *filename,
     for (i = 0; (i < len) || (len == 0); i++) {
         /* reads the word in little endinan format */
         c = fgetc(fp);
-        if ((c == EOF) || !(address < qvm->memsize)) break;
+        if ((c == EOF) || !(address < MEMORY_SIZE)) break;
         qvm->mem[address++] = (uint8_t) c;
     }
     *length = i;
@@ -139,7 +115,7 @@ void quivm_load_array(struct quivm *qvm, const uint8_t *data,
 {
     uint32_t len;
     len = *length;
-    if (check_buffer(address, len, qvm->memsize)) {
+    if (check_buffer(address, len, MEMORY_SIZE)) {
         *length = 0;
         return;
     }
@@ -165,7 +141,7 @@ int quivm_run(struct quivm *qvm)
     err_cond = 0;
 
     while (1) {
-        if (qvm->pc < qvm->memsize) {
+        if (qvm->pc < MEMORY_SIZE) {
             insn = qvm->mem[qvm->pc];
         } else {
             /* prevent the VM from executing outside the memory space */
@@ -404,7 +380,7 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
 {
     uint32_t v;
 
-    if (address < qvm->memsize) {
+    if (address < MEMORY_SIZE) {
         v = ((uint32_t *) &qvm->mem[address])[0];
         v = CONVERT_LE(v);
         return v;
@@ -443,7 +419,7 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
             switch (qvm->selector) {
             case SYS_STATUS:    v = qvm->status; break;
             case SYS_STACKSIZE: v = STACK_SIZE; break;
-            case SYS_MEMSIZE:   v = qvm->memsize; break;
+            case SYS_MEMSIZE:   v = MEMORY_SIZE; break;
             case SYS_CELLSIZE:  v = 4; break;
             case SYS_ID:        v = 0; break; /* TODO: set proper value */
             default: v = -1; break;
@@ -468,7 +444,7 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
 static
 void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
 {
-    if (address < qvm->memsize) {
+    if (address < MEMORY_SIZE) {
         v = CONVERT_LE(v);
         ((uint32_t *) &qvm->mem[address])[0] = v;
         return;
@@ -524,7 +500,7 @@ uint32_t quivm_read(struct quivm *qvm, uint32_t address)
     uint32_t v, shift;
 
     /* small optimization */
-    if (address <= qvm->memsize - 4) {
+    if (address <= MEMORY_SIZE - 4) {
         v = ((uint32_t *) &qvm->mem[address])[0];
         v = CONVERT_LE(v);
         return v;
@@ -548,7 +524,7 @@ void quivm_write(struct quivm *qvm, uint32_t address, uint32_t v)
     uint32_t w, shift, mask;
 
     /* small optimization */
-    if (address <= qvm->memsize - 4) {
+    if (address <= MEMORY_SIZE - 4) {
         v = CONVERT_LE(v);
         ((uint32_t *) &qvm->mem[address])[0] = v;
         return;
@@ -582,7 +558,7 @@ uint8_t quivm_read_byte(struct quivm *qvm, uint32_t address)
 {
     uint32_t v, shift;
 
-    if (address < qvm->memsize)
+    if (address < MEMORY_SIZE)
         return qvm->mem[address];
 
     shift = (address & 3) << 3;
@@ -595,7 +571,7 @@ void quivm_write_byte(struct quivm *qvm, uint32_t address, uint8_t b)
 {
     uint32_t v, shift, mask;
 
-    if (address < qvm->memsize) {
+    if (address < MEMORY_SIZE) {
         qvm->mem[address] = b;
         return;
     }

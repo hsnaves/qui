@@ -259,7 +259,7 @@ void do_operation(struct network *ntw, struct quivm *qvm)
         return;
     }
 
-    if (check_buffer(ntw->data, ntw->len, qvm->memsize)) {
+    if (check_buffer(ntw->data, ntw->len, MEMORY_SIZE)) {
         ntw->len = -1;
         return;
     }
