@@ -267,8 +267,8 @@ void do_operation(struct network *ntw, struct quivm *qvm)
     if (!ntw->initialized) {
         if (start_network(ntw)) {
             /* terminate the VM */
-            qvm->status |= STS_TERMINATED;
-            qvm->termvalue = 1;
+            quivm_terminate(qvm, 1);
+            quivm_raise(qvm);
             return;
         }
     }

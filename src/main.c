@@ -37,19 +37,19 @@ void run_one_frame(struct quivm *qvm)
     dpl = io->dpl;
     aud = io->aud;
 
+    qvm->status |= STS_RUNNING;
     if (!quivm_run(qvm))
         goto destroy_vm;
 
     devio_update(io);
 
     /* check if some device terminated the VM */
-    if (qvm->status & STS_TERMINATED)
+    if (!(qvm->status & (STS_RUNNING | STS_WAITING)))
         goto destroy_vm;
 
     /* No support for display or audio */
     if (dpl->initialized || aud->initialized) {
-        qvm->status |= STS_TERMINATED;
-        qvm->termvalue = 1;
+        quivm_terminate(qvm, 1);
         goto destroy_vm;
     }
     return;
@@ -69,10 +69,10 @@ int run(struct quivm *qvm)
 {
     while (1) {
         run_one_frame(qvm);
-        if (qvm->status & STS_TERMINATED)
+        if (!(qvm->status & (STS_RUNNING | STS_WAITING)))
             break;
     }
-    return qvm->termvalue;
+    return (qvm->status & (STS_RETVAL_MASK));
 }
 
 /* Prints the help text to the console.

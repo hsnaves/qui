@@ -6,7 +6,7 @@ scope{
 public
 \ goes back to the interpreter
 : quit ( -- )
-  0 -1 rstack !
+  0 rsp !
   0 channel c!
   interpreter bye tail
   ; noexit
@@ -20,7 +20,7 @@ public
 : boot ( status -- )
   dup if onexcept @ >r exit then
   drop
-  0 -1 rstack ! 1 -1 dstack !
+  0 rsp ! 1 dsp !
   onboot @ exec \ assumes onboot is non-zero
   quit tail
   ; noexit
@@ -47,13 +47,13 @@ last @ >xt is error
 \ default implementation of fatal
 : default_fatal ( c-str n -- )
   ch_err type nl
-  bye tail
+  1 status! tail
   ; noexit
 last @ >xt is fatal
 
 \ default implementation of onexcept
 : default_onexcept ( status -- )
-  terminate tail
+  status! tail
   ; noexit
 last @ >xt onexcept !
 }scope

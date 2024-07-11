@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <setjmp.h>
 
 #include "vm/quivm.h"
 
@@ -23,15 +24,17 @@
 
 int quivm_init(struct quivm *qvm)
 {
+    qvm->jmpbuf = NULL;
     qvm->dstack = NULL;
     qvm->rstack = NULL;
     qvm->mem = NULL;
 
+    qvm->jmpbuf = (void *) malloc(sizeof(jmp_buf));
     qvm->dstack = (uint32_t *) malloc(STACK_SIZE * sizeof(uint32_t));
     qvm->rstack = (uint32_t *) malloc(STACK_SIZE * sizeof(uint32_t));
     qvm->mem = (uint8_t *) malloc(MEMORY_SIZE);
 
-    if (!qvm->dstack || !qvm->rstack || !qvm->mem) {
+    if (!qvm->jmpbuf || !qvm->dstack || !qvm->rstack || !qvm->mem) {
         quivm_destroy(qvm);
         fprintf(stderr, "vm/quivm: init: "
                 "memory exhausted\n");
@@ -53,10 +56,12 @@ int quivm_init(struct quivm *qvm)
 
 void quivm_destroy(struct quivm *qvm)
 {
+    if (qvm->jmpbuf) free(qvm->jmpbuf);
     if (qvm->dstack) free(qvm->dstack);
     if (qvm->rstack) free(qvm->rstack);
     if (qvm->mem) free(qvm->mem);
 
+    qvm->jmpbuf = NULL;
     qvm->dstack = NULL;
     qvm->rstack = NULL;
     qvm->mem = NULL;
@@ -76,10 +81,8 @@ void quivm_reset(struct quivm *qvm)
     qvm->acc = EX_RESET;
     qvm->dsp = 1; /* leave a sentinel value of zero */
     qvm->rsp = 0;
-    qvm->scell = CELL_STACK_POINTER;
     qvm->selector = 0;
-    qvm->status = 0;
-    qvm->termvalue = 0;
+    qvm->status = (STS_RUNNING | STS_OKAY);
 }
 
 int quivm_load(struct quivm *qvm, const char *filename,
@@ -131,15 +134,16 @@ int quivm_run(struct quivm *qvm)
     uint8_t insn;
 
     /* check if it has terminated */
-    if (qvm->status & STS_TERMINATED)
-        return 0;
+    if (!(qvm->status & STS_RUNNING))
+        return !!(qvm->status & STS_WAITING);
 
-    /* If halted, update the cycle count. */
-    if (qvm->status & STS_HALTED)
-        return 1;
+    qvm->status |= STS_JMPBUF;
+    if (setjmp(((jmp_buf *) qvm->jmpbuf)[0])) {
+        qvm->status &= ~STS_JMPBUF;
+        return quivm_run(qvm);
+    }
 
     err_cond = 0;
-
     while (1) {
         if (qvm->pc < MEMORY_SIZE) {
             insn = qvm->mem[qvm->pc];
@@ -169,19 +173,19 @@ int quivm_run(struct quivm *qvm)
         switch (insn) {
         case INSN_RET:
             qvm->pc = quivm_rstack_pop(qvm);
-            goto check_branch;
+            break;
         case INSN_JSR:
             quivm_rstack_push(qvm, qvm->pc);
             /* fall through */
         case INSN_JMP:
             qvm->pc += qvm->acc;
             qvm->acc = quivm_dstack_pop(qvm);
-            goto check_branch;
+            break;
         case INSN_JZ:
             v = quivm_dstack_pop(qvm);
             if (v == 0) qvm->pc += qvm->acc;
             qvm->acc = quivm_dstack_pop(qvm);
-            goto check_branch;
+            break;
         case INSN_EQ0:
             qvm->acc = (0 == qvm->acc) ? -1 : 0;
             break;
@@ -238,28 +242,21 @@ int quivm_run(struct quivm *qvm)
             qvm->acc = v / qvm->acc;
             break;
         case INSN_RD:
-            v = quivm_read(qvm, qvm->acc);
-            goto check_rewind;
+            qvm->acc = quivm_read(qvm, qvm->acc);
+            break;
         case INSN_WRT:
             v = quivm_dstack_pop(qvm);
             quivm_write(qvm, qvm->acc, v);
             qvm->acc = quivm_dstack_pop(qvm);
-            goto check_read_write;
+            break;
         case INSN_RDB:
-            v = quivm_read_byte(qvm, qvm->acc);
-        check_rewind:
-            if (qvm->status & STS_REWIND) {
-                qvm->pc--;
-                qvm->status &= ~STS_REWIND;
-            } else {
-                qvm->acc = v;
-            }
-            goto check_read_write;
+            qvm->acc = (uint32_t) quivm_read_byte(qvm, qvm->acc);
+            break;
         case INSN_WRTB:
             v = quivm_dstack_pop(qvm);
             quivm_write_byte(qvm, qvm->acc, v);
             qvm->acc = quivm_dstack_pop(qvm);
-            goto check_read_write;
+            break;
         case INSN_SIGNE:
             v = quivm_dstack_pop(qvm);
             if (qvm->acc < 32) {
@@ -323,54 +320,42 @@ int quivm_run(struct quivm *qvm)
         default:
             qvm->pc--;
             err_cond = EX_INVALID_INSN;
-            goto check_exception;
+
+	check_exception:
+            if (!(qvm->status & STS_OKAY)) {
+                fprintf(stderr, "vm/quivm: on_exception: "
+                        "unhandled exception: %d at 0x%08X\n",
+                        err_cond, qvm->pc);
+                quivm_terminate(qvm, err_cond);
+                quivm_raise(qvm);
+                return 0;
+            }
+
+            quivm_dstack_push(qvm, qvm->acc);
+            qvm->acc = err_cond;
+
+            /* rstack points to the faulting instruction */
+            quivm_rstack_push(qvm, qvm->pc);
+            qvm->pc = INITIAL_PC;
+            qvm->status &= ~STS_OKAY;
+            break;
         }
-        continue;
-
-    check_read_write:
-        if (qvm->status & STS_TERMINATED)
-            return 0;
-
-        if (qvm->status & STS_HALTED)
-            return 1;
-
-    check_branch:
-
-        /* Detect stack overflow
-         * Overflows are detected even if the last
-         * instruction halted or terminated the VM
-         */
-        if (!(qvm->status & STS_EXCEPTION)
-            && ((qvm->dsp >= STACK_SIZE - STACK_THRESHOLD)
-                || (qvm->rsp >= STACK_SIZE - STACK_THRESHOLD))) {
-
-            err_cond = EX_STACK_OVERFLOW;
-            goto check_exception;
-        }
-        continue;
-
-    check_exception:
-        if (qvm->status & STS_EXCEPTION) {
-            fprintf(stderr, "vm/quivm: on_exception: "
-                    "unhandled exception: %d at 0x%08X\n",
-                    err_cond, qvm->pc);
-            qvm->status |= STS_TERMINATED;
-            qvm->termvalue = 1;
-            return 0;
-        }
-
-        quivm_dstack_push(qvm, qvm->acc);
-        qvm->acc = err_cond;
-
-        /* rstack points to the faulting instruction */
-        quivm_rstack_push(qvm, qvm->pc);
-        qvm->pc = INITIAL_PC;
-        qvm->status |= STS_EXCEPTION;
-
     }
-
-    return 1;
 }
+
+void quivm_terminate(struct quivm *qvm, int retval)
+{
+    qvm->status &= ~(STS_RUNNING | STS_WAITING | STS_RETVAL_MASK);
+    qvm->status |= retval & (STS_RETVAL_MASK);
+}
+
+void quivm_raise(struct quivm *qvm)
+{
+    if (qvm->status & STS_JMPBUF) {
+        longjmp(((jmp_buf *) qvm->jmpbuf)[0], 1);
+    }
+}
+
 
 /* Performs an aligned read at `address`, which must be a multiple
  * of 4-bytes. Returns the value read.
@@ -391,38 +376,29 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
 
     if (address >= IO_SYS_BASE) {
         switch (address) {
-        case IO_SYS_SCELL:
-            v = qvm->scell;
-            break;
-        case IO_SYS_DSTACK:
-            if (qvm->scell == CELL_STACK_POINTER) {
-                v = qvm->dsp;
-            } else if (qvm->scell < STACK_SIZE) {
-                v = qvm->dstack[qvm->scell];
-            } else {
-                v = -1;
-            }
-            break;
-        case IO_SYS_RSTACK:
-            if (qvm->scell == CELL_STACK_POINTER) {
-                v = qvm->rsp;
-            } else if (qvm->scell < STACK_SIZE) {
-                v = qvm->rstack[qvm->scell];
-            } else {
-                v = -1;
-            }
-            break;
         case IO_SYS_SELECTOR:
             v = qvm->selector;
             break;
         case IO_SYS_VALUE:
             switch (qvm->selector) {
             case SYS_STATUS:    v = qvm->status; break;
+            case SYS_DSP:       v = qvm->dsp; break;
+            case SYS_RSP:       v = qvm->rsp; break;
             case SYS_STACKSIZE: v = STACK_SIZE; break;
             case SYS_MEMSIZE:   v = MEMORY_SIZE; break;
             case SYS_CELLSIZE:  v = 4; break;
             case SYS_ID:        v = 0; break; /* TODO: set proper value */
-            default: v = -1; break;
+            default:
+                if (qvm->selector >= STACK_SIZE
+                    && qvm->selector < (2 * STACK_SIZE)) {
+                    v = qvm->dstack[qvm->selector - STACK_SIZE];
+                } else if (qvm->selector >= (2 * STACK_SIZE)
+                           && qvm->selector < (3 * STACK_SIZE)) {
+                    v = qvm->rstack[qvm->selector - (2 * STACK_SIZE)];
+                } else {
+                    v = -1;
+                }
+                break;
             }
             break;
         default:
@@ -455,35 +431,40 @@ void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
 
     if (address >= IO_SYS_BASE) {
         switch (address) {
-        case IO_SYS_SCELL:
-            qvm->scell = v;
-            break;
-        case IO_SYS_DSTACK:
-            if (qvm->scell == CELL_STACK_POINTER) {
-                qvm->dsp = (uint8_t) v;
-            } else if (qvm->scell < STACK_SIZE) {
-                qvm->dstack[qvm->scell] = v;
-            }
-            break;
-        case IO_SYS_RSTACK:
-            if (qvm->scell == CELL_STACK_POINTER) {
-                qvm->rsp = (uint8_t) v;
-            } else if (qvm->scell < STACK_SIZE) {
-                qvm->rstack[qvm->scell] = v;
-            }
-            break;
         case IO_SYS_SELECTOR:
             qvm->selector = v;
             break;
         case IO_SYS_VALUE:
             switch (qvm->selector) {
             case SYS_STATUS:
-                qvm->status &= ~(STS_EXCEPTION | STS_HALTED);
-                qvm->status |= v & STS_HALTED;
+                qvm->status &= ~(STS_RUNNING
+                                 | STS_WAITING
+                                 | STS_RETVAL_MASK);
+                qvm->status |= v & (STS_RUNNING
+                                    | STS_OKAY
+                                    | STS_WAITING
+                                    | STS_RETVAL_MASK);
+
+                if ((qvm->status & (STS_RUNNING
+                                    | STS_JMPBUF)) == STS_JMPBUF) {
+                    qvm->acc = quivm_dstack_pop(qvm);
+                    quivm_raise(qvm);
+                }
                 break;
-            case SYS_TERMINATE:
-                qvm->termvalue = v;
-                qvm->status |= STS_TERMINATED;
+            case SYS_DSP:
+                qvm->dsp = (uint8_t) v;
+                break;
+            case SYS_RSP:
+                qvm->rsp = (uint8_t) v;
+                break;
+            default:
+                if (qvm->selector >= STACK_SIZE
+                    && qvm->selector < (2 * STACK_SIZE)) {
+                    qvm->dstack[qvm->selector - STACK_SIZE] = v;
+                } else if (qvm->selector >= (2 * STACK_SIZE)
+                           && qvm->selector < (3 * STACK_SIZE)) {
+                    qvm->rstack[qvm->selector - (2 * STACK_SIZE)] = v;
+                }
                 break;
             }
             break;

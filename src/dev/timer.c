@@ -20,7 +20,6 @@ void timer_destroy(struct timer *tmr)
 
 void timer_update(struct timer *tmr, struct quivm *qvm)
 {
-    qvm->status &= ~STS_HALTED;
     if (tmr->enabled) {
         quivm_rstack_push(qvm, qvm->pc);
         qvm->pc = tmr->oninterrupt;

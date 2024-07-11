@@ -58,8 +58,8 @@ align defer banner ( -- )
 private
 \ default implementation of the banner
 "  free bytes out of "
-" QUI Forth v0.1a"
-: my_banner ( -- )
+" QUI Forth 0.1"
+: default_banner ( -- )
   [ swap ] lit lit type nl
   wordbuf dup buf>end @ swap buf>here @ - .
   [ swap ] lit lit type
@@ -93,7 +93,7 @@ private
   if
     drop debug tail
   then
-  terminate tail
+  status! tail
   ; noexit
 
 \ handles invalid instructions
@@ -110,12 +110,6 @@ private
   general_exception tail
   ; noexit
 
-" stack overflow at "
-: stack_overflow ( status -- )
-  [ swap ] lit lit
-  general_exception tail
-  ; noexit
-
 \ current implementation of onexcept
 : my_onexcept ( status -- )
   dup 1 = if
@@ -124,10 +118,7 @@ private
   dup 2 = if
     divide_by_zero tail
   then
-  dup 3 = if
-    stack_overflow tail
-  then
-  terminate tail
+  status! tail
   ; noexit
 last @ >xt onexcept !
 
@@ -163,7 +154,7 @@ last @ >xt
 last @ >xt onboot !
 }scope
 
-decimal 2 janum c!
+decimal 1 janum c!
 file-name" main.rom"
 is prompt 0 0 here @ 2 file-do . nl bye
 

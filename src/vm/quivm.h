@@ -44,21 +44,17 @@
 /* Some special addresses */
 #define INITIAL_PC              0x00000000
 
-/* Cell with stack pointer */
-#define CELL_STACK_POINTER      0xFFFFFFFF
-
 /* Status of the VM */
-#define STS_TERMINATED          0x00000001
-#define STS_HALTED              0x00000002
-#define STS_EXCEPTION           0x00000004
-/* Status bits only used internally */
-#define STS_REWIND              0x80000000
+#define STS_RUNNING             0x80000000
+#define STS_OKAY                0x40000000
+#define STS_JMPBUF              0x20000000 /* used internally */
+#define STS_WAITING             0x00000100
+#define STS_RETVAL_MASK         0x000000FF
 
 /* Exception codes */
 #define EX_RESET                0x00000000
 #define EX_INVALID_INSN         0x00000001
 #define EX_DIVIDE_BY_ZERO       0x00000002
-#define EX_STACK_OVERFLOW       0x00000003
 
 /* The constants for memory and stack */
 #define MEMORY_SIZE             0x00400000
@@ -75,19 +71,17 @@
 #define IO_SYS_BASE             0xFFFFFFE0
 
 /* Addresses within the system device */
-#define IO_SYS_SCELL            0xFFFFFFF8
-#define IO_SYS_DSTACK           0xFFFFFFF4
-#define IO_SYS_RSTACK           0xFFFFFFF0
-#define IO_SYS_SELECTOR         0xFFFFFFEC
-#define IO_SYS_VALUE            0xFFFFFFE8
+#define IO_SYS_SELECTOR         0xFFFFFFF8
+#define IO_SYS_VALUE            0xFFFFFFF4
 
 /* Possible values of the selector */
 #define SYS_STATUS                       1
-#define SYS_TERMINATE                    2
-#define SYS_STACKSIZE                    3
-#define SYS_MEMSIZE                      4
-#define SYS_CELLSIZE                     5
-#define SYS_ID                           6
+#define SYS_DSP                          2
+#define SYS_RSP                          3
+#define SYS_STACKSIZE                    4
+#define SYS_MEMSIZE                      5
+#define SYS_CELLSIZE                     6
+#define SYS_ID                           7
 
 /* Data structures and types */
 
@@ -112,22 +106,22 @@ typedef void (*quivm_write_cb)(struct quivm *qvm, void *arg,
 
 /* Structure for a QUI virtual machine */
 struct quivm {
-    uint32_t *dstack;               /* data stack */
-    uint32_t *rstack;               /* return stack */
-
-    uint8_t *mem;                   /* VM memory */
-    uint32_t pc;                    /* program counter */
-    uint32_t acc;                   /* accumulator */
-    uint8_t dsp, rsp;               /* data and return stack pointers */
-
-    uint32_t scell;                 /* The cell for the stack read/write */
-    uint32_t selector;              /* The selector for internal registers */
-    uint32_t status;                /* The status of the VM */
-    int termvalue;                  /* termination value */
+    void *jmpbuf;                   /* for handling exceptions */
 
     void *arg;                      /* extra argument for callbacks */
     quivm_read_cb read_cb;          /* read callback function */
     quivm_write_cb write_cb;        /* write callback function */
+
+    uint32_t *dstack, *rstack;      /* data and return stacks */
+    uint8_t *mem;                   /* VM memory */
+
+    uint32_t status;                /* The status of the VM */
+    uint32_t selector;              /* The selector for internal registers */
+
+    uint32_t pc;                    /* program counter */
+    uint32_t acc;                   /* accumulator */
+    uint8_t dsp, rsp;               /* data and return stack pointers */
+
 };
 
 /* Functions */
@@ -172,6 +166,15 @@ void quivm_load_array(struct quivm *qvm, const uint8_t *data,
  * Returns nonzero if the machine has not yet terminated.
  */
 int quivm_run(struct quivm *qvm);
+
+/* Terminates the VM using the return value `retval`. */
+void quivm_terminate(struct quivm *qvm, int retval);
+
+/* Signals that some exception happened within the VM
+ * and if the VM is currently running, it might need
+ * to stop. This function might never return.
+ */
+void quivm_raise(struct quivm *qvm);
 
 /* Reads the value of a cell in memory at `address`.
  * Returns the value read.

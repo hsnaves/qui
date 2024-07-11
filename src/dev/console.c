@@ -83,7 +83,12 @@ uint32_t console_read_callback(struct console *cns,
                 if (ret <= 0) v = -1;
             } else {
                 /* halt the machine until it has data */
-                qvm->status |= STS_HALTED | STS_REWIND;
+                qvm->status &= ~(STS_RUNNING);
+                qvm->status |= (STS_WAITING);
+                if (qvm->status & STS_JMPBUF) {
+                    qvm->pc--; /* rewind the PC */
+                    quivm_raise(qvm);
+                }
                 v = -1;
             }
             break;

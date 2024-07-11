@@ -23,8 +23,8 @@ hex
 extra current !
 \ halts the machine
 : halt ( -- )
-  -1 1 sysreg !
-  ;
+  100 status! tail
+  ; noexit
 
 \ prints a given number of spaces
 : spaces ( n -- )
@@ -202,15 +202,17 @@ public
 
 extra current !
 scope{
-ephemeral
-: SYS_STACKSIZE         3 ; inl
+private
+\ temporary words ( to be changed later )
+: dstack ( v -- addr ) 100 + sysreg tail ; noexit
+: rstack ( v -- addr ) 200 + sysreg tail ; noexit
 
 public
 ( *** implementation of the stack printing words *** )
 \ prints the contents of the data stack
 : ds. ( -- )
-  -1 dstack @
-  dup =0 if SYS_STACKSIZE sysreg @ + then
+  dsp @
+  dup =0 if 100 + then
   1- 0
   begin
     2dup u>                     \ d: num idx rem?
@@ -226,7 +228,7 @@ public
 
 \ prints the contents of the return stack
 : rs. ( -- )
-  -1 rstack @ 0
+  rsp @ 0
   begin
     2dup u>                     \ d: num idx rem?
     if

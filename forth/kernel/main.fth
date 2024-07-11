@@ -75,12 +75,11 @@ F_XT flags c!
 scope{
 ephemeral
 ( *** constants for the QUI vm *** )
-: IO_SYS_SCELL       FFFFFFF8 ; inl
-: IO_SYS_DSTACK      FFFFFFF4 ; inl
-: IO_SYS_RSTACK      FFFFFFF0 ; inl
-: IO_SYS_SELECTOR    FFFFFFEC ; inl
-: IO_SYS_VALUE       FFFFFFE8 ; inl
-: SYS_TERMINATE             2 ; inl
+: IO_SYS_SELECTOR    FFFFFFF8 ; inl
+: IO_SYS_VALUE       FFFFFFF4 ; inl
+: SYS_STATUS                1 ; inl
+: SYS_DSP                   2 ; inl
+: SYS_RSP                   3 ; inl
 
 public
 
@@ -88,19 +87,19 @@ internal current !
 \ obtains the address of a system register
 : sysreg ( n -- addr ) IO_SYS_SELECTOR ! IO_SYS_VALUE ;
 
-\ terminates the program
-: terminate ( status -- ) SYS_TERMINATE sysreg ! ;
+\ set status value
+: status! ( v -- ) SYS_STATUS sysreg ! ;
 
-\ obtains the address to access the data stack
-: dstack ( idx -- addr ) IO_SYS_SCELL ! IO_SYS_DSTACK ;
+\ the address of the data stack pointer
+: dsp ( -- addr ) SYS_DSP sysreg tail ; noexit
 
-\ obtains the address to access the return stack
-: rstack ( idx -- addr ) IO_SYS_SCELL ! IO_SYS_RSTACK ;
+\ the address of the return stack pointer
+: rsp ( -- addr ) SYS_RSP sysreg tail ; noexit
 
 forth current !
 
 \ terminate the program successfully
-: bye ( -- ) 0 terminate tail ; noexit
+: bye ( -- ) 0 status! tail ; noexit
 
 }scope
 
@@ -178,7 +177,7 @@ align defer fatal ( c-str n  -- )
 scope{
 ephemeral
 ( *** constants for the QUI vm *** )
-: SYS_MEMSIZE               4 ; inl
+: SYS_MEMSIZE               5 ; inl
 
 private
 \ initializes the wordbuf

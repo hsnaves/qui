@@ -240,8 +240,7 @@ void process_events(struct quivm *qvm)
             quit_counter += 30;
             if (!window || (quit_counter > 30)) {
                /* Ctrl-C was pressed and SDL captured the SIGINT */
-               qvm->status |= STS_TERMINATED;
-               qvm->termvalue = 1;
+               quivm_terminate(qvm, 1);
                break;
             }
             keyboard_set_bit(kbd, KEYBOARD_QUIT, 1);
@@ -373,6 +372,7 @@ void run_one_frame(void *arg)
     dpl = io->dpl;
     aud = io->aud;
 
+    qvm->status |= STS_RUNNING;
     if (!quivm_run(qvm))
         goto destroy_vm;
 
@@ -385,14 +385,13 @@ void run_one_frame(void *arg)
     }
 
     /* check if some device terminated the VM */
-    if (qvm->status & STS_TERMINATED)
+    if (!(qvm->status & (STS_RUNNING | STS_WAITING)))
         goto destroy_vm;
 
     if (dpl->initialized && !window) {
         create_window(dpl->width, dpl->height);
         if (!window) {
-            qvm->status |= STS_TERMINATED;
-            qvm->termvalue = 1;
+            quivm_terminate(qvm, 1);
             goto destroy_vm;
         }
     }
@@ -400,8 +399,7 @@ void run_one_frame(void *arg)
         if (!audio_id) {
             start_audio(aud);
             if (!audio_id) {
-                qvm->status |= STS_TERMINATED;
-                qvm->termvalue = 1;
+                quivm_terminate(qvm, 1);
                 goto destroy_vm;
             }
         }
@@ -442,7 +440,7 @@ int run(struct quivm *qvm)
 
     while (1) {
         run_one_frame(qvm);
-        if (qvm->status & STS_TERMINATED)
+        if (!(qvm->status & (STS_RUNNING | STS_WAITING)))
             break;
 
         delta = (3 * SDL_GetTicks()) - time0;
@@ -454,7 +452,7 @@ int run(struct quivm *qvm)
             time0 += ((3 * 1000 / FPS) - delta);
         }
     }
-    return qvm->termvalue;
+    return (qvm->status & STS_RETVAL_MASK);
 #endif /* ! __EMSCRIPTEN__ */
 }
 
