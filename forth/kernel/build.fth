@@ -12,10 +12,11 @@ include" forth/kernel/herelast.fth"
 internal current !
 include" forth/kernel/imain.fth"
 forth current !
-include" forth/kernel/parsing.fth"
+include" forth/kernel/tib.fth"
 include" forth/kernel/wordmain.fth"
+include" forth/kernel/parsing.fth"
 include" forth/kernel/interp.fth"
-include" forth/kernel/colon.fth"
+include" forth/kernel/other.fth"
 include" forth/kernel/boot.fth"
 
 \ end of the compilation
@@ -25,6 +26,6 @@ meta-exit
 forth current !
 decimal
 
-file-name" kernel.rom"
-meta-buffer swap 2 file-do . nl
+stg-name" kernel.rom"
+meta-buffer swap 2 stg-do . nl
 bye

@@ -6,7 +6,7 @@ private
 \ word to use when interpreting
 : (do-interpret) ( c-str n -- ? )
   0 lookup
-  dup if >xt >r 2drop exit then
+  dup if >xt >r drop drop exit then
   drop number tail
   ; noexit
 
@@ -18,8 +18,8 @@ private
     lookup dup =0
     if drop number lit, tail then
   then
-  >r 2drop
-  r@ >xt r> >flags
+  >r drop drop r>
+  dup >xt swap >flags
   dup F_IMM and
   if drop >r exit then
   F_INL and if inline, tail then

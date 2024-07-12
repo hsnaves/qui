@@ -32,10 +32,9 @@ In order to install QUI, type:
 $ make install
 ```
 
-To install it using in a separate location other the default
-`/usr/local/bin`, type:
+To install it using in a separate location other the default `${HOME}/.local/`, type:
 
 ```sh
-$ PREFIX=/home/myuser/.local/ make install
+$ PREFIX=/usr/local/ make install
 ```
 

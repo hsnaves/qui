@@ -72,26 +72,26 @@ last @ >xt onboot !
   ;
 
 " could not read "
-: file-error ( addr -- )
-  ch_err [ swap ] lit lit type
+: stg-error ( addr -- )
+  [ swap ] lit lit 0 error
   dup uninstall-module
   mod>filename @ dup 0 char-find
-  error tail
+  1 error tail
   ; noexit
 
 \ reads the file and fills the buffer
 \ returns the number of bytes red
 : fill-buffer ( addr -- n )
-  dup mod>filename @ file-name!
-  dup mod>bufstart >r           \ d: addr | r: start
-  r@ over mod>strbuf-off !
+  dup mod>filename @ stg-name!
+  dup mod>bufstart dup >r       \ d: addr start | r: start
+  over mod>strbuf-off !
   dup mod>offset @
-  r@ buffer-size 1 file-do      \ d: addr n | r: start
+  0 r@ buffer-size 1 stg-do     \ d: addr n | r: start
   dup 0 <
-  if rdrop drop file-error tail then
+  if r> drop drop stg-error tail then
   >r                            \ d: addr | r: start n
   dup mod>offset
-  dup @ r@ + swap !
+  dup @ 0 r@ + swap !
   r> r> over +                  \ d: addr n vhere
   rot mod>strbuf-here !
   ;
@@ -104,11 +104,11 @@ last @ >xt onboot !
   over u<=                      \ d: addr voff full?
   if
     drop dup fill-buffer =0
-    if uninstall-module getc tail then
+    if uninstall-module 0A exit then
     dup mod>strbuf-off @
   then
   dup c@                        \ d: addr voff c
-  swap 1+
+  swap 1 +
   rot mod>strbuf-off !
   ;
 
@@ -147,7 +147,7 @@ internal current !
 : (include) ( c-str -- )
   dup 0 char-find
   \ add 1 for the null character
-  1+ dup struct-size +
+  1 + dup struct-size +
   allocate-space
   dup init-struct
   dup struct-size +

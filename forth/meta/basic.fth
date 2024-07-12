@@ -27,7 +27,7 @@ public
 
 \ exit the meta-compilation dictionary and meta-interpreter
 : meta-exit ( -- )
-  rdrop \ drops from the meta-interpreter
+  r> drop \ drops from the meta-interpreter
   meta-discard tail
   ; noexit
 
@@ -38,25 +38,18 @@ public
 \ meta address to host address
 : addr>host ( addr -- addr' )  meta-buffer + ; inl
 
-META_BUFFER_SIZE \ pass the value
-}scope
-
-\ set the meta as the current dictionary
-meta current !
-
-scope{
-ephemeral
-: META_BUFFER_SIZE lit ; inl
-
 private
 \ checks for write outside the buffer
 : check-write ( addr n -- )
   + META_BUFFER_SIZE swap u<
   =0 if exit then
-  " write outside meta-buffer" fatal tail
+  " write outside meta-buffer" 2 error tail
   ; noexit
 
 public
+\ set the meta as the current dictionary
+meta current !
+
 ( read / write in meta system )
 \ read cell in meta system
 : @ ( addr -- v ) addr>host @ ; inl
@@ -83,14 +76,15 @@ public
   type tail
   ; noexit
 
+" ? "
 : unknown ( c-str n -- )
   swap addr>host swap
-  unknown tail
+  [ swap ] lit lit 0 error 1 error tail
   ; noexit
 
 : str-copy ( c-str n dst -- )
   addr>host rot
-  addr>host rrot
+  addr>host rot rot
   str-copy tail
   ; noexit
 

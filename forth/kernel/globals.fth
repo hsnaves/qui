@@ -10,9 +10,9 @@ current !
 : onexcept ( -- addr ) 14 ; inl
 : onboot ( -- addr )   18 ; inl
 : flags ( -- addr )    1C ; inl
-: janum ( -- addr )    1F ; inl
-: wordbuf ( -- addr )  5C ; inl
-: tib ( -- addr )      6C ; inl
+: jsize ( -- addr )    1F ; inl
+: wordbuf ( -- addr )  40 ; inl
+: tib ( -- addr )      50 ; inl
 current !
 : current ( -- addr )  08 ; inl
 : context ( -- addr )  0C ; inl
@@ -20,5 +20,4 @@ current !
 : state ( -- addr )    1D ; inl
 : base ( -- addr )     1E ; inl
 : forth ( -- addr )    20 ; inl
-: internal ( -- addr ) 34 ; inl
-: extra ( -- addr )    48 ; inl
+: internal ( -- addr ) 30 ; inl

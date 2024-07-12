@@ -2,20 +2,19 @@
 hex
 
 \ initialize the tempbuf and temp
-90 buf>start @ 90 buf>here !
-00 7C dict>last !
-90 7C dict>code !
-90 7C dict>data !
-0 7C dict>index !
+70 buf>start @ 70 buf>here !
+00 60 dict>last !
+70 60 dict>code !
+70 60 dict>data !
 current @ currnext !
-7C current ! \ set temp to current
+60 current ! \ set temp to current
 
 \ set the current to temp
-7C use
+60 use
 
 ( define the location of temporary buffer and temporary dictionary )
-: temp ( -- addr )     7C ; inl
-: tmpbuf ( -- addr )   90 ; inl
+: temp ( -- addr )     60 ; inl
+: tmpbuf ( -- addr )   70 ; inl
 
 \ go to public declarations
 currnext @ current !

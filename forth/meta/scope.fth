@@ -4,8 +4,8 @@ hex
 scope{
 ephemeral
 ( *** variables for scope implementation *** )
-: temp        7C ; inl
-: tmpbuf      90 ; inl
+: temp        60 ; inl
+: tmpbuf      70 ; inl
 
 public
 ( *** redefine variables in meta scope *** )

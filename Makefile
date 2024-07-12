@@ -7,15 +7,15 @@ CAT := cat
 
 ROM_DEPS := forth/rom/main.fth forth/rom/scope.fth \
  forth/rom/scopeimpl.fth forth/io/storage.fth forth/rom/module.fth \
- forth/rom/table.fth forth/rom/other.fth forth/rom/disasm.fth \
- forth/rom/end.fth
+ forth/rom/other.fth forth/rom/end.fth
 
 KERNEL_DEPS := forth/kernel/build.fth \
  forth/meta/meta.fth forth/meta/basic.fth forth/meta/interp.fth \
  forth/meta/scope.fth forth/meta/init.fth forth/kernel/globals.fth \
  forth/kernel/ibasic.fth forth/kernel/herelast.fth forth/kernel/imain.fth \
- forth/kernel/wordmain.fth forth/kernel/colon.fth forth/kernel/main.fth \
- forth/kernel/parsing.fth forth/kernel/interp.fth forth/kernel/boot.fth \
+ forth/kernel/tib.fth forth/kernel/flags.fth forth/kernel/wordmain.fth \
+ forth/kernel/parsing.fth forth/kernel/find.fth forth/kernel/other.fth \
+ forth/kernel/main.fth forth/kernel/interp.fth forth/kernel/boot.fth \
  forth/rom/main.fth forth/rom/scopeimpl.fth forth/io/console.fth
 
 all: main.rom src/qui src/qui-sdl

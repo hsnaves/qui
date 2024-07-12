@@ -15,12 +15,12 @@
 #define INSN_EQ                       0xC5
 #define INSN_ULT                      0xC6
 #define INSN_LT                       0xC7
-#define INSN_NOP                      0xC8
-#define INSN_AND                      0xC9
-#define INSN_OR                       0xCA
-#define INSN_XOR                      0xCB
-#define INSN_ADD                      0xCC
-#define INSN_SUB                      0xCD
+#define INSN_AND                      0xC8
+#define INSN_OR                       0xC9
+#define INSN_XOR                      0xCA
+#define INSN_ADD                      0xCB
+#define INSN_SUB                      0xCC
+#define INSN_CSEL                     0xCD
 #define INSN_UMUL                     0xCE
 #define INSN_UDIV                     0xCF
 #define INSN_RD                       0xD0
@@ -31,14 +31,16 @@
 #define INSN_SHL                      0xD5
 #define INSN_USHR                     0xD6
 #define INSN_SHR                      0xD7
-#define INSN_DUP                      0xD8
-#define INSN_DROP                     0xD9
-#define INSN_SWAP                     0xDA
-#define INSN_OVER                     0xDB
-#define INSN_ROT                      0xDC
-#define INSN_RTO                      0xDD
-#define INSN_RFROM                    0xDE
-#define INSN_RPEEK                    0xDF
+#define INSN_NOP                      0xD8
+#define INSN_DUP                      0xD9
+#define INSN_DROP                     0xDA
+#define INSN_SWAP                     0xDB
+#define INSN_OVER                     0xDC
+#define INSN_ROT                      0xDD
+#define INSN_RTO                      0xDE
+#define INSN_RFROM                    0xDF
+#define INSN_RGET                     0xE0
+#define INSN_RSET                     0xE1
 #define INSN_INVL                     0xFF
 
 /* Some special addresses */

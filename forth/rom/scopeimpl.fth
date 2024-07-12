@@ -54,7 +54,8 @@ hex
 : defer ( -- )
   here @ 0 ,
   create lit,
-  D0 c, DD c,                  \ compile "@ >r"
+  [ ' @ c@ ] lit c,
+  [ ' exec c@ ] lit c,
   wrapup tail
   ; noexit
 
@@ -63,6 +64,7 @@ current @ swap current !
 \ finds the address of the pointer to the deferred word
 : defer-ptr ( addr -- addr' ) 4 - ; inl
 current ! \ restore current
+
 \ sets the xt of a deferred word
 : is ( xt -- )
   find defer-ptr !

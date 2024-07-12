@@ -11,11 +11,6 @@ public
   interpreter bye tail
   ; noexit
 
-\ leaves the interpreter
-: leave ( r: addr1 addr2 addr3 -- r: addr1 )
-  rdrop
-  ;
-
 \ performs the boot
 : boot ( status -- )
   dup if onexcept @ >r exit then
@@ -26,9 +21,10 @@ public
   ; noexit
 
 \ write the initial jump to boot
-here @ 0 here !
-' boot 3 I_JMP jumpn,
+jsize c@ here @ 0 here ! 3 jsize c!
+' boot litj, I_JMP c,
 here !  \ restore here
+jsize c! \ restore jsize
 
 private
 \ default implementation of prompt
@@ -37,19 +33,12 @@ private
 last @ >xt is prompt
 
 \ default implementation of error
-: default_error ( c-str n -- )
-  ch_err type nl
-  line  \ flush the current line
-  quit tail
-  ; noexit
+: default_error ( c-str n severity -- )
+  >r 1 channel c! type
+  r> 1 over u< if nl 1 - status! tail then
+  if nl line quit tail then
+  ;
 last @ >xt is error
-
-\ default implementation of fatal
-: default_fatal ( c-str n -- )
-  ch_err type nl
-  1 status! tail
-  ; noexit
-last @ >xt is fatal
 
 \ default implementation of onexcept
 : default_onexcept ( status -- )

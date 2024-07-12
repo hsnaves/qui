@@ -6,39 +6,30 @@ meta use
 
 \ initialize global variables
 forth current !
-extra context !
+forth context !
 0 currnext !
 0 this !
 0 flags c!
 0 state c!
 0A base c!
-01 janum c!
+01 jsize c!
 
 \ initialize the forth dictionary
 internal forth node>next !
 0 forth dict>last !
 wordbuf forth dict>code !
 wordbuf forth dict>data !
-0 forth dict>index !
 
 \ initialize the internal dictionary
 0 internal node>next !
 0 internal dict>last !
 wordbuf internal dict>code !
 wordbuf internal dict>data !
-0 internal dict>index !
-
-\ initialize the extra dictionary
-forth extra node>next !
-0 extra dict>last !
-wordbuf extra dict>code !
-wordbuf extra dict>data !
-0 extra dict>index !
 
 \ initialize the wordbuffer
 \ use smaller size here
-A0 wordbuf buf>here !
-A0 wordbuf buf>start !
+80 wordbuf buf>here !
+80 wordbuf buf>start !
 10000 wordbuf buf>end !
 0 wordbuf buf>off !
 
@@ -47,7 +38,6 @@ A0 wordbuf buf>start !
 0 temp dict>last !
 tmpbuf temp dict>code !
 tmpbuf temp dict>data !
-0 temp dict>index !
 
 \ initialize the tmpbuffer
 \ make it smaller here to fit the current

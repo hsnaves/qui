@@ -21,12 +21,12 @@ last @
 : ; ( addr -- )
   [ wrapup tail
   ; noexit imm
-F_IMM swap toggle \ make [ immediate
+last @ swap last ! imm last ! \ make [ immediate
 
 \ changes the last opcode from a call to a jump
 : tail ( -- )
   here @
-  1- dup c@
+  1 - dup c@
   I_JSR <>
   if drop exit then
   I_JMP swap c!
@@ -41,7 +41,7 @@ F_IMM swap toggle \ make [ immediate
 \ drop the return at the end of the word
 : noexit ( -- )
   here dup @
-  1- swap  !
+  1 - swap  !
   ;
 
 \ compiles a string inplace and returns the
@@ -72,3 +72,27 @@ F_IMM swap toggle \ make [ immediate
 : \ ( -- )
   line tail
   ; noexit imm
+
+scope{
+public
+\ toggles the last word to immediate
+: imm ( -- )
+  F_IMM last @
+  ; noexit \ falls through
+
+private
+\ flips the flags of the word
+: toggle ( fl addr -- )
+  dup c@
+  rot xor
+  swap c!
+  ;
+
+public
+\ toggles the last word to inline
+: inl ( -- )
+  F_INL last @
+  toggle tail
+  ; noexit
+
+}scope

@@ -7,7 +7,7 @@ private
 : (interpret) ( c-str n -- )
   swap addr>host swap
   0 h:lookup
-  dup if h:>xt >r 2drop exit then
+  dup if h:>xt >r drop drop exit then
   drop number tail
   ; noexit
 
@@ -17,7 +17,7 @@ private
   0 h:lookup
   dup if
     dup h:>flags h:F_IMM and
-    if h:>xt >r 2drop exit then
+    if h:>xt >r drop drop exit then
   then
   drop number lit, tail
   ; noexit
@@ -32,7 +32,7 @@ private
   then
   dup >flags
   dup F_IMM and
-  if 2drop (compile-host) tail then
+  if drop drop (compile-host) tail then
   rot drop rot drop
   swap >xt swap F_INL and
   if inline, tail then

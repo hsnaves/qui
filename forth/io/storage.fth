@@ -1,8 +1,6 @@
 \ module for performing storage operations
 hex
 
-extra current !
-
 scope{
 ephemeral
 ( define constants )
@@ -14,20 +12,20 @@ ephemeral
 
 public
 \ set the name of the file to operate on
-: file-name! ( c-str -- ) IO_STORAGE_NAME ! ;
+: stg-name! ( c-str -- ) IO_STORAGE_NAME ! ;
 
 \ set the name of the file to operate on
 \ based on a string
-: file-name" ( -- )
+: stg-name" ( -- )
   ", 0 c,
   drop dup
-  file-name!
+  stg-name!
   here ! \ revert back the here
   ;
 
 \ perform a file operation on a given buffer (and file offset)
 \ returns the number of bytes read/written ( or negative for error )
-: file-do ( offset addr n op -- n )
+: stg-do ( offset addr n op -- n )
   >r IO_STORAGE_LEN !
   IO_STORAGE_DATA !
   IO_STORAGE_OFFSET !
@@ -36,5 +34,3 @@ public
   ;
 
 }scope
-
-forth current !

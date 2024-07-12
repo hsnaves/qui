@@ -4,8 +4,6 @@ hex
 ( *** definition words for working with dictionaries *** )
 \ node sibling
 : node>next ( addr -- addr' )      ; inl
-\ the value of the node
-: node>val ( addr -- addr' )  04 + ; inl
 
 \ last word of dictionary
 : dict>last ( addr -- addr )  04 + ; inl
@@ -13,8 +11,6 @@ hex
 : dict>code ( addr -- addr )  08 + ; inl
 \ buffer for data in dictionary
 : dict>data ( addr -- addr )  0C + ; inl
-\ index data in dictionary
-: dict>index ( addr -- addr ) 10 + ; inl
 
 ( *** useful words for compilation *** )
 \ the current code buffer
@@ -39,35 +35,25 @@ hex
 \ obtains the offset pointer of the buffer
 : buf>off ( addr -- addr )   0C + ; inl
 
-scope{
-private
-\ shows the buffer overflow error
-" buffer overflow"
-: overflow ( -- )
-  [ swap ] lit lit
-  error tail
-  ; noexit
-
-public
 \ detects if the buffer will overflow after allocating n bytes
-: %overflow? ( n buf -- )
+" buffer overflow"
+: %free? ( n buf -- )
   dup buf>end @
-  swap buf>here @
-  - swap
-  u< if overflow tail then
+  swap buf>here @ -
+  swap u<
+  if [ rot rot swap ] lit lit 2 error tail then
   ;
-}scope
 
 \ allocates a given number of bytes in the buffer
 : %allot ( n buf -- addr )
-  2dup %overflow?
+  2dup %free?
   buf>here dup @
   rot over + rot !
   ;
 
 \ compile a value in a user-selected buffer
 : %, ( v buf -- )
-  4 over %overflow?
+  4 over %free?
   buf>here tuck
   @ tuck !
   4 + swap !
@@ -75,10 +61,10 @@ public
 
 \ compile a byte in a user-selected buffer
 : %c, ( b buf -- )
-  1 over %overflow?
+  1 over %free?
   buf>here tuck
   @ tuck c!
-  1+ swap !
+  1 + swap !
   ;
 
 \ compiles a string in a user-selected buffer

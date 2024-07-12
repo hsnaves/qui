@@ -1,61 +1,46 @@
 \ main internal words
 hex
 
-\ computes the relative address for jumps
-: reladdr ( target n -- v n )
-  >r here @
-  r@ 1+ + - r>
-  ;
-
 scope{
 private
+\ computes the relative address for jumps
+: reladdr ( target n -- v n )
+  swap over here @ + 1 + - swap
+  ;
+
 \ checks if a given value fits a literal of fixed size
-: litn? ( v n -- b )
-  7 * 1-
+\ note: the literal might be a target address
+: fit? ( v n a? -- b )
+  if reladdr then
+  7 * 1 -
   over swap
-  signe =
+  signe = =0
   ;
 
-\ checks if the jump fits the given size of literal
-: litjn? ( target n -- b )
-  reladdr
-  litn? tail
-  ; noexit
-
-public
 \ obtains the size of a literal
-: litn ( v -- v n )
-  1
+: get-size ( v a? -- v n )
+  >r 1
   begin
-    2dup litn? =0
-    if 1+ again then
+    2dup 0 r@ fit?
+    if 1 + again then
   end
+  r> drop
   ;
 
-\ obtains the size of a literal for jump
-: litjn ( target -- target n )
-  1
-  begin
-    2dup litjn? =0
-    if 1+ again then
-  end
-  ;
-
-private
 \ shows an error for large literal string
 " large literal"
-: literror ( -- )
+: print-large-error ( -- )
   [ swap ] lit lit
-  error tail
+  1 error tail
   ; noexit
 
-public
-\ compile a literal of a given fixed size n
-: litn, ( v n -- )
-  2dup litn? =0
-  if literror tail then
+\ compile a literal of a given fixed size
+: compile-literal ( v n a?-- )
+  if reladdr then
+  2dup 0 fit?
+  if print-large-error tail then
   begin
-    1- dup =0
+    1 - dup =0
     if
       drop
       3F and 80 +
@@ -67,47 +52,38 @@ public
   end
   ; noexit
 
-\ compiles a literal for a jump of a given fixed size
-: litjn, ( target n -- )
-  2dup litjn? =0
-  if literror tail then
-  reladdr
-  litn, tail
-  ; noexit
-}scope
-
+public
 \ compile a literal
 : lit, ( v -- )
-  litn litn, tail
+  0 get-size 0 compile-literal tail
   ; noexit
 
-\ compiles a jump of a given fixed size
-: jumpn, ( target n insn -- )
-  >r litjn, r> c, tail
+\ compiles a literal for jump of automatic size
+\ based on jsize
+: litj, ( target -- )
+  jsize c@ 1 compile-literal tail
   ; noexit
 
 \ compiles a jump to a target
 : jump, ( target insn -- )
-  >r litjn r> jumpn, tail
+  >r 1 get-size 1 compile-literal r> c, tail
   ; noexit
 
-\ compiles a literal for jump of automatic size
-: litja, ( target -- )
-  janum c@ litjn, tail
-  ; noexit
-
-( words defining some useful instructions )
+ephemeral
+( words defining return instruction )
 : I_RET    C0 ; inl
+
+include" forth/kernel/flags.fth"
+
+public
+( words defining jump instructions )
 : I_JSR    C1 ; inl
 : I_JMP    C2 ; inl
 : I_JZ     C3 ; inl
 
-( define constants for flags )
-: F_EXT    80 ; inl
-: F_IMM    40 ; inl
-: F_INL    20 ; inl
-: F_LINK   10 ; inl
-: F_XT     08 ; inl
+( public flags )
+: F_IMM    F_IMM ; inl
+: F_INL    F_INL ; inl
 
 \ compile a sequence of instructions inline
 : inline, ( addr -- )
@@ -119,3 +95,5 @@ public
 : exit, ( -- )
   I_RET c, tail
   ; noexit
+}scope
+

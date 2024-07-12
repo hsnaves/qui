@@ -2,16 +2,14 @@
 
 hex
 
-extra current !
-
 scope{
 public
 ( the opcode table )
 " RET  JSR  JMP  JZ   EQ0  EQ   ULT  LT   " drop
-" NOP  AND  OR   XOR  ADD  SUB  UMUL UDIV " 2drop
-" RD   WRT  RDB  WRTB SIGNESHL  USHR SHR  " 2drop
-" DUP  DROP SWAP OVER ROT  RTO  RFROMRPEEK" 2drop
-" INVL " 2drop
+" AND  OR   XOR  ADD  SUB  CSEL UMUL UDIV " drop drop
+" RD   WRT  RDB  WRTB SIGNESHL  USHR SHR  " drop drop
+" NOP  DUP  DROP SWAP OVER ROT  RTO  RFROM" drop drop
+" RGET RSET INVL " drop drop
 
 ephemeral
 \ opcodes points to the table defined above
@@ -24,17 +22,17 @@ private
 : literal? ( addr -- addr' b )
   begin
      dup c@ 80 u<
-     if 1- again then
+     if 1 - again then
   end
   dup c@ 80 BF within tail      \ check for lit
   ; noexit
 
 \ checks if this is the last literal in a sequence
 : lastliteral? ( addr -- addr' b )
-  1+ dup c@
+  1 + dup c@
   80 u<                         \ d: addr lits?
   if 0 exit then
-  1- literal? tail
+  1 - literal? tail
   ; noexit
 
 \ checks if this is a jump with known address
@@ -42,7 +40,7 @@ private
   dup c@
   I_JSR I_JZ within =0
   if 0 exit then
-  1- literal? tail
+  1 - literal? tail
   ; noexit
 
 \ opbtains the literal value from an opcode
@@ -54,21 +52,21 @@ private
 : literal ( start end -- n )
   >r dup c@ litval
   begin
-    swap 1+
-    tuck r@ u<=
+    swap 1 +
+    tuck 0 r@ u<=
     if
       7 shl
       over c@ or
       again
     then
   end
-  swap r> 2drop
+  swap r> drop drop
   ;
 
 \ prints the value of a literal
 : print-literal ( addr -- )
   dup lastliteral?
-  =0 if 2drop exit then
+  =0 if drop drop exit then
   swap literal
   [ char ( ] lit emit
   . [ char ) ] lit emit tail
@@ -77,8 +75,8 @@ private
 \ print the jump target
 : print-jump ( addr -- )
   dup dup jumpliteral?
-  =0 if 2drop drop exit then
-  swap 1- literal + 1+
+  =0 if drop drop drop exit then
+  swap 1 - literal + 1 +
   a. tail
   ; noexit
 
@@ -100,8 +98,8 @@ private
 
 \ disassemble a regular instruction
 : disasm_reg ( addr opc -- )
-  C0 - 20 over u<
-  if drop 20 then
+  C0 - 22 over u<
+  if drop 22 then
   5 * opcodes + 5
   type
   print-jump tail
@@ -144,7 +142,7 @@ private
     swap print-resolved-address
     check-word tail
   then
-  2drop 0
+  drop drop 0
   ;
 
 \ fully disassemble a single instruction at given address
@@ -164,7 +162,7 @@ private
   dup resolve if
     drop print-resolved-address tail
   then
-  2drop
+  drop drop
   ;
 
 public
@@ -175,7 +173,7 @@ public
   begin
     0 over < if
       over disasm1
-      rot over + rrot -
+      rot over + rot rot -
       again
     then
   end

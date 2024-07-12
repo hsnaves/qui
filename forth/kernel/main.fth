@@ -6,12 +6,12 @@ hex
 : =     ( n1 n2 -- {n1==n2} )      [ C5 c, ] ; inl
 : u<    ( u1 u2 -- {u1<u2} )       [ C6 c, ] ; inl
 : <     ( n1 n2 -- {n1<n2} )       [ C7 c, ] ; inl
-: nop   ( -- )                     [ C8 c, ] ; inl
-: and   ( n1 n2 -- {n1&n2} )       [ C9 c, ] ; inl
-: or    ( n1 n2 -- {n1|n2} )       [ CA c, ] ; inl
-: xor   ( n1 n2 -- {n1^n2} )       [ CB c, ] ; inl
-: +     ( n1 n2 -- {n1+n2} )       [ CC c, ] ; inl
-: -     ( n1 n2 -- {n1-n2} )       [ CD c, ] ; inl
+: and   ( n1 n2 -- {n1&n2} )       [ C8 c, ] ; inl
+: or    ( n1 n2 -- {n1|n2} )       [ C9 c, ] ; inl
+: xor   ( n1 n2 -- {n1^n2} )       [ CA c, ] ; inl
+: +     ( n1 n2 -- {n1+n2} )       [ CB c, ] ; inl
+: -     ( n1 n2 -- {n1-n2} )       [ CC c, ] ; inl
+: ?:    ( n1 n2 n3 -- {n3?n2:n1} ) [ CD c, ] ; inl
 : du*   ( u1 u2 -- lo high )       [ CE c, ] ; inl
 : u/mod ( u1 u2 -- rem quot )      [ CF c, ] ; inl
 : @     ( addr -- n )              [ D0 c, ] ; inl
@@ -22,31 +22,24 @@ hex
 : shl   ( n1 n2 -- {n1<<n2} )      [ D5 c, ] ; inl
 : ushr  ( u1 u2 -- {u1>>u2} )      [ D6 c, ] ; inl
 : shr   ( n1 n2 -- {n1>>n2} )      [ D7 c, ] ; inl
-: dup   ( n -- n n )               [ D8 c, ] ; inl
-: drop  ( n -- )                   [ D9 c, ] ; inl
-: swap  ( n1 n2 -- n2 n1 )         [ DA c, ] ; inl
-: over  ( n1 n2 -- n1 n2 n1 )      [ DB c, ] ; inl
-: rot   ( n1 n2 n3 -- n2 n3 n1 )   [ DC c, ] ; inl
+: nop   ( -- )                     [ D8 c, ] ; inl
+: dup   ( n -- n n )               [ D9 c, ] ; inl
+: drop  ( n -- )                   [ DA c, ] ; inl
+: swap  ( n1 n2 -- n2 n1 )         [ DB c, ] ; inl
+: over  ( n1 n2 -- n1 n2 n1 )      [ DC c, ] ; inl
+: rot   ( n1 n2 n3 -- n2 n3 n1 )   [ DD c, ] ; inl
 
-( stack manipulation words that will be overriden latter )
-F_XT flags c!
-: >r    ( n -- r: n )              [ DD c, ] ; inl
-: r>    ( r: n -- n )              [ DE c, ] ; inl
-: r@    ( r: n -- n | r: n )       [ DF c, ] ; inl
-
-( composite stack manipulation words that will be overriden latter )
-: rdrop ( r: n -- | r: )            r>  drop ; inl
-0 flags c!
+( stack manipulation words )
+: >r    ( n -- r: n )              [ DE c, ] ; inl
+: r>    ( r: n -- n )              [ DF c, ] ; inl
+: r@    ( raddr -- n )             [ E0 c, ] ; inl
+: r!    ( n raddr -- )             [ E1 c, ] ; inl
 
 ( some other composite words )
 : nip   ( n1 n2 -- n2 )           swap drop  ; inl
 : tuck  ( n1 n2 -- n2 n1 n2 )     swap over  ; inl
 : 2dup  ( n1 n2 -- n1 n2 n1 n2 )  over over  ; inl
-: 2drop ( n1 n2 -- )              drop drop  ; inl
-: rrot  ( n1 n2 n3 -- n3 n1 n2 )   rot  rot  ; inl
 : *     ( n1 n2 -- {n1*n2} )       du* drop  ; inl
-: 1+    ( n1 -- {n1+1} )             1    +  ; inl
-: 1-    ( n1 -- {n1+1} )            -1    +  ; inl
 : not   ( n1 -- {~n1} )             -1  xor  ; inl
 : bool  ( n1 -- {n1!=0} )           =0   =0  ; inl
 : <>    ( n1 n2 -- {n1!=n2} )        =   =0  ; inl
@@ -103,43 +96,23 @@ forth current !
 
 }scope
 
-( *** deferred words *** )
-
-\ emits one character to the standard output
-align defer emit ( c -- )
-
-\ types a counted string to the standard output
-align defer type ( c-str n -- )
-
-\ obtains an input character from standard input
-align defer getc ( -- c)
-
-\ prompt shown before any given input line
-align defer prompt ( -- )
-
-\ prints an error message and restarts the interpreter
-align defer error ( c-str n  -- )
-
-\ prints an error message and quits
-align defer fatal ( c-str n  -- )
-
 ( *** helper words *** )
 
 \ returns true if min <= v <= max
 : within ( v min max -- t )
   rot tuck <
-  if 2drop 0 exit then
+  if drop drop 0 exit then
   swap >=
   ;
 
 \ advances the counted string by a given number of characters
 \ : /str ( c-str n num -- c-str' n' )
-\  rot over + rrot -
+\  rot over + rot rot -
 \  ;
 
 \ advances the counted string by 1
 : 1/str ( c-str n -- c-str' n' )
-  1- swap 1+ swap
+  1 - swap 1 + swap
   ;
 
 \ copies a given string into the destination buffer
@@ -147,12 +120,12 @@ align defer fatal ( c-str n  -- )
   >r
   begin
     dup if
-      over c@ r@ c!
-      r> 1+ >r 1/str
+      over c@ 0 r@ c!
+      r> 1 + >r 1/str
       again
     then
   end
-  2drop rdrop
+  drop drop r> drop
   ;
 
 \ finds a given character in the string
@@ -161,10 +134,38 @@ align defer fatal ( c-str n  -- )
   over
   begin
     2dup c@ <>
-    if 1+ again then
+    if 1 + again then
   end
   rot - nip
   ;
+
+( *** deferred words *** )
+
+\ prompt shown before any given input line
+align defer prompt ( -- )
+
+\ prints an error message and possibly
+\ restarts the interpreter or exits the program
+align defer error ( c-str n severity  -- )
+
+\ obtains an input character from standard input
+align defer getc ( -- c)
+
+\ emits one character to the standard output
+align defer emit ( c -- )
+
+( *** type word *** )
+
+\ types a counted string to the standard output
+: type ( c-str n -- )
+  begin
+    dup =0
+    if drop drop exit then
+    over c@ emit
+    1/str
+    again
+  end
+  ; noexit
 
 ( *** words related to printing *** )
 \ prints space

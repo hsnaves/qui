@@ -34,17 +34,17 @@ private
 
 : error-fileio ( c-str -- )
   restore-prev-emit
-  ch_err " error in file operation: " type
+  " error in file operation: " 0 error
   dup 0 char-find over -
-  fatal tail
+  2 error tail
   ; noexit
 
 : flush-output ( -- )
-  output-filename @ file-name!
+  output-filename @ stg-name!
   output-offset @
   output-buffer
   output-length @
-  2 file-do
+  2 stg-do
   dup 0 < if
     output-filename @ error-fileio tail
   then
@@ -55,7 +55,7 @@ private
 : new-emit ( c -- )
   output-length @ swap over
   output-buffer + c!
-  1+ dup output-length !
+  1 + dup output-length !
   buffer-size =
   if flush-output then
   ;
@@ -66,10 +66,10 @@ private
   ;
 
 : refresh-input ( -- )
-  input-filename @ file-name!
+  input-filename @ stg-name!
   input-offset @
   input-buffer buffer-size
-  1 file-do
+  1 stg-do
   dup 0 < if
     input-filename @ error-fileio tail
   then
@@ -85,10 +85,28 @@ private
 : fetch-character ( -- c )
   input-pos @ dup
   input-buffer + c@
-  swap 1+ dup input-pos !
+  swap 1 + dup input-pos !
   input-length @ =
   if refresh-input then
   ;
+
+\ prints a given number of spaces
+: spaces ( n -- )
+  begin
+    dup if
+      space 1 -
+      again
+    then
+  end
+  drop
+  ;
+
+\ print a byte to the output in hexadecimal (no space)
+: b. ( v -- )
+  dup 4 ushr
+  15 and d.
+  15 and d. tail
+  ; noexit
 
 : dump-entry ( -- )
   " 0x" type
@@ -100,7 +118,7 @@ private
   3 spaces 8
   begin
     dup if
-      1-
+      1 -
       available? if
         space dump-entry
         again
@@ -128,7 +146,7 @@ static const uint8_t default_rom[] = {
 public
 
 : dump-data ( input output -- )
-  ch_args " input: " type
+  1 channel 1 + c! " input: " type
   here @ input-filename !
   word 2dup type nl str, 0 c,
   " output: " type
