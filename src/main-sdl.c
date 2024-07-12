@@ -240,7 +240,7 @@ void process_events(struct quivm *qvm)
             quit_counter += 30;
             if (!window || (quit_counter > 30)) {
                /* Ctrl-C was pressed and SDL captured the SIGINT */
-               quivm_terminate(qvm, 1);
+               quivm_terminate(qvm, 0);
                break;
             }
             keyboard_set_bit(kbd, KEYBOARD_QUIT, 1);

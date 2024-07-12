@@ -49,6 +49,8 @@ void run_one_frame(struct quivm *qvm)
 
     /* No support for display or audio */
     if (dpl->initialized || aud->initialized) {
+        fprintf(stderr, "run_one_frame: "
+                "no support for display or audio\n");
         quivm_terminate(qvm, 1);
         goto destroy_vm;
     }

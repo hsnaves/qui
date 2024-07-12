@@ -63,7 +63,7 @@ private
   [ swap ] lit lit type nl
   wordbuf dup buf>end @ swap buf>here @ - .
   [ swap ] lit lit type
-  4 sysreg @ . tail
+  5 sysreg @ . tail
   ; noexit
 last @ >xt is banner
 
