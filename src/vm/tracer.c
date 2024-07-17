@@ -32,6 +32,7 @@ struct tracer {
     struct page *traced[NUM_PAGES]; /* traced pages */
     struct page *free;              /* free pages */
     struct node *allocated;         /* allocated pages */
+    struct page *sentinel;          /* the sentinel for tracer */
     struct quivm *qvm;              /* pointer to the VM */
     int memory_error;               /* indicates lack of memory */
 };
@@ -39,8 +40,8 @@ struct tracer {
 /* Static declarations */
 static int tracer_allocate(struct tracer *tr);
 static struct page *tracer_get_free_page(struct tracer *tr);
-static void tracer_trace(struct tracer *tr,
-                         struct page *pg, uint32_t offset);
+static void do_trace(struct quivm *qvm, uint64_t data);
+static void tracer_trace(struct tracer *tr, uint32_t address);
 
 
 /* Functions */
@@ -71,6 +72,7 @@ void tracer_destroy(struct quivm *qvm)
 int tracer_init(struct quivm *qvm)
 {
     struct tracer *tr;
+    uint32_t i;
 
     tr = (struct tracer *) malloc(sizeof(struct tracer));
     if (!tr) {
@@ -81,6 +83,7 @@ int tracer_init(struct quivm *qvm)
     memset(tr->traced, 0, NUM_PAGES * sizeof(struct page *));
     tr->free = NULL;
     tr->allocated = NULL;
+    tr->sentinel = NULL;
     tr->qvm = qvm;
     tr->memory_error = 0;
     qvm->tracer = tr;
@@ -90,6 +93,10 @@ int tracer_init(struct quivm *qvm)
         fprintf(stderr, "vm/tracer: init: could not reserve pages\n");
         return 1;
     }
+
+    tr->sentinel = tracer_get_free_page(tr);
+    for (i = 0; i < NUM_PAGES; i++)
+        tr->traced[i] = tr->sentinel;
 
     return 0;
 }
@@ -108,11 +115,11 @@ void tracer_flush(struct quivm *qvm,
 
     for (pg_index = start_pg_index; pg_index != end_pg_index; pg_index++) {
         struct page *pg = tr->traced[pg_index];
-        if (pg) {
+        if (pg != tr->sentinel) {
             struct node *n = (struct node *) pg;
             n->next = (struct node *) tr->free;
             tr->free = pg;
-            tr->traced[pg_index] = NULL;
+            tr->traced[pg_index] = tr->sentinel;
         }
     }
 }
@@ -158,6 +165,7 @@ struct page *tracer_get_free_page(struct tracer *tr)
 {
     struct page *pg;
     struct node *n;
+    uint32_t i;
 
     if (!tr->free) {
         if (tracer_allocate(tr)) {
@@ -171,67 +179,66 @@ struct page *tracer_get_free_page(struct tracer *tr)
     n = (struct node *) pg;
     tr->free = (struct page *) n->next;
 
-    memset(pg->code, 0, PAGE_SIZE * sizeof(run_trace_cb));
+    /* Initialize the page with code for tracing */
+    for (i = 0; i < PAGE_SIZE; i++)
+        pg->code[i] = &do_trace;
+
     memset(pg->data, 0, PAGE_SIZE * sizeof(uint64_t));
     return pg;
 }
 
+/* Macros for stack operations */
+#define dstack_push(qvm, v) (qvm)->dstack[(qvm)->dsp++] = (v)
+#define rstack_push(qvm, v) (qvm)->rstack[(qvm)->rsp++] = (v)
+#define dstack_pop(qvm) ((qvm)->dstack[--(qvm)->dsp])
+#define rstack_pop(qvm) ((qvm)->rstack[--(qvm)->rsp])
+
+#define DISPATCH(qvm) \
+{                                                \
+    struct tracer *tr;                           \
+    struct page *pg;                             \
+    uint32_t address, pg_index, offset;          \
+                                                 \
+    tr = (struct tracer *) (qvm)->tracer;        \
+    address = (qvm)->pc % MEMORY_SIZE;           \
+    pg_index = address / PAGE_SIZE;              \
+    pg = tr->traced[pg_index];                   \
+    offset = address % PAGE_SIZE;                \
+    pg->code[offset]((qvm), pg->data[offset]);   \
+}
+
+
 /* Runs the VM using the tracer */
 int tracer_run(struct quivm *qvm)
 {
-    struct tracer *tr;
-    struct page *last_pg;
-    uint32_t last_pg_index;
-
     /* check if it has terminated */
     if (!(qvm->status & STS_RUNNING))
         return 0;
 
     qvm->status |= STS_JMPBUF;
     if (setjmp(((jmp_buf *) qvm->jmpbuf)[0])) {
+        struct tracer *tr;
         qvm->status &= ~STS_JMPBUF;
         tr = (struct tracer *) qvm->tracer;
         if (tr->memory_error) return 1;
         return tracer_run(qvm);
     }
 
-    tr = (struct tracer *) qvm->tracer;
-
-    last_pg_index = NUM_PAGES;
-    last_pg = NULL;
-    while (1) {
-        struct page *pg;
-        uint32_t pg_index, offset;
-        run_trace_cb runcb;
-
-        pg_index = qvm->pc / PAGE_SIZE;
-        if (pg_index != last_pg_index) {
-            pg = tr->traced[pg_index];
-            if (!pg) {
-                pg = tracer_get_free_page(tr);
-                tr->traced[pg_index] = pg;
-            }
-
-            last_pg_index = pg_index;
-            last_pg = pg;
-        } else {
-            pg = last_pg;
-        }
-
-        offset = qvm->pc % PAGE_SIZE;
-        runcb = pg->code[offset];
-        if (!runcb) {
-            tracer_trace(tr, pg, offset);
-            runcb = pg->code[offset];
-        }
-
-        (*runcb)(qvm, pg->data[offset]);
-    }
-
+    DISPATCH(qvm);
     return 0;
 }
 
+
 /* Implementation of the trace operations */
+
+static
+void do_trace(struct quivm *qvm, uint64_t data)
+{
+    (void)(data); /* UNUSED */
+    tracer_trace((struct tracer *) qvm->tracer, qvm->pc);
+    DISPATCH(qvm);
+}
+
 static
 void do_exception(struct quivm *qvm, uint64_t data)
 {
@@ -244,24 +251,25 @@ void do_exception(struct quivm *qvm, uint64_t data)
                 err_cond, qvm->pc);
         quivm_terminate(qvm, err_cond);
         quivm_raise(qvm);
-        return;
+    } else {
+        dstack_push(qvm, qvm->acc);
+        qvm->acc = err_cond;
+
+        /* rstack points to the faulting instruction */
+        rstack_push(qvm, qvm->pc);
+        qvm->pc = INITIAL_PC;
+        qvm->status &= ~STS_OKAY;
     }
-
-    quivm_dstack_push(qvm, qvm->acc);
-    qvm->acc = err_cond;
-
-    /* rstack points to the faulting instruction */
-    quivm_rstack_push(qvm, qvm->pc);
-    qvm->pc = INITIAL_PC;
-    qvm->status &= ~STS_OKAY;
+    DISPATCH(qvm);
 }
 
 static
 void do_lit(struct quivm *qvm, uint64_t data)
 {
-    quivm_dstack_push(qvm, qvm->acc);
+    dstack_push(qvm, qvm->acc);
     qvm->acc = (uint32_t) data;
     qvm->pc += (uint32_t) (data >> 32);
+    DISPATCH(qvm);
 }
 
 static
@@ -270,22 +278,25 @@ void do_lits(struct quivm *qvm, uint64_t data)
     qvm->acc <<= 7;
     qvm->acc |= (uint32_t) data;
     qvm->pc += (uint32_t) (data >> 32);
+    DISPATCH(qvm);
 }
 
 static
 void do_ret(struct quivm *qvm, uint64_t data)
 {
     (void)(data); /* UNUSED */
-    qvm->pc = quivm_rstack_pop(qvm);
+    qvm->pc = rstack_pop(qvm);
+    DISPATCH(qvm);
 }
 
 static
 void do_jsr(struct quivm *qvm, uint64_t data)
 {
     (void)(data); /* UNUSED */
-    quivm_rstack_push(qvm, ++qvm->pc);
+    rstack_push(qvm, ++qvm->pc);
     qvm->pc += qvm->acc;
-    qvm->acc = quivm_dstack_pop(qvm);
+    qvm->acc = dstack_pop(qvm);
+    DISPATCH(qvm);
 }
 
 static
@@ -293,7 +304,8 @@ void do_jmp(struct quivm *qvm, uint64_t data)
 {
     (void)(data); /* UNUSED */
     qvm->pc += qvm->acc + 1;
-    qvm->acc = quivm_dstack_pop(qvm);
+    qvm->acc = dstack_pop(qvm);
+    DISPATCH(qvm);
 }
 
 static
@@ -301,9 +313,10 @@ void do_jz(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     if (v == 0) qvm->pc += qvm->acc;
-    qvm->acc = quivm_dstack_pop(qvm);
+    qvm->acc = dstack_pop(qvm);
+    DISPATCH(qvm);
 }
 
 static
@@ -312,6 +325,7 @@ void do_eq0(struct quivm *qvm, uint64_t data)
     (void)(data); /* UNUSED */
     qvm->acc = (0 == qvm->acc) ? -1 : 0;
     qvm->pc++;
+    DISPATCH(qvm);
 }
 
 static
@@ -319,8 +333,9 @@ void do_eq(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     qvm->acc = (v == qvm->acc) ? -1 : 0;
+    DISPATCH(qvm);
 }
 
 static
@@ -328,8 +343,9 @@ void do_ult(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     qvm->acc = (v < qvm->acc) ? -1 : 0;
+    DISPATCH(qvm);
 }
 
 static
@@ -337,8 +353,9 @@ void do_lt(struct quivm *qvm, uint64_t data)
 {
     int32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = (int32_t) quivm_dstack_pop(qvm);
+    qvm->pc++; v = (int32_t) dstack_pop(qvm);
     qvm->acc = (v < ((int32_t) qvm->acc)) ? -1 : 0;
+    DISPATCH(qvm);
 }
 
 static
@@ -346,8 +363,9 @@ void do_and(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     qvm->acc &= v;
+    DISPATCH(qvm);
 }
 
 static
@@ -355,8 +373,9 @@ void do_or(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     qvm->acc |= v;
+    DISPATCH(qvm);
 }
 
 static
@@ -364,8 +383,9 @@ void do_xor(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     qvm->acc ^= v;
+    DISPATCH(qvm);
 }
 
 static
@@ -373,8 +393,9 @@ void do_add(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     qvm->acc += v;
+    DISPATCH(qvm);
 }
 
 static
@@ -382,8 +403,9 @@ void do_sub(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     qvm->acc = v - qvm->acc;
+    DISPATCH(qvm);
 }
 
 static
@@ -391,8 +413,9 @@ void do_csel(struct quivm *qvm, uint64_t data)
 {
     uint32_t v, w;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm); w = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm); w = dstack_pop(qvm);
     qvm->acc = (qvm->acc) ? v : w;
+    DISPATCH(qvm);
 }
 
 static
@@ -402,11 +425,12 @@ void do_umul(struct quivm *qvm, uint64_t data)
     (void)(data); /* UNUSED */
 
     qvm->pc++;
-    dw = (uint64_t) quivm_dstack_pop(qvm);
+    dw = (uint64_t) dstack_pop(qvm);
     dv = (uint64_t) qvm->acc;
     dv *= dw;
-    quivm_dstack_push(qvm, (uint32_t) dv);
+    dstack_push(qvm, (uint32_t) dv);
     qvm->acc = (uint32_t) (dv >> 32);
+    DISPATCH(qvm);
 }
 
 static
@@ -418,11 +442,12 @@ void do_udiv(struct quivm *qvm, uint64_t data)
     /* check for division by zero */
     if (qvm->acc == 0) {
         do_exception(qvm, EX_DIVIDE_BY_ZERO);
-        return;
+    } else {
+        qvm->pc++; v = dstack_pop(qvm);
+        dstack_push(qvm, (v % qvm->acc));
+        qvm->acc = v / qvm->acc;
     }
-    qvm->pc++; v = quivm_dstack_pop(qvm);
-    quivm_dstack_push(qvm, (v % qvm->acc));
-    qvm->acc = v / qvm->acc;
+    DISPATCH(qvm);
 }
 
 static
@@ -431,6 +456,7 @@ void do_rd(struct quivm *qvm, uint64_t data)
     (void)(data); /* UNUSED */
     qvm->pc++;
     qvm->acc = quivm_read(qvm, qvm->acc);
+    DISPATCH(qvm);
 }
 
 static
@@ -438,9 +464,10 @@ void do_wrt(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     quivm_write(qvm, qvm->acc, v);
-    qvm->acc = quivm_dstack_pop(qvm);
+    qvm->acc = dstack_pop(qvm);
+    DISPATCH(qvm);
 }
 
 static
@@ -449,6 +476,7 @@ void do_rdb(struct quivm *qvm, uint64_t data)
     (void)(data); /* UNUSED */
     qvm->pc++;
     qvm->acc = (uint32_t) quivm_read_byte(qvm, qvm->acc);
+    DISPATCH(qvm);
 }
 
 static
@@ -456,9 +484,10 @@ void do_wrtb(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     quivm_write_byte(qvm, qvm->acc, v);
-    qvm->acc = quivm_dstack_pop(qvm);
+    qvm->acc = dstack_pop(qvm);
+    DISPATCH(qvm);
 }
 
 static
@@ -466,7 +495,7 @@ void do_signe(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     if (qvm->acc < 32) {
         qvm->acc = 32 - qvm->acc;
         v <<= qvm->acc;
@@ -474,6 +503,7 @@ void do_signe(struct quivm *qvm, uint64_t data)
     } else {
         qvm->acc = v;
     }
+    DISPATCH(qvm);
 }
 
 static
@@ -481,8 +511,9 @@ void do_shl(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     qvm->acc = (v << (qvm->acc & 0x1F));
+    DISPATCH(qvm);
 }
 
 static
@@ -490,8 +521,9 @@ void do_ushr(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     qvm->acc = (v >> (qvm->acc & 0x1F));
+    DISPATCH(qvm);
 }
 
 static
@@ -499,14 +531,16 @@ void do_shr(struct quivm *qvm, uint64_t data)
 {
     int32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = (int32_t) quivm_dstack_pop(qvm);
+    qvm->pc++; v = (int32_t) dstack_pop(qvm);
     qvm->acc = (uint32_t) (v >> (qvm->acc & 0x1F));
+    DISPATCH(qvm);
 }
 
 static
 void do_nop(struct quivm *qvm, uint64_t data)
 {
     qvm->pc += (uint32_t) (data >> 32);
+    DISPATCH(qvm);
 }
 
 static
@@ -514,7 +548,8 @@ void do_dup(struct quivm *qvm, uint64_t data)
 {
     (void)(data); /* UNUSED */
     qvm->pc++;
-    quivm_dstack_push(qvm, qvm->acc);
+    dstack_push(qvm, qvm->acc);
+    DISPATCH(qvm);
 }
 
 static
@@ -522,7 +557,8 @@ void do_drop(struct quivm *qvm, uint64_t data)
 {
     (void)(data); /* UNUSED */
     qvm->pc++;
-    qvm->acc = quivm_dstack_pop(qvm);
+    qvm->acc = dstack_pop(qvm);
+    DISPATCH(qvm);
 }
 
 static
@@ -530,9 +566,10 @@ void do_swap(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
-    quivm_dstack_push(qvm, qvm->acc);
+    qvm->pc++; v = dstack_pop(qvm);
+    dstack_push(qvm, qvm->acc);
     qvm->acc = v;
+    DISPATCH(qvm);
 }
 
 static
@@ -540,10 +577,11 @@ void do_over(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
-    quivm_dstack_push(qvm, v);
-    quivm_dstack_push(qvm, qvm->acc);
+    qvm->pc++; v = dstack_pop(qvm);
+    dstack_push(qvm, v);
+    dstack_push(qvm, qvm->acc);
     qvm->acc = v;
+    DISPATCH(qvm);
 }
 
 static
@@ -551,26 +589,29 @@ void do_rot(struct quivm *qvm, uint64_t data)
 {
     uint32_t v, w;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm); w = quivm_dstack_pop(qvm);
-    quivm_dstack_push(qvm, v);
-    quivm_dstack_push(qvm, qvm->acc);
+    qvm->pc++; v = dstack_pop(qvm); w = dstack_pop(qvm);
+    dstack_push(qvm, v);
+    dstack_push(qvm, qvm->acc);
     qvm->acc = w;
+    DISPATCH(qvm);
 }
 
 static
 void do_rto(struct quivm *qvm, uint64_t data)
 {
     (void)(data); /* UNUSED */
-    qvm->pc++; quivm_rstack_push(qvm, qvm->acc);
-    qvm->acc = quivm_dstack_pop(qvm);
+    qvm->pc++; rstack_push(qvm, qvm->acc);
+    qvm->acc = dstack_pop(qvm);
+    DISPATCH(qvm);
 }
 
 static
 void do_rfrom(struct quivm *qvm, uint64_t data)
 {
     (void)(data); /* UNUSED */
-    qvm->pc++; quivm_dstack_push(qvm, qvm->acc);
-    qvm->acc = quivm_rstack_pop(qvm);
+    qvm->pc++; dstack_push(qvm, qvm->acc);
+    qvm->acc = rstack_pop(qvm);
+    DISPATCH(qvm);
 }
 
 static
@@ -579,6 +620,7 @@ void do_rget(struct quivm *qvm, uint64_t data)
     (void)(data); /* UNUSED */
     qvm->pc++;
     qvm->acc = qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)];
+    DISPATCH(qvm);
 }
 
 static
@@ -586,28 +628,32 @@ void do_rset(struct quivm *qvm, uint64_t data)
 {
     uint32_t v;
     (void)(data); /* UNUSED */
-    qvm->pc++; v = quivm_dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(qvm);
     qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)] = v;
-    qvm->acc = quivm_dstack_pop(qvm);
+    qvm->acc = dstack_pop(qvm);
+    DISPATCH(qvm);
 }
 
 
-/* Traces the code in a given page, and at given offset. */
+/* Traces the code in a given address. */
 static
-void tracer_trace(struct tracer *tr, struct page *pg, uint32_t offset)
+void tracer_trace(struct tracer *tr, uint32_t address)
 {
     struct quivm *qvm;
-    uint32_t v;
+    struct page *pg;
+    uint32_t pg_index, offset, v;
     uint8_t insn;
 
     qvm = tr->qvm;
-    if (qvm->pc < MEMORY_SIZE) {
-        insn = qvm->mem[qvm->pc];
-    } else {
-        /* prevent the VM from executing outside the memory space */
-        insn = INSN_INVL;
+    pg_index = address / PAGE_SIZE;
+    pg = tr->traced[pg_index];
+    if (pg == tr->sentinel) {
+        pg = tracer_get_free_page(tr);
+        tr->traced[pg_index] = pg;
     }
+    offset = address % PAGE_SIZE;
 
+    insn = qvm->mem[address];
     if (insn < INSN_LIT_BASE) {
         pg->code[offset] = &do_lits;
         pg->data[offset] = ((uint64_t) insn) | (1UL << 32UL);

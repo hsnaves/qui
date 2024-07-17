@@ -165,12 +165,7 @@ int quivm_run(struct quivm *qvm)
 
     err_cond = 0;
     while (1) {
-        if (qvm->pc < MEMORY_SIZE) {
-            insn = qvm->mem[qvm->pc];
-        } else {
-            /* prevent the VM from executing outside the memory space */
-            insn = INSN_INVL;
-        }
+        insn = qvm->mem[qvm->pc % MEMORY_SIZE];
         qvm->pc++;
 
         if (insn < INSN_LIT_BASE) {
