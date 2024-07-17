@@ -92,6 +92,7 @@ void print_help(const char *execname)
     printf("  --target <addr>    The address of the target socket\n");
     printf("  --port <port>      The UDP port to bind to\n");
     printf("  --utc              To use UTC for the real time clock\n");
+    printf("  --tracer           To use the tracer\n");
     printf("  -h|--help          Print this help\n");
 }
 
@@ -108,7 +109,7 @@ int main(int argc, char **argv, char **envp)
     const char *bind_address;
     const char *target_address;
     uint32_t length;
-    int use_utc;
+    int use_utc, use_tracer;
     int disable_write;
     int port;
     int i, ret;
@@ -118,6 +119,7 @@ int main(int argc, char **argv, char **envp)
     bind_address = NULL;
     target_address = NULL;
     use_utc = 0;
+    use_tracer = 0;
     disable_write = 0;
     port = 0;
 
@@ -139,6 +141,8 @@ int main(int argc, char **argv, char **envp)
         } else if (strcmp(argv[i], "--target") == 0) {
             if (i == argc - 1) goto missing_argument;
             target_address = argv[++i];
+        } else if (strcmp(argv[i], "--tracer") == 0) {
+            use_tracer = 1;
         } else if ((strcmp(argv[i], "-h") == 0)
                    || (strcmp(argv[i], "--help") == 0)) {
             print_help(argv[0]);
@@ -166,7 +170,7 @@ int main(int argc, char **argv, char **envp)
     argc -= i;
     argv = &argv[i];
 
-    if (quivm_init(&qvm)) {
+    if (quivm_init(&qvm, use_tracer)) {
         fprintf(stderr, "main: could not initialize the VM\n");
         return 1;
     }

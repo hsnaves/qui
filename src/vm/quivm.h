@@ -124,14 +124,18 @@ struct quivm {
     uint32_t acc;                   /* accumulator */
     uint8_t dsp, rsp;               /* data and return stack pointers */
 
+    void *tracer;                   /* pointer to the tracer data */
+    int use_tracer;                 /* boolean flag to use the tracer */
 };
 
 /* Functions */
 
 /* Creates and initializes the QUI vm.
+ * If `use_tracer` is nonzero, it uses the tracer to speed
+ * up the virtual machine.
  * Returns zero on success.
  */
-int quivm_init(struct quivm *qvm);
+int quivm_init(struct quivm *qvm, int use_tracer);
 
 /* Destroys the QUI vm and release the resources. */
 void quivm_destroy(struct quivm *qvm);

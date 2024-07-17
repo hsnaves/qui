@@ -20,14 +20,22 @@
 #    error "undefined endianness"
 #endif
 
+/* External tracer functions */
+extern int tracer_init(struct quivm *qvm);
+extern void tracer_destroy(struct quivm *qvm);
+extern void tracer_flush(struct quivm *qvm,
+                         uint32_t start_address, uint32_t end_address);
+extern int tracer_run(struct quivm *qvm);
+
 /* Functions */
 
-int quivm_init(struct quivm *qvm)
+int quivm_init(struct quivm *qvm, int use_tracer)
 {
     qvm->jmpbuf = NULL;
     qvm->dstack = NULL;
     qvm->rstack = NULL;
     qvm->mem = NULL;
+    qvm->tracer = NULL;
 
     qvm->jmpbuf = (void *) malloc(sizeof(jmp_buf));
     qvm->dstack = (uint32_t *) malloc(STACK_SIZE * sizeof(uint32_t));
@@ -44,6 +52,14 @@ int quivm_init(struct quivm *qvm)
     qvm->arg = NULL;
     qvm->read_cb = NULL;
     qvm->write_cb = NULL;
+    qvm->use_tracer = use_tracer;
+
+    if (tracer_init(qvm)) {
+        quivm_destroy(qvm);
+        fprintf(stderr, "vm/quivm: init: "
+                "could not initialize tracer\n");
+        return 1;
+    }
 
     /* reset the memory, and the stacks (with -1) */
     memset(qvm->dstack, -1, STACK_SIZE * sizeof(uint32_t));
@@ -56,6 +72,8 @@ int quivm_init(struct quivm *qvm)
 
 void quivm_destroy(struct quivm *qvm)
 {
+    tracer_destroy(qvm);
+
     if (qvm->jmpbuf) free(qvm->jmpbuf);
     if (qvm->dstack) free(qvm->dstack);
     if (qvm->rstack) free(qvm->rstack);
@@ -132,6 +150,8 @@ int quivm_run(struct quivm *qvm)
     uint64_t dv, dw;
     uint32_t err_cond;
     uint8_t insn;
+
+    if (qvm->use_tracer) tracer_run(qvm);
 
     /* check if it has terminated */
     if (!(qvm->status & STS_RUNNING))
