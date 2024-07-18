@@ -84,6 +84,8 @@
 #define SYS_MEMSIZE                      5
 #define SYS_CELLSIZE                     6
 #define SYS_ID                           7
+#define SYS_ISTART                       8
+#define SYS_IEND                         9
 
 /* Data structures and types */
 
@@ -122,6 +124,9 @@ struct quivm {
 
     uint32_t status;                /* The status of the VM */
     uint32_t selector;              /* The selector for internal registers */
+    uint32_t istart, iend;          /* The code cache invalidate address
+                                     * range
+                                     */
 
     uint32_t pc;                    /* program counter */
     uint32_t acc;                   /* accumulator */

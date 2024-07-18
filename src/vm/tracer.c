@@ -102,18 +102,18 @@ int tracer_init(struct quivm *qvm)
 }
 
 /* Flushes the pages of the tracer cache */
-void tracer_flush(struct quivm *qvm,
-                  uint32_t start_address, uint32_t end_address)
+void tracer_invalidate(struct quivm *qvm,
+                       uint32_t istart, uint32_t iend)
 {
     struct tracer *tr;
     uint32_t start_pg_index, end_pg_index;
     uint32_t pg_index;
 
     tr = (struct tracer *) qvm->tracer;
-    start_pg_index = start_address / PAGE_SIZE;
-    end_pg_index = 1 + (end_address / PAGE_SIZE);
+    start_pg_index = istart / PAGE_SIZE;
+    end_pg_index = 1 + ((iend - 1) / PAGE_SIZE);
 
-    for (pg_index = start_pg_index; pg_index != end_pg_index; pg_index++) {
+    for (pg_index = start_pg_index; pg_index < end_pg_index; pg_index++) {
         struct page *pg = tr->traced[pg_index];
         if (pg != tr->sentinel) {
             struct node *n = (struct node *) pg;

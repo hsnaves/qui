@@ -3,9 +3,13 @@ hex
 
 \ start the scope
 : scope{ ( -- )
+  [ tmpbuf buf>end ] lit @
+
   \ clear the tmpbuf
-  [ tmpbuf buf>start ] lit @
+  [ tmpbuf buf>start ] lit @ dup
   [ tmpbuf buf>here ] lit !
+
+  flush \ flush the cache
 
   \ initialize the temp dictionary
   0 [ temp dict>last ] lit !

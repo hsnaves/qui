@@ -73,6 +73,8 @@ ephemeral
 : SYS_STATUS                1 ; inl
 : SYS_DSP                   2 ; inl
 : SYS_RSP                   3 ; inl
+: SYS_ISTART                8 ; inl
+: SYS_IEND                  9 ; inl
 
 public
 
@@ -88,6 +90,12 @@ internal current !
 
 \ the address of the return stack pointer
 : rsp ( -- addr ) SYS_RSP sysreg tail ; noexit
+
+\ flushes the code cache
+: flush ( iend istart -- )
+  SYS_ISTART sysreg !
+  SYS_IEND sysreg !
+  ;
 
 forth current !
 

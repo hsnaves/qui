@@ -97,3 +97,8 @@ meta current !
   word
   swap addr>meta swap
   ;
+
+: flush ( iend istart -- )
+  swap addr>host swap addr>host
+  flush tail
+  ; noexit

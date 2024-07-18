@@ -23,8 +23,8 @@
 /* External tracer functions */
 extern int tracer_init(struct quivm *qvm);
 extern void tracer_destroy(struct quivm *qvm);
-extern void tracer_flush(struct quivm *qvm,
-                         uint32_t start_address, uint32_t end_address);
+extern void tracer_invalidate(struct quivm *qvm,
+                              uint32_t istart, uint32_t iend);
 extern int tracer_run(struct quivm *qvm);
 
 /* Functions */
@@ -101,6 +101,8 @@ void quivm_reset(struct quivm *qvm)
     qvm->rsp = 0;
     qvm->selector = 0;
     qvm->status = (STS_RUNNING | STS_OKAY);
+    qvm->istart = 0;
+    qvm->iend = 0;
 }
 
 int quivm_load(struct quivm *qvm, const char *filename,
@@ -411,6 +413,8 @@ uint32_t aligned_read(struct quivm *qvm, uint32_t address)
             case SYS_MEMSIZE:   v = MEMORY_SIZE; break;
             case SYS_CELLSIZE:  v = 4; break;
             case SYS_ID:        v = 0; break; /* TODO: set proper value */
+            case SYS_ISTART:    v = qvm->istart; break;
+            case SYS_IEND:      v = qvm->iend; break;
             default:
                 if (qvm->selector >= STACK_SIZE
                     && qvm->selector < (2 * STACK_SIZE)) {
@@ -479,6 +483,13 @@ void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
                 break;
             case SYS_RSP:
                 qvm->rsp = (uint8_t) v;
+                break;
+            case SYS_ISTART:
+                qvm->istart = v;
+                break;
+            case SYS_IEND:
+                qvm->iend = v;
+                tracer_invalidate(qvm, qvm->istart, qvm->iend);
                 break;
             default:
                 if (qvm->selector >= STACK_SIZE
