@@ -625,6 +625,47 @@ void do_rset(struct quivm *qvm, uint64_t data)
     DISPATCH(qvm);
 }
 
+static
+void do_jsr_const(struct quivm *qvm, uint64_t data)
+{
+    qvm->pc += (uint32_t) (data >> 32);
+    rstack_push(qvm, qvm->pc);
+    qvm->pc = (uint32_t) data;
+    DISPATCH(qvm);
+}
+
+static
+void do_jmp_const(struct quivm *qvm, uint64_t data)
+{
+    qvm->pc = (uint32_t) data;
+    DISPATCH(qvm);
+}
+
+static
+void do_jz_const(struct quivm *qvm, uint64_t data)
+{
+    qvm->pc += (uint32_t) (data >> 32);
+    if (qvm->acc == 0) qvm->pc = (uint32_t) data;
+    qvm->acc = dstack_pop(qvm);
+    DISPATCH(qvm);
+}
+
+static
+void do_add_const(struct quivm *qvm, uint64_t data)
+{
+    qvm->pc += (uint32_t) (data >> 32);
+    qvm->acc += (uint32_t) data;
+    DISPATCH(qvm);
+}
+
+static
+void do_rget_const(struct quivm *qvm, uint64_t data)
+{
+    dstack_push(qvm, qvm->acc);
+    qvm->pc += (uint32_t) (data >> 32);
+    qvm->acc = qvm->rstack[(uint8_t) (qvm->rsp - 1 - ((uint32_t) data))];
+    DISPATCH(qvm);
+}
 
 /* Traces the code in a given address. */
 static
@@ -652,13 +693,46 @@ void tracer_trace(struct tracer *tr, uint32_t address)
     }
 
     if (insn < INSN_REG_BASE) {
+        uint32_t addr, max_addr;
+
         v = (uint32_t) (insn - INSN_LIT_BASE);
         if (v & 0x20) {
             /* sign-extend the literal value */
             v |= ~0x3F;
         }
-        pg->code[offset] = &do_lit;
-        pg->data[offset] = ((uint64_t) v) | (1UL << 32UL);
+
+        addr = address;
+        max_addr =  (pg_index + 1) * PAGE_SIZE;
+        while (++addr < max_addr) {
+            insn = qvm->mem[addr];
+            if (!(insn < INSN_LIT_BASE)) break;
+            v <<= 7;
+            v |= (uint32_t) insn;
+        }
+
+        addr++;
+        if (insn == INSN_JSR) {
+            pg->code[offset] = &do_jsr_const;
+            v += addr;
+        } else if (insn == INSN_JMP) {
+            pg->code[offset] = &do_jmp_const;
+            v += addr;
+        } else if (insn == INSN_JZ) {
+            pg->code[offset] = &do_jz_const;
+            v += addr;
+        } else if (insn == INSN_ADD) {
+            pg->code[offset] = &do_add_const;
+        } else if (insn == INSN_SUB) {
+            pg->code[offset] = &do_add_const;
+            v = -v;
+        } else if (insn == INSN_RGET) {
+            pg->code[offset] = &do_rget_const;
+        } else {
+            addr--;
+            pg->code[offset] = &do_lit;
+        }
+        pg->data[offset] = ((uint64_t) v)
+                         | (((uint64_t) (addr - address)) << 32UL);
         return;
     }
 
