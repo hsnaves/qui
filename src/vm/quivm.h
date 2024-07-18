@@ -110,7 +110,6 @@ typedef void (*quivm_write_cb)(struct quivm *qvm, void *arg,
 
 /* Structure for a QUI virtual machine */
 struct quivm {
-    void *tracer;                   /* pointer to the tracer data */
     void *jmpbuf;                   /* for handling exceptions */
 
     void *arg;                      /* extra argument for callbacks */
@@ -119,8 +118,6 @@ struct quivm {
 
     uint32_t *dstack, *rstack;      /* data and return stacks */
     uint8_t *mem;                   /* VM memory */
-
-    int use_tracer;                 /* boolean flag to use the tracer */
 
     uint32_t status;                /* The status of the VM */
     uint32_t selector;              /* The selector for internal registers */
@@ -131,6 +128,9 @@ struct quivm {
     uint32_t pc;                    /* program counter */
     uint32_t acc;                   /* accumulator */
     uint8_t dsp, rsp;               /* data and return stack pointers */
+
+    int use_tracer;                 /* boolean flag to use the tracer */
+    void *tracer[8];                /* space for the embedded tracer struct */
 };
 
 /* Functions */

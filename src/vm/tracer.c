@@ -1,10 +1,12 @@
+#include <stddef.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <setjmp.h>
 
-#include "quivm.h"
+#include "vm/quivm.h"
+#include "vm/internal.h"
 
 /* Constants for the tracer */
 #define PAGE_SIZE                     4096
@@ -29,13 +31,19 @@ struct node {
 
 /* Structure for the tracer */
 struct tracer {
-    struct page *traced[NUM_PAGES]; /* traced pages */
-    struct page *free;              /* free pages */
-    struct node *allocated;         /* allocated pages */
-    struct page *sentinel;          /* the sentinel for tracer */
-    struct quivm *qvm;              /* pointer to the VM */
+    struct page **traced;           /* traced pages */
+    struct page *free;              /* free pages (linked list) */
+    struct node *allocated;         /* allocated pages (linked list) */
+    struct page *sentinel;          /* the sentinel (only "do_trace" code) */
     int memory_error;               /* indicates lack of memory */
 };
+
+/* Helpful macros */
+#define get_tracer(qvm) \
+    ((struct tracer *) (((char *) (qvm)) + offsetof(struct quivm, tracer)))
+
+#define get_quivm(tr) \
+    ((struct quivm *) (((char *) (tr)) - offsetof(struct quivm, tracer)))
 
 /* Static declarations */
 static int tracer_allocate(struct tracer *tr);
@@ -43,50 +51,26 @@ static struct page *tracer_get_free_page(struct tracer *tr);
 static void do_trace(struct quivm *qvm, uint64_t data);
 static void tracer_trace(struct tracer *tr, uint32_t address);
 
-
 /* Functions */
 
-/* Destroys the tracer and release the resources. */
-void tracer_destroy(struct quivm *qvm)
-{
-    struct tracer *tr;
-
-    tr = (struct tracer *) qvm->tracer;
-    qvm->tracer = NULL;
-
-    if (tr) {
-        while (tr->allocated) {
-            struct node *next;
-            next = tr->allocated->next;
-            free(tr->allocated);
-            tr->allocated = next;
-        }
-
-        free(tr);
-    }
-}
-
-/* Initializes the tracer.
- * Returns zero on success.
- */
 int tracer_init(struct quivm *qvm)
 {
     struct tracer *tr;
     uint32_t i;
 
-    tr = (struct tracer *) malloc(sizeof(struct tracer));
-    if (!tr) {
-        fprintf(stderr, "vm/tracer: init: memory exhausted\n");
-        return 1;
-    }
-
-    memset(tr->traced, 0, NUM_PAGES * sizeof(struct page *));
+    tr = get_tracer(qvm);
+    tr->traced = NULL;
     tr->free = NULL;
     tr->allocated = NULL;
     tr->sentinel = NULL;
-    tr->qvm = qvm;
     tr->memory_error = 0;
-    qvm->tracer = tr;
+
+    tr->traced = (struct page **) malloc(NUM_PAGES * sizeof(struct page *));
+    if (!tr->traced) {
+        fprintf(stderr, "vm/tracer: init: memory exhausted\n");
+        return 1;
+    }
+    memset(tr->traced, 0, NUM_PAGES * sizeof(struct page *));
 
     if (tracer_allocate(tr)) {
         tracer_destroy(qvm);
@@ -101,15 +85,29 @@ int tracer_init(struct quivm *qvm)
     return 0;
 }
 
-/* Flushes the pages of the tracer cache */
-void tracer_invalidate(struct quivm *qvm,
-                       uint32_t istart, uint32_t iend)
+void tracer_destroy(struct quivm *qvm)
+{
+    struct tracer *tr;
+    tr = get_tracer(qvm);
+
+    if (tr->traced) free(tr->traced);
+    tr->traced = NULL;
+
+    while (tr->allocated) {
+        struct node *next;
+        next = tr->allocated->next;
+        free(tr->allocated);
+        tr->allocated = next;
+    }
+}
+
+void tracer_invalidate(struct quivm *qvm, uint32_t istart, uint32_t iend)
 {
     struct tracer *tr;
     uint32_t start_pg_index, end_pg_index;
     uint32_t pg_index;
 
-    tr = (struct tracer *) qvm->tracer;
+    tr = get_tracer(qvm);
     start_pg_index = istart / PAGE_SIZE;
     end_pg_index = 1 + ((iend - 1) / PAGE_SIZE);
 
@@ -153,7 +151,6 @@ int tracer_allocate(struct tracer *tr)
 
     allocated->next = tr->allocated;
     tr->allocated = allocated;
-
     return 0;
 }
 
@@ -169,8 +166,10 @@ struct page *tracer_get_free_page(struct tracer *tr)
 
     if (!tr->free) {
         if (tracer_allocate(tr)) {
+            struct quivm *qvm;
             tr->memory_error = 1;
-            quivm_raise(tr->qvm);
+            qvm = get_quivm(tr);
+            quivm_raise(qvm);
             return NULL; /* should never return */
         }
     }
@@ -187,19 +186,13 @@ struct page *tracer_get_free_page(struct tracer *tr)
     return pg;
 }
 
-/* Macros for stack operations */
-#define dstack_push(qvm, v) (qvm)->dstack[(qvm)->dsp++] = (v)
-#define rstack_push(qvm, v) (qvm)->rstack[(qvm)->rsp++] = (v)
-#define dstack_pop(qvm) ((qvm)->dstack[--(qvm)->dsp])
-#define rstack_pop(qvm) ((qvm)->rstack[--(qvm)->rsp])
-
 #define DISPATCH(qvm) \
 {                                                \
     struct tracer *tr;                           \
     struct page *pg;                             \
     uint32_t address, pg_index, offset;          \
                                                  \
-    tr = (struct tracer *) (qvm)->tracer;        \
+    tr = get_tracer(qvm);                        \
     address = (qvm)->pc % MEMORY_SIZE;           \
     pg_index = address / PAGE_SIZE;              \
     pg = tr->traced[pg_index];                   \
@@ -207,8 +200,6 @@ struct page *tracer_get_free_page(struct tracer *tr)
     pg->code[offset]((qvm), pg->data[offset]);   \
 }
 
-
-/* Runs the VM using the tracer */
 int tracer_run(struct quivm *qvm)
 {
     /* check if it has terminated */
@@ -219,7 +210,7 @@ int tracer_run(struct quivm *qvm)
     if (setjmp(((jmp_buf *) qvm->jmpbuf)[0])) {
         struct tracer *tr;
         qvm->status &= ~STS_JMPBUF;
-        tr = (struct tracer *) qvm->tracer;
+        tr = get_tracer(qvm);
         if (tr->memory_error) return 1;
         return tracer_run(qvm);
     }
@@ -644,7 +635,7 @@ void tracer_trace(struct tracer *tr, uint32_t address)
     uint32_t pg_index, offset, v;
     uint8_t insn;
 
-    qvm = tr->qvm;
+    qvm = get_quivm(tr);
     pg_index = address / PAGE_SIZE;
     pg = tr->traced[pg_index];
     if (pg == tr->sentinel) {

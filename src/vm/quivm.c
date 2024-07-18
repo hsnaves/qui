@@ -5,27 +5,7 @@
 #include <setjmp.h>
 
 #include "vm/quivm.h"
-
-/* Macros */
-#define BSWAP(n) ((uint32_t) ((((n) & 0xFFU) << 24) |  \
-                              (((n) & 0xFF00U) << 8) | \
-                              (((n) >> 8) & 0xFF00U) | \
-                              (((n) >> 24) & 0xFFU)))
-
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-#    define CONVERT_LE(n) (n)
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#    define CONVERT_LE(n) BSWAP(n)
-#else
-#    error "undefined endianness"
-#endif
-
-/* External tracer functions */
-extern int tracer_init(struct quivm *qvm);
-extern void tracer_destroy(struct quivm *qvm);
-extern void tracer_invalidate(struct quivm *qvm,
-                              uint32_t istart, uint32_t iend);
-extern int tracer_run(struct quivm *qvm);
+#include "vm/internal.h"
 
 /* Functions */
 
@@ -35,7 +15,13 @@ int quivm_init(struct quivm *qvm, int use_tracer)
     qvm->dstack = NULL;
     qvm->rstack = NULL;
     qvm->mem = NULL;
-    qvm->tracer = NULL;
+
+    if (tracer_init(qvm)) {
+        quivm_destroy(qvm);
+        fprintf(stderr, "vm/quivm: init: "
+                "could not initialize tracer\n");
+        return 1;
+    }
 
     qvm->jmpbuf = (void *) malloc(sizeof(jmp_buf));
     qvm->dstack = (uint32_t *) malloc(STACK_SIZE * sizeof(uint32_t));
@@ -53,13 +39,6 @@ int quivm_init(struct quivm *qvm, int use_tracer)
     qvm->read_cb = NULL;
     qvm->write_cb = NULL;
     qvm->use_tracer = use_tracer;
-
-    if (tracer_init(qvm)) {
-        quivm_destroy(qvm);
-        fprintf(stderr, "vm/quivm: init: "
-                "could not initialize tracer\n");
-        return 1;
-    }
 
     /* reset the memory, and the stacks (with -1) */
     memset(qvm->dstack, -1, STACK_SIZE * sizeof(uint32_t));
@@ -177,7 +156,7 @@ int quivm_run(struct quivm *qvm)
         }
 
         if (insn < INSN_REG_BASE) {
-            quivm_dstack_push(qvm, qvm->acc);
+            dstack_push(qvm, qvm->acc);
             qvm->acc = (uint32_t) (insn - INSN_LIT_BASE);
             if (qvm->acc & 0x20) {
                 /* sign-extend the literal value */
@@ -189,65 +168,65 @@ int quivm_run(struct quivm *qvm)
         /* process regular instructions */
         switch (insn) {
         case INSN_RET:
-            qvm->pc = quivm_rstack_pop(qvm);
+            qvm->pc = rstack_pop(qvm);
             break;
         case INSN_JSR:
-            quivm_rstack_push(qvm, qvm->pc);
+            rstack_push(qvm, qvm->pc);
             /* fall through */
         case INSN_JMP:
             qvm->pc += qvm->acc;
-            qvm->acc = quivm_dstack_pop(qvm);
+            qvm->acc = dstack_pop(qvm);
             break;
         case INSN_JZ:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             if (v == 0) qvm->pc += qvm->acc;
-            qvm->acc = quivm_dstack_pop(qvm);
+            qvm->acc = dstack_pop(qvm);
             break;
         case INSN_EQ0:
             qvm->acc = (0 == qvm->acc) ? -1 : 0;
             break;
         case INSN_EQ:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc = (v == qvm->acc) ? -1 : 0;
             break;
         case INSN_ULT:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc = (v < qvm->acc) ? -1 : 0;
             break;
         case INSN_LT:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc = (((int32_t) v) < ((int32_t) qvm->acc)) ? -1 : 0;
             break;
         case INSN_AND:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc &= v;
             break;
         case INSN_OR:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc |= v;
             break;
         case INSN_XOR:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc ^= v;
             break;
         case INSN_ADD:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc += v;
             break;
         case INSN_SUB:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc = v - qvm->acc;
             break;
         case INSN_CSEL:
-            v = quivm_dstack_pop(qvm);
-            w = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
+            w = dstack_pop(qvm);
             qvm->acc = (qvm->acc) ? v : w;
             break;
         case INSN_UMUL:
-            dw = (uint64_t) quivm_dstack_pop(qvm);
+            dw = (uint64_t) dstack_pop(qvm);
             dv = (uint64_t) qvm->acc;
             dv *= dw;
-            quivm_dstack_push(qvm, (uint32_t) dv);
+            dstack_push(qvm, (uint32_t) dv);
             qvm->acc = (uint32_t) (dv >> 32);
             break;
         case INSN_UDIV:
@@ -257,28 +236,28 @@ int quivm_run(struct quivm *qvm)
                 err_cond = EX_DIVIDE_BY_ZERO;
                 goto check_exception;
             }
-            v = quivm_dstack_pop(qvm);
-            quivm_dstack_push(qvm, (v % qvm->acc));
+            v = dstack_pop(qvm);
+            dstack_push(qvm, (v % qvm->acc));
             qvm->acc = v / qvm->acc;
             break;
         case INSN_RD:
             qvm->acc = quivm_read(qvm, qvm->acc);
             break;
         case INSN_WRT:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             quivm_write(qvm, qvm->acc, v);
-            qvm->acc = quivm_dstack_pop(qvm);
+            qvm->acc = dstack_pop(qvm);
             break;
         case INSN_RDB:
             qvm->acc = (uint32_t) quivm_read_byte(qvm, qvm->acc);
             break;
         case INSN_WRTB:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             quivm_write_byte(qvm, qvm->acc, v);
-            qvm->acc = quivm_dstack_pop(qvm);
+            qvm->acc = dstack_pop(qvm);
             break;
         case INSN_SIGNE:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             if (qvm->acc < 32) {
                 qvm->acc = 32 - qvm->acc;
                 v <<= qvm->acc;
@@ -288,65 +267,65 @@ int quivm_run(struct quivm *qvm)
             }
             break;
         case INSN_SHL:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc = (v << (qvm->acc & 0x1F));
             break;
         case INSN_USHR:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc = (v >> (qvm->acc & 0x1F));
             break;
         case INSN_SHR:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->acc = (((int32_t) v) >> (qvm->acc & 0x1F));
             break;
         case INSN_NOP:
             break;
         case INSN_DUP:
-            quivm_dstack_push(qvm, qvm->acc);
+            dstack_push(qvm, qvm->acc);
             break;
         case INSN_DROP:
-            qvm->acc = quivm_dstack_pop(qvm);
+            qvm->acc = dstack_pop(qvm);
             break;
         case INSN_SWAP:
-            v = quivm_dstack_pop(qvm);
-            quivm_dstack_push(qvm, qvm->acc);
+            v = dstack_pop(qvm);
+            dstack_push(qvm, qvm->acc);
             qvm->acc = v;
             break;
         case INSN_OVER:
-            v = quivm_dstack_pop(qvm);
-            quivm_dstack_push(qvm, v);
-            quivm_dstack_push(qvm, qvm->acc);
+            v = dstack_pop(qvm);
+            dstack_push(qvm, v);
+            dstack_push(qvm, qvm->acc);
             qvm->acc = v;
             break;
         case INSN_ROT:
-            v = quivm_dstack_pop(qvm);
-            w = quivm_dstack_pop(qvm);
-            quivm_dstack_push(qvm, v);
-            quivm_dstack_push(qvm, qvm->acc);
+            v = dstack_pop(qvm);
+            w = dstack_pop(qvm);
+            dstack_push(qvm, v);
+            dstack_push(qvm, qvm->acc);
             qvm->acc = w;
             break;
         case INSN_RTO:
-            quivm_rstack_push(qvm, qvm->acc);
-            qvm->acc = quivm_dstack_pop(qvm);
+            rstack_push(qvm, qvm->acc);
+            qvm->acc = dstack_pop(qvm);
             break;
         case INSN_RFROM:
-            quivm_dstack_push(qvm, qvm->acc);
-            qvm->acc = quivm_rstack_pop(qvm);
+            dstack_push(qvm, qvm->acc);
+            qvm->acc = rstack_pop(qvm);
             break;
         case INSN_RGET:
             qvm->acc = qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)];
             break;
         case INSN_RSET:
-            v = quivm_dstack_pop(qvm);
+            v = dstack_pop(qvm);
             qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)] = v;
-            qvm->acc = quivm_dstack_pop(qvm);
+            qvm->acc = dstack_pop(qvm);
             break;
         case INSN_INVL: /* fall through */
         default:
             qvm->pc--;
             err_cond = EX_INVALID_INSN;
 
-	check_exception:
+        check_exception:
             if (!(qvm->status & STS_OKAY)) {
                 fprintf(stderr, "vm/quivm: on_exception: "
                         "unhandled exception: %d at 0x%08X\n",
@@ -356,11 +335,11 @@ int quivm_run(struct quivm *qvm)
                 return 0;
             }
 
-            quivm_dstack_push(qvm, qvm->acc);
+            dstack_push(qvm, qvm->acc);
             qvm->acc = err_cond;
 
             /* rstack points to the faulting instruction */
-            quivm_rstack_push(qvm, qvm->pc);
+            rstack_push(qvm, qvm->pc);
             qvm->pc = INITIAL_PC;
             qvm->status &= ~STS_OKAY;
             break;
@@ -474,7 +453,7 @@ void aligned_write(struct quivm *qvm, uint32_t address, uint32_t v)
 
                 if ((qvm->status & (STS_RUNNING
                                     | STS_JMPBUF)) == STS_JMPBUF) {
-                    qvm->acc = quivm_dstack_pop(qvm);
+                    qvm->acc = dstack_pop(qvm);
                     quivm_raise(qvm);
                 }
                 break;
@@ -515,7 +494,7 @@ uint32_t quivm_read(struct quivm *qvm, uint32_t address)
     uint32_t v, shift;
 
     /* small optimization */
-    if (address <= MEMORY_SIZE - 4) {
+    if (address < MEMORY_SIZE - 3) {
         v = ((uint32_t *) &qvm->mem[address])[0];
         v = CONVERT_LE(v);
         return v;
@@ -539,7 +518,7 @@ void quivm_write(struct quivm *qvm, uint32_t address, uint32_t v)
     uint32_t w, shift, mask;
 
     /* small optimization */
-    if (address <= MEMORY_SIZE - 4) {
+    if (address < MEMORY_SIZE - 3) {
         v = CONVERT_LE(v);
         ((uint32_t *) &qvm->mem[address])[0] = v;
         return;
@@ -601,20 +580,20 @@ void quivm_write_byte(struct quivm *qvm, uint32_t address, uint8_t b)
 
 void quivm_dstack_push(struct quivm *qvm, uint32_t v)
 {
-    qvm->dstack[qvm->dsp++] = v;
+    dstack_push(qvm, v);
 }
 
 void quivm_rstack_push(struct quivm *qvm, uint32_t v)
 {
-    qvm->rstack[qvm->rsp++] = v;
+    rstack_push(qvm, v);
 }
 
 uint32_t quivm_dstack_pop(struct quivm *qvm)
 {
-    return qvm->dstack[--qvm->dsp];
+    return dstack_pop(qvm);
 }
 
 uint32_t quivm_rstack_pop(struct quivm *qvm)
 {
-    return qvm->rstack[--qvm->rsp];
+    return rstack_pop(qvm);
 }

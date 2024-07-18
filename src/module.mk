@@ -19,5 +19,5 @@ main.o: main.c vm/quivm.h dev/devio.h dev/console.h dev/storage.h \
 main-sdl.o: main-sdl.c vm/quivm.h dev/devio.h dev/console.h dev/storage.h \
  dev/network.h dev/rtclock.h dev/display.h dev/audio.h dev/keyboard.h \
  dev/timer.h
-vm/quivm.o: vm/quivm.c vm/quivm.h
-vm/tracer.o: vm/tracer.c vm/quivm.h
+vm/quivm.o: vm/quivm.c vm/quivm.h vm/internal.h
+vm/tracer.o: vm/tracer.c vm/quivm.h vm/internal.h
