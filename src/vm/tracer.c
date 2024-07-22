@@ -34,7 +34,7 @@ struct tracer {
     struct page **traced;           /* traced pages */
     struct page *free;              /* free pages (linked list) */
     struct node *allocated;         /* allocated pages (linked list) */
-    struct page *sentinel;          /* the sentinel (only "do_trace" code) */
+    struct page *sentinel;          /* the sentinel (only "do_TRACE" code) */
     int memory_error;               /* indicates lack of memory */
 };
 
@@ -48,7 +48,7 @@ struct tracer {
 /* Static declarations */
 static int tracer_allocate(struct tracer *tr);
 static struct page *tracer_get_free_page(struct tracer *tr);
-static void do_trace(struct quivm *qvm, uint64_t data);
+static void do_TRACE(struct quivm *qvm, uint64_t data);
 static void tracer_trace(struct tracer *tr, uint32_t address);
 
 /* Functions */
@@ -180,25 +180,82 @@ struct page *tracer_get_free_page(struct tracer *tr)
 
     /* Initialize the page with code for tracing */
     for (i = 0; i < PAGE_SIZE; i++)
-        pg->code[i] = &do_trace;
+        pg->code[i] = &do_TRACE;
 
     memset(pg->data, 0, PAGE_SIZE * sizeof(uint64_t));
     return pg;
 }
 
-#define DISPATCH(qvm) \
+/* Macros for stack operations */
+#define dstack_push(qvm, v) (qvm)->dstack[(qvm)->dsp++] = (v)
+#define rstack_push(qvm, v) (qvm)->rstack[(qvm)->rsp++] = (v)
+#define dstack_pop(qvm) ((qvm)->dstack[--(qvm)->dsp])
+#define rstack_pop(qvm) ((qvm)->rstack[--(qvm)->rsp])
+
+/* Other macros */
+#define PROLOGUE(insn) \
+    static void do_ ## insn(struct quivm *qvm, uint64_t data)
+#define EPILOGUE
+#define UNUSED_DATA (void)(data)
+#define DISPATCH \
 {                                                \
     struct tracer *tr;                           \
     struct page *pg;                             \
     uint32_t address, pg_index, offset;          \
                                                  \
     tr = get_tracer(qvm);                        \
-    address = (qvm)->pc % MEMORY_SIZE;           \
+    address = qvm->pc % MEMORY_SIZE;             \
     pg_index = address / PAGE_SIZE;              \
     pg = tr->traced[pg_index];                   \
     offset = address % PAGE_SIZE;                \
-    pg->code[offset]((qvm), pg->data[offset]);   \
+    pg->code[offset](qvm, pg->data[offset]);     \
 }
+#define XT(insn) &do_ ## insn
+
+#define ALL_INSNS(MACRO) \
+    MACRO(TRACE) \
+    MACRO(EXCEPTION) \
+    MACRO(LIT) \
+    MACRO(LITS) \
+    MACRO(RET) \
+    MACRO(JSR) \
+    MACRO(JMP) \
+    MACRO(JZ) \
+    MACRO(EQ0) \
+    MACRO(EQ) \
+    MACRO(ULT) \
+    MACRO(LT) \
+    MACRO(AND) \
+    MACRO(OR) \
+    MACRO(XOR) \
+    MACRO(ADD) \
+    MACRO(SUB) \
+    MACRO(CSEL) \
+    MACRO(UMUL) \
+    MACRO(UDIV) \
+    MACRO(RD) \
+    MACRO(WRT) \
+    MACRO(RDB) \
+    MACRO(WRTB) \
+    MACRO(SIGNE) \
+    MACRO(SHL) \
+    MACRO(USHR) \
+    MACRO(SHR) \
+    MACRO(NOP) \
+    MACRO(DUP) \
+    MACRO(DROP) \
+    MACRO(SWAP) \
+    MACRO(OVER) \
+    MACRO(ROT) \
+    MACRO(RTO) \
+    MACRO(RFROM) \
+    MACRO(RGET) \
+    MACRO(RSET) \
+    MACRO(JSR_CONST) \
+    MACRO(JMP_CONST) \
+    MACRO(JZ_CONST) \
+    MACRO(ADD_CONST) \
+    MACRO(RGET_CONST)
 
 int tracer_run(struct quivm *qvm)
 {
@@ -215,23 +272,22 @@ int tracer_run(struct quivm *qvm)
         return tracer_run(qvm);
     }
 
-    DISPATCH(qvm);
+    DISPATCH;
     return 0;
 }
 
 
 /* Implementation of the trace operations */
 
-static
-void do_trace(struct quivm *qvm, uint64_t data)
+PROLOGUE(TRACE)
 {
-    (void)(data); /* UNUSED */
-    tracer_trace((struct tracer *) qvm->tracer, qvm->pc);
-    DISPATCH(qvm);
+    UNUSED_DATA;
+    tracer_trace(get_tracer(qvm), qvm->pc);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_exception(struct quivm *qvm, uint64_t data)
+PROLOGUE(EXCEPTION)
 {
     int err_cond;
 
@@ -251,169 +307,169 @@ void do_exception(struct quivm *qvm, uint64_t data)
         qvm->pc = INITIAL_PC;
         qvm->status &= ~STS_OKAY;
     }
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_lit(struct quivm *qvm, uint64_t data)
+PROLOGUE(LIT)
 {
     dstack_push(qvm, qvm->acc);
     qvm->acc = (uint32_t) data;
     qvm->pc += (uint32_t) (data >> 32);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_lits(struct quivm *qvm, uint64_t data)
+PROLOGUE(LITS)
 {
     qvm->acc <<= 7;
     qvm->acc |= (uint32_t) data;
     qvm->pc += (uint32_t) (data >> 32);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_ret(struct quivm *qvm, uint64_t data)
+PROLOGUE(RET)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc = rstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_jsr(struct quivm *qvm, uint64_t data)
+PROLOGUE(JSR)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     rstack_push(qvm, ++qvm->pc);
     qvm->pc += qvm->acc;
     qvm->acc = dstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_jmp(struct quivm *qvm, uint64_t data)
+PROLOGUE(JMP)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc += qvm->acc + 1;
     qvm->acc = dstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_jz(struct quivm *qvm, uint64_t data)
+PROLOGUE(JZ)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     if (v == 0) qvm->pc += qvm->acc;
     qvm->acc = dstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_eq0(struct quivm *qvm, uint64_t data)
+PROLOGUE(EQ0)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->acc = (0 == qvm->acc) ? -1 : 0;
     qvm->pc++;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_eq(struct quivm *qvm, uint64_t data)
+PROLOGUE(EQ)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     qvm->acc = (v == qvm->acc) ? -1 : 0;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_ult(struct quivm *qvm, uint64_t data)
+PROLOGUE(ULT)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     qvm->acc = (v < qvm->acc) ? -1 : 0;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_lt(struct quivm *qvm, uint64_t data)
+PROLOGUE(LT)
 {
     int32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = (int32_t) dstack_pop(qvm);
     qvm->acc = (v < ((int32_t) qvm->acc)) ? -1 : 0;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_and(struct quivm *qvm, uint64_t data)
+PROLOGUE(AND)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     qvm->acc &= v;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_or(struct quivm *qvm, uint64_t data)
+PROLOGUE(OR)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     qvm->acc |= v;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_xor(struct quivm *qvm, uint64_t data)
+PROLOGUE(XOR)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     qvm->acc ^= v;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_add(struct quivm *qvm, uint64_t data)
+PROLOGUE(ADD)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     qvm->acc += v;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_sub(struct quivm *qvm, uint64_t data)
+PROLOGUE(SUB)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     qvm->acc = v - qvm->acc;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_csel(struct quivm *qvm, uint64_t data)
+PROLOGUE(CSEL)
 {
     uint32_t v, w;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm); w = dstack_pop(qvm);
     qvm->acc = (qvm->acc) ? v : w;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_umul(struct quivm *qvm, uint64_t data)
+PROLOGUE(UMUL)
 {
     uint64_t dv, dw;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
 
     qvm->pc++;
     dw = (uint64_t) dstack_pop(qvm);
@@ -421,71 +477,71 @@ void do_umul(struct quivm *qvm, uint64_t data)
     dv *= dw;
     dstack_push(qvm, (uint32_t) dv);
     qvm->acc = (uint32_t) (dv >> 32);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_udiv(struct quivm *qvm, uint64_t data)
+PROLOGUE(UDIV)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
 
     /* check for division by zero */
     if (qvm->acc == 0) {
-        do_exception(qvm, EX_DIVIDE_BY_ZERO);
+        do_EXCEPTION(qvm, EX_DIVIDE_BY_ZERO);
     } else {
         qvm->pc++; v = dstack_pop(qvm);
         dstack_push(qvm, (v % qvm->acc));
         qvm->acc = v / qvm->acc;
     }
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_rd(struct quivm *qvm, uint64_t data)
+PROLOGUE(RD)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++;
     qvm->acc = quivm_read(qvm, qvm->acc);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_wrt(struct quivm *qvm, uint64_t data)
+PROLOGUE(WRT)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     quivm_write(qvm, qvm->acc, v);
     qvm->acc = dstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_rdb(struct quivm *qvm, uint64_t data)
+PROLOGUE(RDB)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++;
     qvm->acc = (uint32_t) quivm_read_byte(qvm, qvm->acc);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_wrtb(struct quivm *qvm, uint64_t data)
+PROLOGUE(WRTB)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     quivm_write_byte(qvm, qvm->acc, v);
     qvm->acc = dstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_signe(struct quivm *qvm, uint64_t data)
+PROLOGUE(SIGNE)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     if (qvm->acc < 32) {
         qvm->acc = 32 - qvm->acc;
@@ -494,178 +550,179 @@ void do_signe(struct quivm *qvm, uint64_t data)
     } else {
         qvm->acc = v;
     }
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_shl(struct quivm *qvm, uint64_t data)
+PROLOGUE(SHL)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     qvm->acc = (v << (qvm->acc & 0x1F));
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_ushr(struct quivm *qvm, uint64_t data)
+PROLOGUE(USHR)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     qvm->acc = (v >> (qvm->acc & 0x1F));
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_shr(struct quivm *qvm, uint64_t data)
+PROLOGUE(SHR)
 {
     int32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = (int32_t) dstack_pop(qvm);
     qvm->acc = (uint32_t) (v >> (qvm->acc & 0x1F));
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_nop(struct quivm *qvm, uint64_t data)
+PROLOGUE(NOP)
 {
     qvm->pc += (uint32_t) (data >> 32);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_dup(struct quivm *qvm, uint64_t data)
+PROLOGUE(DUP)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++;
     dstack_push(qvm, qvm->acc);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_drop(struct quivm *qvm, uint64_t data)
+PROLOGUE(DROP)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++;
     qvm->acc = dstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_swap(struct quivm *qvm, uint64_t data)
+PROLOGUE(SWAP)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     dstack_push(qvm, qvm->acc);
     qvm->acc = v;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_over(struct quivm *qvm, uint64_t data)
+PROLOGUE(OVER)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     dstack_push(qvm, v);
     dstack_push(qvm, qvm->acc);
     qvm->acc = v;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_rot(struct quivm *qvm, uint64_t data)
+PROLOGUE(ROT)
 {
     uint32_t v, w;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm); w = dstack_pop(qvm);
     dstack_push(qvm, v);
     dstack_push(qvm, qvm->acc);
     qvm->acc = w;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_rto(struct quivm *qvm, uint64_t data)
+PROLOGUE(RTO)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; rstack_push(qvm, qvm->acc);
     qvm->acc = dstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_rfrom(struct quivm *qvm, uint64_t data)
+PROLOGUE(RFROM)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; dstack_push(qvm, qvm->acc);
     qvm->acc = rstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_rget(struct quivm *qvm, uint64_t data)
+PROLOGUE(RGET)
 {
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++;
     qvm->acc = qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)];
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_rset(struct quivm *qvm, uint64_t data)
+PROLOGUE(RSET)
 {
     uint32_t v;
-    (void)(data); /* UNUSED */
+    UNUSED_DATA;
     qvm->pc++; v = dstack_pop(qvm);
     qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)] = v;
     qvm->acc = dstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_jsr_const(struct quivm *qvm, uint64_t data)
+PROLOGUE(JSR_CONST)
 {
     qvm->pc += (uint32_t) (data >> 32);
     rstack_push(qvm, qvm->pc);
     qvm->pc = (uint32_t) data;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_jmp_const(struct quivm *qvm, uint64_t data)
+PROLOGUE(JMP_CONST)
 {
     qvm->pc = (uint32_t) data;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_jz_const(struct quivm *qvm, uint64_t data)
+PROLOGUE(JZ_CONST)
 {
     qvm->pc += (uint32_t) (data >> 32);
     if (qvm->acc == 0) qvm->pc = (uint32_t) data;
     qvm->acc = dstack_pop(qvm);
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_add_const(struct quivm *qvm, uint64_t data)
+PROLOGUE(ADD_CONST)
 {
     qvm->pc += (uint32_t) (data >> 32);
     qvm->acc += (uint32_t) data;
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
-static
-void do_rget_const(struct quivm *qvm, uint64_t data)
+PROLOGUE(RGET_CONST)
 {
     dstack_push(qvm, qvm->acc);
     qvm->pc += (uint32_t) (data >> 32);
     qvm->acc = qvm->rstack[(uint8_t) (qvm->rsp - 1 - ((uint32_t) data))];
-    DISPATCH(qvm);
+    DISPATCH;
 }
+EPILOGUE
 
 /* Traces the code in a given address. */
 static
@@ -687,7 +744,7 @@ void tracer_trace(struct tracer *tr, uint32_t address)
 
     insn = qvm->mem[address];
     if (insn < INSN_LIT_BASE) {
-        pg->code[offset] = &do_lits;
+        pg->code[offset] = XT(LITS);
         pg->data[offset] = ((uint64_t) insn) | (1UL << 32UL);
         return;
     }
@@ -712,24 +769,24 @@ void tracer_trace(struct tracer *tr, uint32_t address)
 
         addr++;
         if (insn == INSN_JSR) {
-            pg->code[offset] = &do_jsr_const;
+            pg->code[offset] = XT(JSR_CONST);
             v += addr;
         } else if (insn == INSN_JMP) {
-            pg->code[offset] = &do_jmp_const;
+            pg->code[offset] = XT(JMP_CONST);
             v += addr;
         } else if (insn == INSN_JZ) {
-            pg->code[offset] = &do_jz_const;
+            pg->code[offset] = XT(JZ_CONST);
             v += addr;
         } else if (insn == INSN_ADD) {
-            pg->code[offset] = &do_add_const;
+            pg->code[offset] = XT(ADD_CONST);
         } else if (insn == INSN_SUB) {
-            pg->code[offset] = &do_add_const;
+            pg->code[offset] = XT(ADD_CONST);
             v = -v;
         } else if (insn == INSN_RGET) {
-            pg->code[offset] = &do_rget_const;
+            pg->code[offset] = XT(RGET_CONST);
         } else {
             addr--;
-            pg->code[offset] = &do_lit;
+            pg->code[offset] = XT(LIT);
         }
         pg->data[offset] = ((uint64_t) v)
                          | (((uint64_t) (addr - address)) << 32UL);
@@ -739,43 +796,43 @@ void tracer_trace(struct tracer *tr, uint32_t address)
     /* process regular instructions */
     pg->data[offset] = (1UL << 32UL);
     switch (insn) {
-    case INSN_RET:   pg->code[offset] = &do_ret;     break;
-    case INSN_JSR:   pg->code[offset] = &do_jsr;     break;
-    case INSN_JMP:   pg->code[offset] = &do_jmp;     break;
-    case INSN_JZ:    pg->code[offset] = &do_jz;      break;
-    case INSN_EQ0:   pg->code[offset] = &do_eq0;     break;
-    case INSN_EQ:    pg->code[offset] = &do_eq;      break;
-    case INSN_ULT:   pg->code[offset] = &do_ult;     break;
-    case INSN_LT:    pg->code[offset] = &do_lt;      break;
-    case INSN_AND:   pg->code[offset] = &do_and;     break;
-    case INSN_OR:    pg->code[offset] = &do_or;      break;
-    case INSN_XOR:   pg->code[offset] = &do_xor;     break;
-    case INSN_ADD:   pg->code[offset] = &do_add;     break;
-    case INSN_SUB:   pg->code[offset] = &do_sub;     break;
-    case INSN_CSEL:  pg->code[offset] = &do_csel;    break;
-    case INSN_UMUL:  pg->code[offset] = &do_umul;    break;
-    case INSN_UDIV:  pg->code[offset] = &do_udiv;    break;
-    case INSN_RD:    pg->code[offset] = &do_rd;      break;
-    case INSN_WRT:   pg->code[offset] = &do_wrt;     break;
-    case INSN_RDB:   pg->code[offset] = &do_rdb;     break;
-    case INSN_WRTB:  pg->code[offset] = &do_wrtb;    break;
-    case INSN_SIGNE: pg->code[offset] = &do_signe;   break;
-    case INSN_SHL:   pg->code[offset] = &do_shl;     break;
-    case INSN_USHR:  pg->code[offset] = &do_ushr;    break;
-    case INSN_SHR:   pg->code[offset] = &do_shr;     break;
-    case INSN_NOP:   pg->code[offset] = &do_nop;     break;
-    case INSN_DUP:   pg->code[offset] = &do_dup;     break;
-    case INSN_DROP:  pg->code[offset] = &do_drop;    break;
-    case INSN_SWAP:  pg->code[offset] = &do_swap;    break;
-    case INSN_OVER:  pg->code[offset] = &do_over;    break;
-    case INSN_ROT:   pg->code[offset] = &do_rot;     break;
-    case INSN_RTO:   pg->code[offset] = &do_rto;     break;
-    case INSN_RFROM: pg->code[offset] = &do_rfrom;   break;
-    case INSN_RGET:  pg->code[offset] = &do_rget;    break;
-    case INSN_RSET:  pg->code[offset] = &do_rset;    break;
+    case INSN_RET:   pg->code[offset] = XT(RET);     break;
+    case INSN_JSR:   pg->code[offset] = XT(JSR);     break;
+    case INSN_JMP:   pg->code[offset] = XT(JMP);     break;
+    case INSN_JZ:    pg->code[offset] = XT(JZ);      break;
+    case INSN_EQ0:   pg->code[offset] = XT(EQ0);     break;
+    case INSN_EQ:    pg->code[offset] = XT(EQ);      break;
+    case INSN_ULT:   pg->code[offset] = XT(ULT);     break;
+    case INSN_LT:    pg->code[offset] = XT(LT);      break;
+    case INSN_AND:   pg->code[offset] = XT(AND);     break;
+    case INSN_OR:    pg->code[offset] = XT(OR);      break;
+    case INSN_XOR:   pg->code[offset] = XT(XOR);     break;
+    case INSN_ADD:   pg->code[offset] = XT(ADD);     break;
+    case INSN_SUB:   pg->code[offset] = XT(SUB);     break;
+    case INSN_CSEL:  pg->code[offset] = XT(CSEL);    break;
+    case INSN_UMUL:  pg->code[offset] = XT(UMUL);    break;
+    case INSN_UDIV:  pg->code[offset] = XT(UDIV);    break;
+    case INSN_RD:    pg->code[offset] = XT(RD);      break;
+    case INSN_WRT:   pg->code[offset] = XT(WRT);     break;
+    case INSN_RDB:   pg->code[offset] = XT(RDB);     break;
+    case INSN_WRTB:  pg->code[offset] = XT(WRTB);    break;
+    case INSN_SIGNE: pg->code[offset] = XT(SIGNE);   break;
+    case INSN_SHL:   pg->code[offset] = XT(SHL);     break;
+    case INSN_USHR:  pg->code[offset] = XT(USHR);    break;
+    case INSN_SHR:   pg->code[offset] = XT(SHR);     break;
+    case INSN_NOP:   pg->code[offset] = XT(NOP);     break;
+    case INSN_DUP:   pg->code[offset] = XT(DUP);     break;
+    case INSN_DROP:  pg->code[offset] = XT(DROP);    break;
+    case INSN_SWAP:  pg->code[offset] = XT(SWAP);    break;
+    case INSN_OVER:  pg->code[offset] = XT(OVER);    break;
+    case INSN_ROT:   pg->code[offset] = XT(ROT);     break;
+    case INSN_RTO:   pg->code[offset] = XT(RTO);     break;
+    case INSN_RFROM: pg->code[offset] = XT(RFROM);   break;
+    case INSN_RGET:  pg->code[offset] = XT(RGET);    break;
+    case INSN_RSET:  pg->code[offset] = XT(RSET);    break;
     case INSN_INVL: /* fall through */
     default:
-        pg->code[offset] = &do_exception;
+        pg->code[offset] = XT(EXCEPTION);
         pg->data[offset] = EX_INVALID_INSN;
         break;
     }

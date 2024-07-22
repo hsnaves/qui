@@ -19,12 +19,6 @@
 #    error "undefined endianness"
 #endif
 
-/* Macros for stack operations */
-#define dstack_push(qvm, v) (qvm)->dstack[(qvm)->dsp++] = (v)
-#define rstack_push(qvm, v) (qvm)->rstack[(qvm)->rsp++] = (v)
-#define dstack_pop(qvm) ((qvm)->dstack[--(qvm)->dsp])
-#define rstack_pop(qvm) ((qvm)->rstack[--(qvm)->rsp])
-
 /* Functions */
 
 /* Initializes the tracer.

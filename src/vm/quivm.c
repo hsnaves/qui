@@ -7,6 +7,12 @@
 #include "vm/quivm.h"
 #include "vm/internal.h"
 
+/* Macros for stack operations */
+#define dstack_push(qvm, v) (qvm)->dstack[(qvm)->dsp++] = (v)
+#define rstack_push(qvm, v) (qvm)->rstack[(qvm)->rsp++] = (v)
+#define dstack_pop(qvm) ((qvm)->dstack[--(qvm)->dsp])
+#define rstack_pop(qvm) ((qvm)->rstack[--(qvm)->rsp])
+
 /* Functions */
 
 int quivm_init(struct quivm *qvm, int use_tracer)
