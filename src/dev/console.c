@@ -31,7 +31,7 @@ int console_init(struct console *cns)
     tcgetattr(STDIN_FILENO, &ci->old_state);
     cns->internal = (void *) ci;
 
-    cns->channel = (CONSOLE_FLAGS_ECHO | CONSOLE_FLAGS_CANONICAL);
+    cns->channel = 0;
     console_configure(cns, 0, NULL, NULL);
     return 0;
 }
@@ -74,7 +74,7 @@ uint32_t console_read_callback(struct console *cns,
             FD_ZERO(&rfds);
             FD_SET(STDIN_FILENO, &rfds);
             tv.tv_sec = 0;
-            tv.tv_usec = 1000;
+            tv.tv_usec = 50000;
             ret = select(1, &rfds, NULL, NULL, &tv);
 
             if (ret > 0) {
@@ -82,12 +82,14 @@ uint32_t console_read_callback(struct console *cns,
                 ret = read(STDIN_FILENO, &v, 1);
                 if (ret <= 0) v = -1;
             } else {
-                /* halt the machine until it has data */
-                qvm->status &= ~(STS_RUNNING);
-                qvm->status |= (STS_WAITING);
-                if (qvm->status & STS_JMPBUF) {
-                    qvm->pc--; /* rewind the PC */
-                    quivm_raise(qvm);
+                if (!(cns->channel & CONSOLE_FLAGS_NOWAIT)) {
+                    /* halt the machine until it has data */
+                    qvm->status &= ~(STS_RUNNING);
+                    qvm->status |= (STS_WAITING);
+                    if (qvm->status & STS_JMPBUF) {
+                        qvm->pc--; /* rewind the PC */
+                        quivm_raise(qvm);
+                    }
                 }
                 v = -1;
             }
@@ -145,9 +147,23 @@ void update_channel(struct console *cns, uint32_t v)
         /* change the terminal state according to the flags */
         ci = (struct cns_internal *) cns->internal;
         new_state = ci->old_state;
-        new_state.c_lflag &= ~(ICANON | ECHO);
-        if (v & CONSOLE_FLAGS_ECHO) new_state.c_lflag |= ECHO;
-        if (v & CONSOLE_FLAGS_CANONICAL) new_state.c_lflag |= ICANON;
+
+        if (v & CONSOLE_FLAGS_NOECHO) {
+            new_state.c_lflag &= ~(ECHO);
+        } else {
+            new_state.c_lflag |= ECHO;
+        }
+
+        if (v & CONSOLE_FLAGS_RAW) {
+            new_state.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+            new_state.c_oflag &= ~(OPOST);
+            new_state.c_lflag &= ~(ICANON | IEXTEN | ISIG);
+        } else {
+            new_state.c_iflag |= (BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+            new_state.c_oflag |= (OPOST);
+            new_state.c_lflag |= (ICANON | IEXTEN | ISIG);
+        }
+
         tcsetattr(STDIN_FILENO, TCSANOW, &new_state);
     }
     cns->channel = v;

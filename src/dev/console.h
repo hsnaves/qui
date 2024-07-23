@@ -23,8 +23,9 @@
 #define CONSOLE_ICHANNEL_STDIN    (0 << 8)
 #define CONSOLE_ICHANNEL_ARGS     (1 << 8)
 #define CONSOLE_ICHANNEL_ENV      (2 << 8)
-#define CONSOLE_FLAGS_ECHO       (1 << 16)
-#define CONSOLE_FLAGS_CANONICAL  (1 << 17)
+#define CONSOLE_FLAGS_NOECHO     (1 << 16)
+#define CONSOLE_FLAGS_RAW        (1 << 17)
+#define CONSOLE_FLAGS_NOWAIT     (1 << 18)
 
 /* Data structures and types */
 /* A structure representing the console device */
