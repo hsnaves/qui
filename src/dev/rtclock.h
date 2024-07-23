@@ -53,4 +53,4 @@ uint32_t rtclock_read_callback(struct rtclock *rtc,
 void rtclock_write_callback(struct rtclock *rtc, struct quivm *qvm,
                             uint32_t address, uint32_t v);
 
-#endif
+#endif /* !defined(__DEV_RTCLOCK_H) */

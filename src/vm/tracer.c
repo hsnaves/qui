@@ -8,19 +8,150 @@
 #include "vm/quivm.h"
 #include "vm/internal.h"
 
+/* The dispatch methods are
+ * 0 -> switch
+ * 1 -> computed gotos (threaded)
+ * 2 -> functions with tail call (threaded)
+ */
+#ifndef DISPATCH_METHOD
+#define DISPATCH_METHOD 0
+#endif
+
+/* computed gotos are only used when __GNUC__ is defined */
+#if !defined(__GNUC__) && (DISPATCH_METHOD == 1)
+#define DISPATCH_METHOD 2
+#endif
+
 /* Constants for the tracer */
 #define PAGE_SIZE                     4096
 #define NUM_PAGES  (MEMORY_SIZE/PAGE_SIZE)
 #define NUM_ALLOC_PAGES                 16
 
-/* Data structures and types */
+/* Constants for other instructions */
+#define INSN_BASE                     0xB0
+#define INSN_TRACE                    0xB0
+#define INSN_EXCEPTION                0xB1
+#define INSN_JSR_CONST                0xB2
+#define INSN_JMP_CONST                0xB3
+#define INSN_JZ_CONST                 0xB4
+#define INSN_ADD_CONST                0xB5
+#define INSN_RGET_CONST               0xB6
+#define INSN_LIT                      0xBE
+#define INSN_LITS                     0xBF
+#define NUM_INSN ((INSN_RSET+1)-INSN_BASE)
+
+/* Macro for list of instructions */
+#define INSN_TABLE(MACRO) \
+    MACRO(TRACE) \
+    MACRO(EXCEPTION) \
+    MACRO(JSR_CONST) \
+    MACRO(JMP_CONST) \
+    MACRO(JZ_CONST) \
+    MACRO(ADD_CONST) \
+    MACRO(RGET_CONST) \
+    MACRO(TRACE) \
+    MACRO(TRACE) \
+    MACRO(TRACE) \
+    MACRO(TRACE) \
+    MACRO(TRACE) \
+    MACRO(TRACE) \
+    MACRO(TRACE) \
+    MACRO(LIT) \
+    MACRO(LITS) \
+    MACRO(RET) \
+    MACRO(JSR) \
+    MACRO(JMP) \
+    MACRO(JZ) \
+    MACRO(EQ0) \
+    MACRO(EQ) \
+    MACRO(ULT) \
+    MACRO(LT) \
+    MACRO(AND) \
+    MACRO(OR) \
+    MACRO(XOR) \
+    MACRO(ADD) \
+    MACRO(SUB) \
+    MACRO(CSEL) \
+    MACRO(UMUL) \
+    MACRO(UDIV) \
+    MACRO(RD) \
+    MACRO(WRT) \
+    MACRO(RDB) \
+    MACRO(WRTB) \
+    MACRO(SIGNE) \
+    MACRO(SHL) \
+    MACRO(USHR) \
+    MACRO(SHR) \
+    MACRO(NOP) \
+    MACRO(DUP) \
+    MACRO(DROP) \
+    MACRO(SWAP) \
+    MACRO(OVER) \
+    MACRO(ROT) \
+    MACRO(RTO) \
+    MACRO(RFROM) \
+    MACRO(RGET) \
+    MACRO(RSET)
+
+#if DISPATCH_METHOD == 0 /* switch */
 
 /* Callback function to run the traced code. */
-typedef void (*run_trace_cb)(struct quivm *qvm, uint64_t data);
+typedef uint8_t trace_code;
+
+/* Macros for stack operations */
+#define dstack_push(v) qvm->dstack[qvm->dsp++] = (v)
+#define rstack_push(v) qvm->rstack[qvm->rsp++] = (v)
+#define dstack_pop() qvm->dstack[--qvm->dsp]
+#define rstack_pop() qvm->rstack[--qvm->rsp]
+
+/* Other macros */
+#define PROLOGUE(insn) case (INSN_ ## insn - INSN_BASE):
+#define EPILOGUE       break;
+#define UNUSED_DATA
+#define DISPATCH       continue;
+
+#elif DISPATCH_METHOD == 1 /* computed gotos */
+
+#elif DISPATCH_METHOD == 2 /* functions (tail call) */
+
+/* Callback function to run the traced code. */
+typedef void (*trace_code)(struct quivm *qvm, uint64_t data);
+
+/* Macros for stack operations */
+#define dstack_push(v) qvm->dstack[qvm->dsp++] = (v)
+#define rstack_push(v) qvm->rstack[qvm->rsp++] = (v)
+#define dstack_pop() qvm->dstack[--qvm->dsp]
+#define rstack_pop() qvm->rstack[--qvm->rsp]
+
+/* Other macros */
+#define PROLOGUE(insn) \
+    static void do_ ## insn(struct quivm *qvm, uint64_t data)
+#define EPILOGUE
+#define UNUSED_DATA (void)(data)
+#define DISPATCH \
+{                                                \
+    struct tracer *tr;                           \
+    struct page *pg;                             \
+    uint32_t address, pg_index, offset;          \
+                                                 \
+    tr = get_tracer(qvm);                        \
+    address = qvm->pc % MEMORY_SIZE;             \
+    pg_index = address / PAGE_SIZE;              \
+    pg = tr->traced[pg_index];                   \
+    offset = address % PAGE_SIZE;                \
+    pg->code[offset](qvm, pg->data[offset]);     \
+}
+
+#else /* DISPATCH_METHOD > 2 */
+#error "invalid dispatch method"
+#endif
+
+
+/* Data structures and types */
 
 /* Structure representing a page of the traced code */
 struct page {
-    run_trace_cb code[PAGE_SIZE];   /* translated code */
+    trace_code code[PAGE_SIZE];     /* translated code */
     uint64_t data[PAGE_SIZE];       /* translated code data */
 };
 
@@ -34,7 +165,8 @@ struct tracer {
     struct page **traced;           /* traced pages */
     struct page *free;              /* free pages (linked list) */
     struct node *allocated;         /* allocated pages (linked list) */
-    struct page *sentinel;          /* the sentinel (only "do_TRACE" code) */
+    struct page *sentinel;          /* the sentinel (only "TRACE" code) */
+    trace_code *ctable;             /* table of codes */
     int memory_error;               /* indicates lack of memory */
 };
 
@@ -48,7 +180,7 @@ struct tracer {
 /* Static declarations */
 static int tracer_allocate(struct tracer *tr);
 static struct page *tracer_get_free_page(struct tracer *tr);
-static void do_TRACE(struct quivm *qvm, uint64_t data);
+static void tracer_populate_ctable(struct tracer *tr);
 static void tracer_trace(struct tracer *tr, uint32_t address);
 
 /* Functions */
@@ -63,14 +195,17 @@ int tracer_init(struct quivm *qvm)
     tr->free = NULL;
     tr->allocated = NULL;
     tr->sentinel = NULL;
+    tr->ctable = NULL;
     tr->memory_error = 0;
 
     tr->traced = (struct page **) malloc(NUM_PAGES * sizeof(struct page *));
-    if (!tr->traced) {
+    tr->ctable = (trace_code *) malloc(NUM_INSN * sizeof(trace_code));
+    if (!tr->traced || !tr->ctable) {
         fprintf(stderr, "vm/tracer: init: memory exhausted\n");
         return 1;
     }
     memset(tr->traced, 0, NUM_PAGES * sizeof(struct page *));
+    memset(tr->ctable, 0, NUM_INSN * sizeof(trace_code));
 
     if (tracer_allocate(tr)) {
         tracer_destroy(qvm);
@@ -78,6 +213,7 @@ int tracer_init(struct quivm *qvm)
         return 1;
     }
 
+    tracer_populate_ctable(tr);
     tr->sentinel = tracer_get_free_page(tr);
     for (i = 0; i < NUM_PAGES; i++)
         tr->traced[i] = tr->sentinel;
@@ -92,6 +228,9 @@ void tracer_destroy(struct quivm *qvm)
 
     if (tr->traced) free(tr->traced);
     tr->traced = NULL;
+
+    if (tr->ctable) free(tr->ctable);
+    tr->ctable = NULL;
 
     while (tr->allocated) {
         struct node *next;
@@ -180,82 +319,11 @@ struct page *tracer_get_free_page(struct tracer *tr)
 
     /* Initialize the page with code for tracing */
     for (i = 0; i < PAGE_SIZE; i++)
-        pg->code[i] = &do_TRACE;
+        pg->code[i] = tr->ctable[INSN_TRACE - INSN_BASE];
 
     memset(pg->data, 0, PAGE_SIZE * sizeof(uint64_t));
     return pg;
 }
-
-/* Macros for stack operations */
-#define dstack_push(qvm, v) (qvm)->dstack[(qvm)->dsp++] = (v)
-#define rstack_push(qvm, v) (qvm)->rstack[(qvm)->rsp++] = (v)
-#define dstack_pop(qvm) ((qvm)->dstack[--(qvm)->dsp])
-#define rstack_pop(qvm) ((qvm)->rstack[--(qvm)->rsp])
-
-/* Other macros */
-#define PROLOGUE(insn) \
-    static void do_ ## insn(struct quivm *qvm, uint64_t data)
-#define EPILOGUE
-#define UNUSED_DATA (void)(data)
-#define DISPATCH \
-{                                                \
-    struct tracer *tr;                           \
-    struct page *pg;                             \
-    uint32_t address, pg_index, offset;          \
-                                                 \
-    tr = get_tracer(qvm);                        \
-    address = qvm->pc % MEMORY_SIZE;             \
-    pg_index = address / PAGE_SIZE;              \
-    pg = tr->traced[pg_index];                   \
-    offset = address % PAGE_SIZE;                \
-    pg->code[offset](qvm, pg->data[offset]);     \
-}
-#define XT(insn) &do_ ## insn
-
-#define ALL_INSNS(MACRO) \
-    MACRO(TRACE) \
-    MACRO(EXCEPTION) \
-    MACRO(LIT) \
-    MACRO(LITS) \
-    MACRO(RET) \
-    MACRO(JSR) \
-    MACRO(JMP) \
-    MACRO(JZ) \
-    MACRO(EQ0) \
-    MACRO(EQ) \
-    MACRO(ULT) \
-    MACRO(LT) \
-    MACRO(AND) \
-    MACRO(OR) \
-    MACRO(XOR) \
-    MACRO(ADD) \
-    MACRO(SUB) \
-    MACRO(CSEL) \
-    MACRO(UMUL) \
-    MACRO(UDIV) \
-    MACRO(RD) \
-    MACRO(WRT) \
-    MACRO(RDB) \
-    MACRO(WRTB) \
-    MACRO(SIGNE) \
-    MACRO(SHL) \
-    MACRO(USHR) \
-    MACRO(SHR) \
-    MACRO(NOP) \
-    MACRO(DUP) \
-    MACRO(DROP) \
-    MACRO(SWAP) \
-    MACRO(OVER) \
-    MACRO(ROT) \
-    MACRO(RTO) \
-    MACRO(RFROM) \
-    MACRO(RGET) \
-    MACRO(RSET) \
-    MACRO(JSR_CONST) \
-    MACRO(JMP_CONST) \
-    MACRO(JZ_CONST) \
-    MACRO(ADD_CONST) \
-    MACRO(RGET_CONST)
 
 int tracer_run(struct quivm *qvm)
 {
@@ -272,13 +340,30 @@ int tracer_run(struct quivm *qvm)
         return tracer_run(qvm);
     }
 
+#if DISPATCH_METHOD == 0
+    while (1) {
+        struct tracer *tr;
+        struct page *pg;
+        uint32_t address, pg_index, offset;
+        trace_code code;
+        uint64_t data;
+
+        tr = get_tracer(qvm);
+        address = qvm->pc % MEMORY_SIZE;
+        pg_index = address / PAGE_SIZE;
+        pg = tr->traced[pg_index];
+        offset = address % PAGE_SIZE;
+        data = pg->data[offset];
+        code = pg->code[offset];
+        switch (code - INSN_BASE) {
+#elif DISPATCH_METHOD == 1
+#elif DISPATCH_METHOD == 2
     DISPATCH;
     return 0;
 }
-
+#endif
 
 /* Implementation of the trace operations */
-
 PROLOGUE(TRACE)
 {
     UNUSED_DATA;
@@ -299,11 +384,11 @@ PROLOGUE(EXCEPTION)
         quivm_terminate(qvm, err_cond);
         quivm_raise(qvm);
     } else {
-        dstack_push(qvm, qvm->acc);
+        dstack_push(qvm->acc);
         qvm->acc = err_cond;
 
         /* rstack points to the faulting instruction */
-        rstack_push(qvm, qvm->pc);
+        rstack_push(qvm->pc);
         qvm->pc = INITIAL_PC;
         qvm->status &= ~STS_OKAY;
     }
@@ -313,7 +398,7 @@ EPILOGUE
 
 PROLOGUE(LIT)
 {
-    dstack_push(qvm, qvm->acc);
+    dstack_push(qvm->acc);
     qvm->acc = (uint32_t) data;
     qvm->pc += (uint32_t) (data >> 32);
     DISPATCH;
@@ -332,7 +417,7 @@ EPILOGUE
 PROLOGUE(RET)
 {
     UNUSED_DATA;
-    qvm->pc = rstack_pop(qvm);
+    qvm->pc = rstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -340,9 +425,9 @@ EPILOGUE
 PROLOGUE(JSR)
 {
     UNUSED_DATA;
-    rstack_push(qvm, ++qvm->pc);
+    rstack_push(++qvm->pc);
     qvm->pc += qvm->acc;
-    qvm->acc = dstack_pop(qvm);
+    qvm->acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -351,7 +436,7 @@ PROLOGUE(JMP)
 {
     UNUSED_DATA;
     qvm->pc += qvm->acc + 1;
-    qvm->acc = dstack_pop(qvm);
+    qvm->acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -360,9 +445,9 @@ PROLOGUE(JZ)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     if (v == 0) qvm->pc += qvm->acc;
-    qvm->acc = dstack_pop(qvm);
+    qvm->acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -380,7 +465,7 @@ PROLOGUE(EQ)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     qvm->acc = (v == qvm->acc) ? -1 : 0;
     DISPATCH;
 }
@@ -390,7 +475,7 @@ PROLOGUE(ULT)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     qvm->acc = (v < qvm->acc) ? -1 : 0;
     DISPATCH;
 }
@@ -400,7 +485,7 @@ PROLOGUE(LT)
 {
     int32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = (int32_t) dstack_pop(qvm);
+    qvm->pc++; v = (int32_t) dstack_pop();
     qvm->acc = (v < ((int32_t) qvm->acc)) ? -1 : 0;
     DISPATCH;
 }
@@ -410,7 +495,7 @@ PROLOGUE(AND)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     qvm->acc &= v;
     DISPATCH;
 }
@@ -420,7 +505,7 @@ PROLOGUE(OR)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     qvm->acc |= v;
     DISPATCH;
 }
@@ -430,7 +515,7 @@ PROLOGUE(XOR)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     qvm->acc ^= v;
     DISPATCH;
 }
@@ -440,7 +525,7 @@ PROLOGUE(ADD)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     qvm->acc += v;
     DISPATCH;
 }
@@ -450,7 +535,7 @@ PROLOGUE(SUB)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     qvm->acc = v - qvm->acc;
     DISPATCH;
 }
@@ -460,7 +545,7 @@ PROLOGUE(CSEL)
 {
     uint32_t v, w;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm); w = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop(); w = dstack_pop();
     qvm->acc = (qvm->acc) ? v : w;
     DISPATCH;
 }
@@ -472,10 +557,10 @@ PROLOGUE(UMUL)
     UNUSED_DATA;
 
     qvm->pc++;
-    dw = (uint64_t) dstack_pop(qvm);
+    dw = (uint64_t) dstack_pop();
     dv = (uint64_t) qvm->acc;
     dv *= dw;
-    dstack_push(qvm, (uint32_t) dv);
+    dstack_push((uint32_t) dv);
     qvm->acc = (uint32_t) (dv >> 32);
     DISPATCH;
 }
@@ -488,10 +573,12 @@ PROLOGUE(UDIV)
 
     /* check for division by zero */
     if (qvm->acc == 0) {
+#if DISPATCH_METHOD == 2
         do_EXCEPTION(qvm, EX_DIVIDE_BY_ZERO);
+#endif
     } else {
-        qvm->pc++; v = dstack_pop(qvm);
-        dstack_push(qvm, (v % qvm->acc));
+        qvm->pc++; v = dstack_pop();
+        dstack_push((v % qvm->acc));
         qvm->acc = v / qvm->acc;
     }
     DISPATCH;
@@ -511,9 +598,9 @@ PROLOGUE(WRT)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     quivm_write(qvm, qvm->acc, v);
-    qvm->acc = dstack_pop(qvm);
+    qvm->acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -531,9 +618,9 @@ PROLOGUE(WRTB)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     quivm_write_byte(qvm, qvm->acc, v);
-    qvm->acc = dstack_pop(qvm);
+    qvm->acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -542,7 +629,7 @@ PROLOGUE(SIGNE)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     if (qvm->acc < 32) {
         qvm->acc = 32 - qvm->acc;
         v <<= qvm->acc;
@@ -558,7 +645,7 @@ PROLOGUE(SHL)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     qvm->acc = (v << (qvm->acc & 0x1F));
     DISPATCH;
 }
@@ -568,7 +655,7 @@ PROLOGUE(USHR)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     qvm->acc = (v >> (qvm->acc & 0x1F));
     DISPATCH;
 }
@@ -578,7 +665,7 @@ PROLOGUE(SHR)
 {
     int32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = (int32_t) dstack_pop(qvm);
+    qvm->pc++; v = (int32_t) dstack_pop();
     qvm->acc = (uint32_t) (v >> (qvm->acc & 0x1F));
     DISPATCH;
 }
@@ -595,7 +682,7 @@ PROLOGUE(DUP)
 {
     UNUSED_DATA;
     qvm->pc++;
-    dstack_push(qvm, qvm->acc);
+    dstack_push(qvm->acc);
     DISPATCH;
 }
 EPILOGUE
@@ -604,7 +691,7 @@ PROLOGUE(DROP)
 {
     UNUSED_DATA;
     qvm->pc++;
-    qvm->acc = dstack_pop(qvm);
+    qvm->acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -613,8 +700,8 @@ PROLOGUE(SWAP)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
-    dstack_push(qvm, qvm->acc);
+    qvm->pc++; v = dstack_pop();
+    dstack_push(qvm->acc);
     qvm->acc = v;
     DISPATCH;
 }
@@ -624,9 +711,9 @@ PROLOGUE(OVER)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
-    dstack_push(qvm, v);
-    dstack_push(qvm, qvm->acc);
+    qvm->pc++; v = dstack_pop();
+    dstack_push(v);
+    dstack_push(qvm->acc);
     qvm->acc = v;
     DISPATCH;
 }
@@ -636,9 +723,9 @@ PROLOGUE(ROT)
 {
     uint32_t v, w;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm); w = dstack_pop(qvm);
-    dstack_push(qvm, v);
-    dstack_push(qvm, qvm->acc);
+    qvm->pc++; v = dstack_pop(); w = dstack_pop();
+    dstack_push(v);
+    dstack_push(qvm->acc);
     qvm->acc = w;
     DISPATCH;
 }
@@ -647,8 +734,8 @@ EPILOGUE
 PROLOGUE(RTO)
 {
     UNUSED_DATA;
-    qvm->pc++; rstack_push(qvm, qvm->acc);
-    qvm->acc = dstack_pop(qvm);
+    qvm->pc++; rstack_push(qvm->acc);
+    qvm->acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -656,8 +743,8 @@ EPILOGUE
 PROLOGUE(RFROM)
 {
     UNUSED_DATA;
-    qvm->pc++; dstack_push(qvm, qvm->acc);
-    qvm->acc = rstack_pop(qvm);
+    qvm->pc++; dstack_push(qvm->acc);
+    qvm->acc = rstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -675,9 +762,9 @@ PROLOGUE(RSET)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(qvm);
+    qvm->pc++; v = dstack_pop();
     qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)] = v;
-    qvm->acc = dstack_pop(qvm);
+    qvm->acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -685,7 +772,7 @@ EPILOGUE
 PROLOGUE(JSR_CONST)
 {
     qvm->pc += (uint32_t) (data >> 32);
-    rstack_push(qvm, qvm->pc);
+    rstack_push(qvm->pc);
     qvm->pc = (uint32_t) data;
     DISPATCH;
 }
@@ -702,7 +789,7 @@ PROLOGUE(JZ_CONST)
 {
     qvm->pc += (uint32_t) (data >> 32);
     if (qvm->acc == 0) qvm->pc = (uint32_t) data;
-    qvm->acc = dstack_pop(qvm);
+    qvm->acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -717,12 +804,37 @@ EPILOGUE
 
 PROLOGUE(RGET_CONST)
 {
-    dstack_push(qvm, qvm->acc);
+    dstack_push(qvm->acc);
     qvm->pc += (uint32_t) (data >> 32);
     qvm->acc = qvm->rstack[(uint8_t) (qvm->rsp - 1 - ((uint32_t) data))];
     DISPATCH;
 }
 EPILOGUE
+
+#if DISPATCH_METHOD == 0
+        default:
+            break;
+        }
+    }
+    return 0;
+}
+#endif
+
+/* Populates the code table */
+static
+void tracer_populate_ctable(struct tracer *tr)
+{
+#if DISPATCH_METHOD == 0
+    #define CTABLE_MACRO(insn) INSN_ ## insn,
+#elif DISPATCH_METHOD == 1
+#elif DISPATCH_METHOD == 2
+    #define CTABLE_MACRO(insn) &do_ ## insn,
+#endif
+    static trace_code ctable[] = {
+        INSN_TABLE(CTABLE_MACRO)
+    };
+    memcpy(tr->ctable, ctable, sizeof(ctable));
+}
 
 /* Traces the code in a given address. */
 static
@@ -731,22 +843,16 @@ void tracer_trace(struct tracer *tr, uint32_t address)
     struct quivm *qvm;
     struct page *pg;
     uint32_t pg_index, offset, v;
+    uint64_t data;
     uint8_t insn;
 
     qvm = get_quivm(tr);
     pg_index = address / PAGE_SIZE;
-    pg = tr->traced[pg_index];
-    if (pg == tr->sentinel) {
-        pg = tracer_get_free_page(tr);
-        tr->traced[pg_index] = pg;
-    }
-    offset = address % PAGE_SIZE;
-
     insn = qvm->mem[address];
     if (insn < INSN_LIT_BASE) {
-        pg->code[offset] = XT(LITS);
-        pg->data[offset] = ((uint64_t) insn) | (1UL << 32UL);
-        return;
+        data = ((uint64_t) insn) | (1UL << 32UL);
+        insn = INSN_LITS;
+        goto write_code;
     }
 
     if (insn < INSN_REG_BASE) {
@@ -769,71 +875,44 @@ void tracer_trace(struct tracer *tr, uint32_t address)
 
         addr++;
         if (insn == INSN_JSR) {
-            pg->code[offset] = XT(JSR_CONST);
+            insn = INSN_JSR_CONST;
             v += addr;
         } else if (insn == INSN_JMP) {
-            pg->code[offset] = XT(JMP_CONST);
+            insn = INSN_JMP_CONST;
             v += addr;
         } else if (insn == INSN_JZ) {
-            pg->code[offset] = XT(JZ_CONST);
+            insn = INSN_JZ_CONST;
             v += addr;
         } else if (insn == INSN_ADD) {
-            pg->code[offset] = XT(ADD_CONST);
+            insn = INSN_ADD_CONST;
         } else if (insn == INSN_SUB) {
-            pg->code[offset] = XT(ADD_CONST);
+            insn = INSN_ADD_CONST;
             v = -v;
         } else if (insn == INSN_RGET) {
-            pg->code[offset] = XT(RGET_CONST);
+            insn = INSN_RGET_CONST;
         } else {
+            insn = INSN_LIT;
             addr--;
-            pg->code[offset] = XT(LIT);
         }
-        pg->data[offset] = ((uint64_t) v)
-                         | (((uint64_t) (addr - address)) << 32UL);
-        return;
+        data = ((uint64_t) v);
+        data |= (((uint64_t) (addr - address)) << 32UL);
+        goto write_code;
     }
 
     /* process regular instructions */
-    pg->data[offset] = (1UL << 32UL);
-    switch (insn) {
-    case INSN_RET:   pg->code[offset] = XT(RET);     break;
-    case INSN_JSR:   pg->code[offset] = XT(JSR);     break;
-    case INSN_JMP:   pg->code[offset] = XT(JMP);     break;
-    case INSN_JZ:    pg->code[offset] = XT(JZ);      break;
-    case INSN_EQ0:   pg->code[offset] = XT(EQ0);     break;
-    case INSN_EQ:    pg->code[offset] = XT(EQ);      break;
-    case INSN_ULT:   pg->code[offset] = XT(ULT);     break;
-    case INSN_LT:    pg->code[offset] = XT(LT);      break;
-    case INSN_AND:   pg->code[offset] = XT(AND);     break;
-    case INSN_OR:    pg->code[offset] = XT(OR);      break;
-    case INSN_XOR:   pg->code[offset] = XT(XOR);     break;
-    case INSN_ADD:   pg->code[offset] = XT(ADD);     break;
-    case INSN_SUB:   pg->code[offset] = XT(SUB);     break;
-    case INSN_CSEL:  pg->code[offset] = XT(CSEL);    break;
-    case INSN_UMUL:  pg->code[offset] = XT(UMUL);    break;
-    case INSN_UDIV:  pg->code[offset] = XT(UDIV);    break;
-    case INSN_RD:    pg->code[offset] = XT(RD);      break;
-    case INSN_WRT:   pg->code[offset] = XT(WRT);     break;
-    case INSN_RDB:   pg->code[offset] = XT(RDB);     break;
-    case INSN_WRTB:  pg->code[offset] = XT(WRTB);    break;
-    case INSN_SIGNE: pg->code[offset] = XT(SIGNE);   break;
-    case INSN_SHL:   pg->code[offset] = XT(SHL);     break;
-    case INSN_USHR:  pg->code[offset] = XT(USHR);    break;
-    case INSN_SHR:   pg->code[offset] = XT(SHR);     break;
-    case INSN_NOP:   pg->code[offset] = XT(NOP);     break;
-    case INSN_DUP:   pg->code[offset] = XT(DUP);     break;
-    case INSN_DROP:  pg->code[offset] = XT(DROP);    break;
-    case INSN_SWAP:  pg->code[offset] = XT(SWAP);    break;
-    case INSN_OVER:  pg->code[offset] = XT(OVER);    break;
-    case INSN_ROT:   pg->code[offset] = XT(ROT);     break;
-    case INSN_RTO:   pg->code[offset] = XT(RTO);     break;
-    case INSN_RFROM: pg->code[offset] = XT(RFROM);   break;
-    case INSN_RGET:  pg->code[offset] = XT(RGET);    break;
-    case INSN_RSET:  pg->code[offset] = XT(RSET);    break;
-    case INSN_INVL: /* fall through */
-    default:
-        pg->code[offset] = XT(EXCEPTION);
-        pg->data[offset] = EX_INVALID_INSN;
-        break;
+    data = (1UL << 32UL);
+    if (insn > INSN_RSET) {
+        insn = INSN_EXCEPTION;
+        data = EX_INVALID_INSN;
     }
+
+write_code:
+    pg = tr->traced[pg_index];
+    if (pg == tr->sentinel) {
+        pg = tracer_get_free_page(tr);
+        tr->traced[pg_index] = pg;
+    }
+    offset = address % PAGE_SIZE;
+    pg->code[offset] = tr->ctable[insn - INSN_BASE];
+    pg->data[offset] = data;
 }

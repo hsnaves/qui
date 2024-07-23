@@ -69,4 +69,4 @@ uint32_t storage_read_callback(struct storage *stg,
 void storage_write_callback(struct storage *stg, struct quivm *qvm,
                             uint32_t address, uint32_t v);
 
-#endif
+#endif /* !defined(__DEV_STORAGE_H) */

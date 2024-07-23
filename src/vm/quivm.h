@@ -229,4 +229,4 @@ uint32_t quivm_rstack_pop(struct quivm *qvm);
 #define check_buffer(address, length, memsize) \
     (!(((address) < (memsize)) && ((length) < ((memsize) - (address)))))
 
-#endif
+#endif /* !defined(__VM_QUIVM_H) */

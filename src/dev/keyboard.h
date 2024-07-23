@@ -203,4 +203,4 @@ void keyboard_clear_mouse(struct keyboard *kbd);
  */
 void keyboard_move_mouse(struct keyboard *kbd, int dx, int dy);
 
-#endif
+#endif /* !defined(__DEV_KEYBOARD_H) */

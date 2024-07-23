@@ -39,4 +39,4 @@ void tracer_invalidate(struct quivm *qvm, uint32_t istart, uint32_t iend);
 /* Runs the VM using the tracer */
 int tracer_run(struct quivm *qvm);
 
-#endif
+#endif /* !defined(__VM_INTERNAL_H) */

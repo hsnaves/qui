@@ -66,4 +66,4 @@ uint32_t network_read_callback(struct network *ntw,
 void network_write_callback(struct network *ntw, struct quivm *qvm,
                             uint32_t address, uint32_t v);
 
-#endif
+#endif /* !defined(__DEV_NETWORK_H) */
