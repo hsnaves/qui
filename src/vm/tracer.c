@@ -36,6 +36,8 @@
 #define INSN_JZ_CONST                 0xB4
 #define INSN_ADD_CONST                0xB5
 #define INSN_RGET_CONST               0xB6
+#define INSN_RSET_CONST               0xB7
+#define INSN_TWODUP                   0xB8
 #define INSN_LIT                      0xBE
 #define INSN_LITS                     0xBF
 #define NUM_INSN ((INSN_RSET+1)-INSN_BASE)
@@ -49,8 +51,8 @@
     MACRO(JZ_CONST) \
     MACRO(ADD_CONST) \
     MACRO(RGET_CONST) \
-    MACRO(TRACE) \
-    MACRO(TRACE) \
+    MACRO(RSET_CONST) \
+    MACRO(TWODUP) \
     MACRO(TRACE) \
     MACRO(TRACE) \
     MACRO(TRACE) \
@@ -483,6 +485,69 @@ PROLOGUE(EXCEPTION)
 }
 EPILOGUE
 
+PROLOGUE(JSR_CONST)
+{
+    r_pc += (uint32_t) (data >> 32);
+    rstack_push(r_pc);
+    r_pc = (uint32_t) data;
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(JMP_CONST)
+{
+    r_pc = (uint32_t) data;
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(JZ_CONST)
+{
+    r_pc += (uint32_t) (data >> 32);
+    if (r_acc == 0) r_pc = (uint32_t) data;
+    r_acc = dstack_pop();
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(ADD_CONST)
+{
+    r_pc += (uint32_t) (data >> 32);
+    r_acc += (uint32_t) data;
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(RGET_CONST)
+{
+    dstack_push(r_acc);
+    r_pc += (uint32_t) (data >> 32);
+    r_acc = m_rstack[(uint8_t) (r_rsp - 1 - ((uint32_t) data))];
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(RSET_CONST)
+{
+    r_pc += (uint32_t) (data >> 32);
+    m_rstack[(uint8_t) (r_rsp - 1 - ((uint8_t) data))] = r_acc;
+    r_acc = dstack_pop();
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(TWODUP)
+{
+    uint32_t v;
+    r_pc += 2;
+    v = dstack_pop();
+    dstack_push(v);
+    dstack_push(r_acc);
+    dstack_push(v);
+    DISPATCH;
+}
+EPILOGUE
+
 PROLOGUE(LIT)
 {
     dstack_push(r_acc);
@@ -858,48 +923,6 @@ PROLOGUE(RSET)
 }
 EPILOGUE
 
-PROLOGUE(JSR_CONST)
-{
-    r_pc += (uint32_t) (data >> 32);
-    rstack_push(r_pc);
-    r_pc = (uint32_t) data;
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(JMP_CONST)
-{
-    r_pc = (uint32_t) data;
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(JZ_CONST)
-{
-    r_pc += (uint32_t) (data >> 32);
-    if (r_acc == 0) r_pc = (uint32_t) data;
-    r_acc = dstack_pop();
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(ADD_CONST)
-{
-    r_pc += (uint32_t) (data >> 32);
-    r_acc += (uint32_t) data;
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(RGET_CONST)
-{
-    dstack_push(r_acc);
-    r_pc += (uint32_t) (data >> 32);
-    r_acc = m_rstack[(uint8_t) (r_rsp - 1 - ((uint32_t) data))];
-    DISPATCH;
-}
-EPILOGUE
-
 #if DISPATCH_METHOD == 0
         default:
             break;
@@ -934,12 +957,17 @@ void tracer_trace(struct tracer *tr, uint32_t address)
     struct quivm *qvm;
     struct page *pg;
     uint32_t pg_index, offset, v;
+    uint32_t addr, max_addr;
     uint64_t data;
     uint8_t insn;
 
     qvm = get_quivm(tr);
     pg_index = address / PAGE_SIZE;
-    insn = qvm->mem[address];
+
+    addr = address;
+    max_addr = (pg_index + 1) * PAGE_SIZE;
+
+    insn = qvm->mem[addr++];
     if (insn < INSN_LIT_BASE) {
         data = ((uint64_t) insn) | (1UL << 32UL);
         insn = INSN_LITS;
@@ -947,24 +975,18 @@ void tracer_trace(struct tracer *tr, uint32_t address)
     }
 
     if (insn < INSN_REG_BASE) {
-        uint32_t addr, max_addr;
-
         v = (uint32_t) (insn - INSN_LIT_BASE);
         if (v & 0x20) {
             /* sign-extend the literal value */
             v |= ~0x3F;
         }
 
-        addr = address;
-        max_addr =  (pg_index + 1) * PAGE_SIZE;
-        while (++addr < max_addr) {
-            insn = qvm->mem[addr];
+        while (addr < max_addr) {
+            insn = qvm->mem[addr++];
             if (!(insn < INSN_LIT_BASE)) break;
-            v <<= 7;
-            v |= (uint32_t) insn;
+            v <<= 7; v |= (uint32_t) insn;
         }
 
-        addr++;
         if (insn == INSN_JSR) {
             insn = INSN_JSR_CONST;
             v += addr;
@@ -981,9 +1003,12 @@ void tracer_trace(struct tracer *tr, uint32_t address)
             v = -v;
         } else if (insn == INSN_RGET) {
             insn = INSN_RGET_CONST;
+        } else if (insn == INSN_RSET) {
+            insn = INSN_RSET_CONST;
         } else {
+            if ((insn >= INSN_LIT_BASE) && (addr > address + 1))
+                addr--;
             insn = INSN_LIT;
-            addr--;
         }
         data = ((uint64_t) v);
         data |= (((uint64_t) (addr - address)) << 32UL);
@@ -992,7 +1017,17 @@ void tracer_trace(struct tracer *tr, uint32_t address)
 
     /* process regular instructions */
     data = (1UL << 32UL);
-    if (insn > INSN_RSET) {
+    if (insn == INSN_OVER) {
+        if (addr < max_addr) {
+            insn = qvm->mem[addr++];
+            if (insn == INSN_OVER) {
+                insn = INSN_TWODUP;
+            } else {
+                insn = INSN_OVER;
+                addr--;
+            }
+        }
+    } else if (insn > INSN_RSET) {
         insn = INSN_EXCEPTION;
         data = EX_INVALID_INSN;
     }
