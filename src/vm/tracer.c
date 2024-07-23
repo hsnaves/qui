@@ -304,8 +304,8 @@ void tracer_invalidate(struct quivm *qvm, uint32_t istart, uint32_t iend)
     uint32_t pg_index;
 
     tr = get_tracer(qvm);
-    start_pg_index = istart / PAGE_SIZE;
-    end_pg_index = 1 + ((iend - 1) / PAGE_SIZE);
+    start_pg_index = (istart % MEMORY_SIZE) / PAGE_SIZE;
+    end_pg_index = 1 + (((iend - 1) % MEMORY_SIZE) / PAGE_SIZE);
 
     for (pg_index = start_pg_index; pg_index < end_pg_index; pg_index++) {
         struct page *pg = tr->traced[pg_index];

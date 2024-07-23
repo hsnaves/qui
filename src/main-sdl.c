@@ -95,7 +95,7 @@ void create_window(uint32_t width, uint32_t height)
                                   SDL_RENDERER_SOFTWARE);
 #else
     renderer = SDL_CreateRenderer(window, -1,
-                                  SDL_RENDERER_HARDWARE);
+                                  SDL_RENDERER_ACCELERATED);
 #endif
     if (!renderer) {
         fprintf(stderr, "main: create_window: "
