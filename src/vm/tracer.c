@@ -14,12 +14,12 @@
  * 2 -> functions with tail call (threaded)
  */
 #ifndef DISPATCH_METHOD
-#define DISPATCH_METHOD 0
+#define DISPATCH_METHOD 1
 #endif
 
 /* computed gotos are only used when __GNUC__ is defined */
 #if !defined(__GNUC__) && (DISPATCH_METHOD == 1)
-#define DISPATCH_METHOD 2
+#define DISPATCH_METHOD 0
 #endif
 
 /* Constants for the tracer */
@@ -98,36 +98,46 @@
 /* Callback function to run the traced code. */
 typedef uint8_t trace_code;
 
-/* Macros for stack operations */
-#define dstack_push(v) qvm->dstack[qvm->dsp++] = (v)
-#define rstack_push(v) qvm->rstack[qvm->rsp++] = (v)
-#define dstack_pop() qvm->dstack[--qvm->dsp]
-#define rstack_pop() qvm->rstack[--qvm->rsp]
-
-/* Other macros */
-#define PROLOGUE(insn) case (INSN_ ## insn - INSN_BASE):
-#define EPILOGUE       break;
-#define UNUSED_DATA
-#define DISPATCH       continue;
-
-#elif DISPATCH_METHOD == 1 /* computed gotos */
-
-#elif DISPATCH_METHOD == 2 /* functions (tail call) */
-
-/* Callback function to run the traced code. */
-typedef void (*trace_code)(struct quivm *qvm, uint64_t data);
-
-/* Macros for stack operations */
-#define dstack_push(v) qvm->dstack[qvm->dsp++] = (v)
-#define rstack_push(v) qvm->rstack[qvm->rsp++] = (v)
-#define dstack_pop() qvm->dstack[--qvm->dsp]
-#define rstack_pop() qvm->rstack[--qvm->rsp]
+/* Macros for VM registers and memory */
+#define r_pc     pc
+#define r_acc    acc
+#define r_dsp    dsp
+#define r_rsp    rsp
+#define m_dstack dstack
+#define m_rstack rstack
 
 /* Other macros */
 #define PROLOGUE(insn) \
-    static void do_ ## insn(struct quivm *qvm, uint64_t data)
+    case (INSN_ ## insn - INSN_BASE): \
+    goto do_ ## insn; do_ ## insn:
+#define EPILOGUE        break;
+#define UNUSED_DATA
+#define INVOKE(insn, d) data = d; goto do_ ## insn
+#define CTABLE(insn)    INSN_ ## insn,
+#define DISPATCH        continue;
+#define FLUSH \
+    qvm->pc = pc;   qvm->acc = acc; \
+    qvm->dsp = dsp; qvm->rsp = rsp
+
+#elif DISPATCH_METHOD == 1 /* computed gotos */
+
+/* Callback function to run the traced code. */
+typedef void *trace_code;
+
+/* Macros for VM registers and memory */
+#define r_pc     pc
+#define r_acc    acc
+#define r_dsp    dsp
+#define r_rsp    rsp
+#define m_dstack dstack
+#define m_rstack rstack
+
+/* Other macros */
+#define PROLOGUE(insn)  do_ ## insn:
 #define EPILOGUE
-#define UNUSED_DATA (void)(data)
+#define UNUSED_DATA
+#define INVOKE(insn, d) data = d; goto do_ ## insn
+#define CTABLE(insn)    &&do_ ## insn,
 #define DISPATCH \
 {                                                \
     struct tracer *tr;                           \
@@ -135,16 +145,61 @@ typedef void (*trace_code)(struct quivm *qvm, uint64_t data);
     uint32_t address, pg_index, offset;          \
                                                  \
     tr = get_tracer(qvm);                        \
-    address = qvm->pc % MEMORY_SIZE;             \
+    address = r_pc % MEMORY_SIZE;                \
+    pg_index = address / PAGE_SIZE;              \
+    pg = tr->traced[pg_index];                   \
+    offset = address % PAGE_SIZE;                \
+    data = pg->data[offset];                     \
+    goto *pg->code[offset];                      \
+}
+#define FLUSH \
+    qvm->pc = pc;   qvm->acc = acc; \
+    qvm->dsp = dsp; qvm->rsp = rsp
+
+#elif DISPATCH_METHOD == 2 /* functions (tail call) */
+
+/* Callback function to run the traced code. */
+typedef void (*trace_code)(struct quivm *qvm, uint64_t data);
+
+/* Macros for VM registers and memory */
+#define r_pc     qvm->pc
+#define r_acc    qvm->acc
+#define r_dsp    qvm->dsp
+#define r_rsp    qvm->rsp
+#define m_dstack qvm->dstack
+#define m_rstack qvm->rstack
+
+/* Other macros */
+#define PROLOGUE(insn) \
+    static void do_ ## insn(struct quivm *qvm, uint64_t data)
+#define EPILOGUE
+#define UNUSED_DATA     (void)(data)
+#define INVOKE(insn, d) do_ ## insn(qvm, d)
+#define CTABLE(insn)    &do_ ## insn,
+#define DISPATCH \
+{                                                \
+    struct tracer *tr;                           \
+    struct page *pg;                             \
+    uint32_t address, pg_index, offset;          \
+                                                 \
+    tr = get_tracer(qvm);                        \
+    address = r_pc % MEMORY_SIZE;                \
     pg_index = address / PAGE_SIZE;              \
     pg = tr->traced[pg_index];                   \
     offset = address % PAGE_SIZE;                \
     pg->code[offset](qvm, pg->data[offset]);     \
 }
+#define FLUSH
 
 #else /* DISPATCH_METHOD > 2 */
 #error "invalid dispatch method"
 #endif
+
+/* Macros for stack operations */
+#define dstack_push(v) m_dstack[r_dsp++] = (v)
+#define rstack_push(v) m_rstack[r_rsp++] = (v)
+#define dstack_pop() m_dstack[--r_dsp]
+#define rstack_pop() m_rstack[--r_rsp]
 
 
 /* Data structures and types */
@@ -327,47 +382,78 @@ struct page *tracer_get_free_page(struct tracer *tr)
 
 int tracer_run(struct quivm *qvm)
 {
+#if DISPATCH_METHOD != 2
+    uint32_t pc, acc;
+    uint32_t *dstack, *rstack;
+    uint64_t data;
+    uint8_t dsp, rsp;
+#endif
+#if DISPATCH_METHOD == 1
+    static trace_code ctable[] = {
+        INSN_TABLE(CTABLE)
+    };
+    if (!get_tracer(qvm)->ctable[0]) {
+        memcpy(get_tracer(qvm)->ctable, ctable, sizeof(ctable));
+        return 0;
+    }
+#endif
+
     /* check if it has terminated */
     if (!(qvm->status & STS_RUNNING))
         return 0;
 
     qvm->status |= STS_JMPBUF;
     if (setjmp(((jmp_buf *) qvm->jmpbuf)[0])) {
-        struct tracer *tr;
         qvm->status &= ~STS_JMPBUF;
-        tr = get_tracer(qvm);
-        if (tr->memory_error) return 1;
+        if (get_tracer(qvm)->memory_error) return 1;
         return tracer_run(qvm);
     }
 
 #if DISPATCH_METHOD == 0
+    pc = qvm->pc;
+    acc = qvm->acc;
+    dstack = qvm->dstack;
+    rstack = qvm->rstack;
+    dsp = qvm->dsp;
+    rsp = qvm->rsp;
+
     while (1) {
         struct tracer *tr;
         struct page *pg;
         uint32_t address, pg_index, offset;
-        trace_code code;
-        uint64_t data;
 
         tr = get_tracer(qvm);
-        address = qvm->pc % MEMORY_SIZE;
+        address = r_pc % MEMORY_SIZE;
         pg_index = address / PAGE_SIZE;
         pg = tr->traced[pg_index];
         offset = address % PAGE_SIZE;
         data = pg->data[offset];
-        code = pg->code[offset];
-        switch (code - INSN_BASE) {
+        switch (pg->code[offset] - INSN_BASE) {
 #elif DISPATCH_METHOD == 1
+    pc = qvm->pc;
+    acc = qvm->acc;
+    dstack = qvm->dstack;
+    rstack = qvm->rstack;
+    dsp = qvm->dsp;
+    rsp = qvm->rsp;
+    DISPATCH;
 #elif DISPATCH_METHOD == 2
     DISPATCH;
     return 0;
 }
-#endif
+
+#define DECLARATION(insn) \
+    static void do_ ## insn(struct quivm *qvm, uint64_t data);
+INSN_TABLE(DECLARATION)
+
+#endif /* DISPATCH_METHOD == 2 */
 
 /* Implementation of the trace operations */
 PROLOGUE(TRACE)
 {
     UNUSED_DATA;
-    tracer_trace(get_tracer(qvm), qvm->pc);
+    FLUSH;
+    tracer_trace(get_tracer(qvm), r_pc);
     DISPATCH;
 }
 EPILOGUE
@@ -376,20 +462,21 @@ PROLOGUE(EXCEPTION)
 {
     int err_cond;
 
+    FLUSH;
     err_cond = (int) data;
     if (!(qvm->status & STS_OKAY)) {
         fprintf(stderr, "vm/quivm: on_exception: "
                 "unhandled exception: %d at 0x%08X\n",
-                err_cond, qvm->pc);
+                err_cond, r_pc);
         quivm_terminate(qvm, err_cond);
         quivm_raise(qvm);
     } else {
-        dstack_push(qvm->acc);
-        qvm->acc = err_cond;
+        dstack_push(r_acc);
+        r_acc = err_cond;
 
         /* rstack points to the faulting instruction */
-        rstack_push(qvm->pc);
-        qvm->pc = INITIAL_PC;
+        rstack_push(r_pc);
+        r_pc = INITIAL_PC;
         qvm->status &= ~STS_OKAY;
     }
     DISPATCH;
@@ -398,18 +485,18 @@ EPILOGUE
 
 PROLOGUE(LIT)
 {
-    dstack_push(qvm->acc);
-    qvm->acc = (uint32_t) data;
-    qvm->pc += (uint32_t) (data >> 32);
+    dstack_push(r_acc);
+    r_acc = (uint32_t) data;
+    r_pc += (uint32_t) (data >> 32);
     DISPATCH;
 }
 EPILOGUE
 
 PROLOGUE(LITS)
 {
-    qvm->acc <<= 7;
-    qvm->acc |= (uint32_t) data;
-    qvm->pc += (uint32_t) (data >> 32);
+    r_acc <<= 7;
+    r_acc |= (uint32_t) data;
+    r_pc += (uint32_t) (data >> 32);
     DISPATCH;
 }
 EPILOGUE
@@ -417,7 +504,7 @@ EPILOGUE
 PROLOGUE(RET)
 {
     UNUSED_DATA;
-    qvm->pc = rstack_pop();
+    r_pc = rstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -425,9 +512,9 @@ EPILOGUE
 PROLOGUE(JSR)
 {
     UNUSED_DATA;
-    rstack_push(++qvm->pc);
-    qvm->pc += qvm->acc;
-    qvm->acc = dstack_pop();
+    rstack_push(++r_pc);
+    r_pc += r_acc;
+    r_acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -435,8 +522,8 @@ EPILOGUE
 PROLOGUE(JMP)
 {
     UNUSED_DATA;
-    qvm->pc += qvm->acc + 1;
-    qvm->acc = dstack_pop();
+    r_pc += r_acc + 1;
+    r_acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -445,9 +532,9 @@ PROLOGUE(JZ)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    if (v == 0) qvm->pc += qvm->acc;
-    qvm->acc = dstack_pop();
+    r_pc++; v = dstack_pop();
+    if (v == 0) r_pc += r_acc;
+    r_acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -455,8 +542,8 @@ EPILOGUE
 PROLOGUE(EQ0)
 {
     UNUSED_DATA;
-    qvm->acc = (0 == qvm->acc) ? -1 : 0;
-    qvm->pc++;
+    r_pc++;
+    r_acc = (0 == r_acc) ? -1 : 0;
     DISPATCH;
 }
 EPILOGUE
@@ -465,8 +552,8 @@ PROLOGUE(EQ)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    qvm->acc = (v == qvm->acc) ? -1 : 0;
+    r_pc++; v = dstack_pop();
+    r_acc = (v == r_acc) ? -1 : 0;
     DISPATCH;
 }
 EPILOGUE
@@ -475,8 +562,8 @@ PROLOGUE(ULT)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    qvm->acc = (v < qvm->acc) ? -1 : 0;
+    r_pc++; v = dstack_pop();
+    r_acc = (v < r_acc) ? -1 : 0;
     DISPATCH;
 }
 EPILOGUE
@@ -485,8 +572,8 @@ PROLOGUE(LT)
 {
     int32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = (int32_t) dstack_pop();
-    qvm->acc = (v < ((int32_t) qvm->acc)) ? -1 : 0;
+    r_pc++; v = (int32_t) dstack_pop();
+    r_acc = (v < ((int32_t) r_acc)) ? -1 : 0;
     DISPATCH;
 }
 EPILOGUE
@@ -495,8 +582,8 @@ PROLOGUE(AND)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    qvm->acc &= v;
+    r_pc++; v = dstack_pop();
+    r_acc &= v;
     DISPATCH;
 }
 EPILOGUE
@@ -505,8 +592,8 @@ PROLOGUE(OR)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    qvm->acc |= v;
+    r_pc++; v = dstack_pop();
+    r_acc |= v;
     DISPATCH;
 }
 EPILOGUE
@@ -515,8 +602,8 @@ PROLOGUE(XOR)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    qvm->acc ^= v;
+    r_pc++; v = dstack_pop();
+    r_acc ^= v;
     DISPATCH;
 }
 EPILOGUE
@@ -525,8 +612,8 @@ PROLOGUE(ADD)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    qvm->acc += v;
+    r_pc++; v = dstack_pop();
+    r_acc += v;
     DISPATCH;
 }
 EPILOGUE
@@ -535,8 +622,8 @@ PROLOGUE(SUB)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    qvm->acc = v - qvm->acc;
+    r_pc++; v = dstack_pop();
+    r_acc = v - r_acc;
     DISPATCH;
 }
 EPILOGUE
@@ -545,8 +632,8 @@ PROLOGUE(CSEL)
 {
     uint32_t v, w;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(); w = dstack_pop();
-    qvm->acc = (qvm->acc) ? v : w;
+    r_pc++; v = dstack_pop(); w = dstack_pop();
+    r_acc = (r_acc) ? v : w;
     DISPATCH;
 }
 EPILOGUE
@@ -556,12 +643,12 @@ PROLOGUE(UMUL)
     uint64_t dv, dw;
     UNUSED_DATA;
 
-    qvm->pc++;
+    r_pc++;
     dw = (uint64_t) dstack_pop();
-    dv = (uint64_t) qvm->acc;
+    dv = (uint64_t) r_acc;
     dv *= dw;
     dstack_push((uint32_t) dv);
-    qvm->acc = (uint32_t) (dv >> 32);
+    r_acc = (uint32_t) (dv >> 32);
     DISPATCH;
 }
 EPILOGUE
@@ -572,14 +659,12 @@ PROLOGUE(UDIV)
     UNUSED_DATA;
 
     /* check for division by zero */
-    if (qvm->acc == 0) {
-#if DISPATCH_METHOD == 2
-        do_EXCEPTION(qvm, EX_DIVIDE_BY_ZERO);
-#endif
+    if (r_acc == 0) {
+        INVOKE(EXCEPTION, EX_DIVIDE_BY_ZERO);
     } else {
-        qvm->pc++; v = dstack_pop();
-        dstack_push((v % qvm->acc));
-        qvm->acc = v / qvm->acc;
+        r_pc++; v = dstack_pop();
+        dstack_push((v % r_acc));
+        r_acc = v / r_acc;
     }
     DISPATCH;
 }
@@ -588,8 +673,9 @@ EPILOGUE
 PROLOGUE(RD)
 {
     UNUSED_DATA;
-    qvm->pc++;
-    qvm->acc = quivm_read(qvm, qvm->acc);
+    r_pc++;
+    FLUSH;
+    r_acc = quivm_read(qvm, r_acc);
     DISPATCH;
 }
 EPILOGUE
@@ -598,9 +684,10 @@ PROLOGUE(WRT)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    quivm_write(qvm, qvm->acc, v);
-    qvm->acc = dstack_pop();
+    r_pc++; v = dstack_pop();
+    FLUSH;
+    quivm_write(qvm, r_acc, v);
+    r_acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -608,8 +695,9 @@ EPILOGUE
 PROLOGUE(RDB)
 {
     UNUSED_DATA;
-    qvm->pc++;
-    qvm->acc = (uint32_t) quivm_read_byte(qvm, qvm->acc);
+    r_pc++;
+    FLUSH;
+    r_acc = (uint32_t) quivm_read_byte(qvm, r_acc);
     DISPATCH;
 }
 EPILOGUE
@@ -618,9 +706,10 @@ PROLOGUE(WRTB)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    quivm_write_byte(qvm, qvm->acc, v);
-    qvm->acc = dstack_pop();
+    r_pc++; v = dstack_pop();
+    FLUSH;
+    quivm_write_byte(qvm, r_acc, v);
+    r_acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -629,13 +718,13 @@ PROLOGUE(SIGNE)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    if (qvm->acc < 32) {
-        qvm->acc = 32 - qvm->acc;
-        v <<= qvm->acc;
-        qvm->acc = (((int32_t) v) >> qvm->acc);
+    r_pc++; v = dstack_pop();
+    if (r_acc < 32) {
+        r_acc = 32 - r_acc;
+        v <<= r_acc;
+        r_acc = (((int32_t) v) >> r_acc);
     } else {
-        qvm->acc = v;
+        r_acc = v;
     }
     DISPATCH;
 }
@@ -645,8 +734,8 @@ PROLOGUE(SHL)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    qvm->acc = (v << (qvm->acc & 0x1F));
+    r_pc++; v = dstack_pop();
+    r_acc = (v << (r_acc & 0x1F));
     DISPATCH;
 }
 EPILOGUE
@@ -655,8 +744,8 @@ PROLOGUE(USHR)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    qvm->acc = (v >> (qvm->acc & 0x1F));
+    r_pc++; v = dstack_pop();
+    r_acc = (v >> (r_acc & 0x1F));
     DISPATCH;
 }
 EPILOGUE
@@ -665,15 +754,15 @@ PROLOGUE(SHR)
 {
     int32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = (int32_t) dstack_pop();
-    qvm->acc = (uint32_t) (v >> (qvm->acc & 0x1F));
+    r_pc++; v = (int32_t) dstack_pop();
+    r_acc = (uint32_t) (v >> (r_acc & 0x1F));
     DISPATCH;
 }
 EPILOGUE
 
 PROLOGUE(NOP)
 {
-    qvm->pc += (uint32_t) (data >> 32);
+    r_pc += (uint32_t) (data >> 32);
     DISPATCH;
 }
 EPILOGUE
@@ -681,8 +770,8 @@ EPILOGUE
 PROLOGUE(DUP)
 {
     UNUSED_DATA;
-    qvm->pc++;
-    dstack_push(qvm->acc);
+    r_pc++;
+    dstack_push(r_acc);
     DISPATCH;
 }
 EPILOGUE
@@ -690,8 +779,8 @@ EPILOGUE
 PROLOGUE(DROP)
 {
     UNUSED_DATA;
-    qvm->pc++;
-    qvm->acc = dstack_pop();
+    r_pc++;
+    r_acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -700,9 +789,9 @@ PROLOGUE(SWAP)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    dstack_push(qvm->acc);
-    qvm->acc = v;
+    r_pc++; v = dstack_pop();
+    dstack_push(r_acc);
+    r_acc = v;
     DISPATCH;
 }
 EPILOGUE
@@ -711,10 +800,10 @@ PROLOGUE(OVER)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
+    r_pc++; v = dstack_pop();
     dstack_push(v);
-    dstack_push(qvm->acc);
-    qvm->acc = v;
+    dstack_push(r_acc);
+    r_acc = v;
     DISPATCH;
 }
 EPILOGUE
@@ -723,10 +812,10 @@ PROLOGUE(ROT)
 {
     uint32_t v, w;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop(); w = dstack_pop();
+    r_pc++; v = dstack_pop(); w = dstack_pop();
     dstack_push(v);
-    dstack_push(qvm->acc);
-    qvm->acc = w;
+    dstack_push(r_acc);
+    r_acc = w;
     DISPATCH;
 }
 EPILOGUE
@@ -734,8 +823,8 @@ EPILOGUE
 PROLOGUE(RTO)
 {
     UNUSED_DATA;
-    qvm->pc++; rstack_push(qvm->acc);
-    qvm->acc = dstack_pop();
+    r_pc++; rstack_push(r_acc);
+    r_acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -743,8 +832,8 @@ EPILOGUE
 PROLOGUE(RFROM)
 {
     UNUSED_DATA;
-    qvm->pc++; dstack_push(qvm->acc);
-    qvm->acc = rstack_pop();
+    r_pc++; dstack_push(r_acc);
+    r_acc = rstack_pop();
     DISPATCH;
 }
 EPILOGUE
@@ -752,8 +841,8 @@ EPILOGUE
 PROLOGUE(RGET)
 {
     UNUSED_DATA;
-    qvm->pc++;
-    qvm->acc = qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)];
+    r_pc++;
+    r_acc = m_rstack[(uint8_t) (r_rsp - 1 - r_acc)];
     DISPATCH;
 }
 EPILOGUE
@@ -762,51 +851,51 @@ PROLOGUE(RSET)
 {
     uint32_t v;
     UNUSED_DATA;
-    qvm->pc++; v = dstack_pop();
-    qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)] = v;
-    qvm->acc = dstack_pop();
+    r_pc++; v = dstack_pop();
+    m_rstack[(uint8_t) (r_rsp - 1 - r_acc)] = v;
+    r_acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
 
 PROLOGUE(JSR_CONST)
 {
-    qvm->pc += (uint32_t) (data >> 32);
-    rstack_push(qvm->pc);
-    qvm->pc = (uint32_t) data;
+    r_pc += (uint32_t) (data >> 32);
+    rstack_push(r_pc);
+    r_pc = (uint32_t) data;
     DISPATCH;
 }
 EPILOGUE
 
 PROLOGUE(JMP_CONST)
 {
-    qvm->pc = (uint32_t) data;
+    r_pc = (uint32_t) data;
     DISPATCH;
 }
 EPILOGUE
 
 PROLOGUE(JZ_CONST)
 {
-    qvm->pc += (uint32_t) (data >> 32);
-    if (qvm->acc == 0) qvm->pc = (uint32_t) data;
-    qvm->acc = dstack_pop();
+    r_pc += (uint32_t) (data >> 32);
+    if (r_acc == 0) r_pc = (uint32_t) data;
+    r_acc = dstack_pop();
     DISPATCH;
 }
 EPILOGUE
 
 PROLOGUE(ADD_CONST)
 {
-    qvm->pc += (uint32_t) (data >> 32);
-    qvm->acc += (uint32_t) data;
+    r_pc += (uint32_t) (data >> 32);
+    r_acc += (uint32_t) data;
     DISPATCH;
 }
 EPILOGUE
 
 PROLOGUE(RGET_CONST)
 {
-    dstack_push(qvm->acc);
-    qvm->pc += (uint32_t) (data >> 32);
-    qvm->acc = qvm->rstack[(uint8_t) (qvm->rsp - 1 - ((uint32_t) data))];
+    dstack_push(r_acc);
+    r_pc += (uint32_t) (data >> 32);
+    r_acc = m_rstack[(uint8_t) (r_rsp - 1 - ((uint32_t) data))];
     DISPATCH;
 }
 EPILOGUE
@@ -818,22 +907,24 @@ EPILOGUE
     }
     return 0;
 }
+#elif DISPATCH_METHOD == 1
+    return 0;
+}
 #endif
 
 /* Populates the code table */
 static
 void tracer_populate_ctable(struct tracer *tr)
 {
-#if DISPATCH_METHOD == 0
-    #define CTABLE_MACRO(insn) INSN_ ## insn,
-#elif DISPATCH_METHOD == 1
-#elif DISPATCH_METHOD == 2
-    #define CTABLE_MACRO(insn) &do_ ## insn,
-#endif
+#if DISPATCH_METHOD == 1
+    tr->ctable[0] = NULL;
+    tracer_run(get_quivm(tr));
+#else
     static trace_code ctable[] = {
-        INSN_TABLE(CTABLE_MACRO)
+        INSN_TABLE(CTABLE)
     };
     memcpy(tr->ctable, ctable, sizeof(ctable));
+#endif
 }
 
 /* Traces the code in a given address. */
