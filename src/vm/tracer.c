@@ -969,7 +969,7 @@ void tracer_trace(struct tracer *tr, uint32_t address)
 
     insn = qvm->mem[addr++];
     if (insn < INSN_LIT_BASE) {
-        data = ((uint64_t) insn) | (1UL << 32UL);
+        data = ((uint64_t) insn) | (1ULL << 32ULL);
         insn = INSN_LITS;
         goto write_code;
     }
@@ -1011,12 +1011,12 @@ void tracer_trace(struct tracer *tr, uint32_t address)
             insn = INSN_LIT;
         }
         data = ((uint64_t) v);
-        data |= (((uint64_t) (addr - address)) << 32UL);
+        data |= (((uint64_t) (addr - address)) << 32ULL);
         goto write_code;
     }
 
     /* process regular instructions */
-    data = (1UL << 32UL);
+    data = (1ULL << 32ULL);
     if (insn == INSN_OVER) {
         if (addr < max_addr) {
             insn = qvm->mem[addr++];

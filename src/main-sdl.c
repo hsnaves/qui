@@ -90,8 +90,13 @@ void create_window(uint32_t width, uint32_t height)
         return;
     }
 
+#ifdef __EMSCRIPTEN__
     renderer = SDL_CreateRenderer(window, -1,
-                                  SDL_RENDERER_ACCELERATED);
+                                  SDL_RENDERER_SOFTWARE);
+#else
+    renderer = SDL_CreateRenderer(window, -1,
+                                  SDL_RENDERER_HARDWARE);
+#endif
     if (!renderer) {
         fprintf(stderr, "main: create_window: "
                 "using software renderer\n");
@@ -430,7 +435,8 @@ static
 int run(struct quivm *qvm)
 {
 #ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop_arg(&run_one_frame, qvm, 60, 0);
+    /* We assume native FPS is 60, a terrible assumption  */
+    emscripten_set_main_loop_arg(&run_one_frame, qvm, 0, 0);
     return 0;
 #else
     uint32_t time0, delta;
