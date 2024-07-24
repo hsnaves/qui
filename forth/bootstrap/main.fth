@@ -126,9 +126,6 @@ forth current !
 
 ( *** deferred words *** )
 
-\ prompt shown before any given input line
-align defer prompt ( -- )
-
 \ prints an error message and possibly
 \ restarts the interpreter or exits the program
 align defer error ( c-str n severity  -- )

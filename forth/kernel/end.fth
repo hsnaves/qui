@@ -12,18 +12,6 @@ private
   ; noexit
 last @ >xt onexcept !
 
-\ default prompt implementation
-" 
-> "
-: default_prompt ( -- )
-  state c@ if exit then \ not show prompt when compiling
-  channel 1 + c@ if exit then \ not show when not from stdin
-  [ find getc defer-ptr ] lit @
-  [ ' (getc) ] lit - if exit then
-  [ swap ] lit lit type tail
-  ; noexit
-last @ >xt
-
 \ new onboot
 : check-args ( -- )
   [ onboot @ ] lit exec
@@ -43,5 +31,5 @@ last @ >xt onboot !
 
 decimal 1 jsize c!
 stg-name" kernel.rom"
-is prompt 0 0 here @ 2 stg-do . nl bye
+0 0 here @ 2 stg-do . nl bye
 

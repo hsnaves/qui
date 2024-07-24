@@ -31,11 +31,6 @@ here !  \ restore here
 jsize c! \ restore jsize
 
 private
-\ default implementation of prompt
-: default_prompt ( -- )
-  ;
-last @ >xt is prompt
-
 \ default implementation of error
 : default_error ( c-str n severity -- )
   >r 1 channel c! type
