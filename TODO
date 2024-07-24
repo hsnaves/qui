@@ -1,9 +1,5 @@
-Short term goals:
+Goals:
 - Improve the speed of the VM;
 - Add support for deterministic replay of the VM;
 - Improve the bit resolution of the audio and stereo mode;
-- Division should be of 64-bit dividend by 32-bit divisor;
-
-Long term goals:
-- Decide whether or not to add floating point support to the VM;
 

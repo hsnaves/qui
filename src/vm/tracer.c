@@ -40,7 +40,7 @@
 #define INSN_TWODUP                   0xB8
 #define INSN_LIT                      0xBE
 #define INSN_LITS                     0xBF
-#define NUM_INSN ((INSN_RSET+1)-INSN_BASE)
+#define NUM_INSN ((INSN_UDIV+1)-INSN_BASE)
 
 /* Macro for list of instructions */
 #define INSN_TABLE(MACRO) \
@@ -71,19 +71,11 @@
     MACRO(AND) \
     MACRO(OR) \
     MACRO(XOR) \
-    MACRO(ADD) \
-    MACRO(SUB) \
-    MACRO(CSEL) \
-    MACRO(UMUL) \
-    MACRO(UDIV) \
-    MACRO(RD) \
-    MACRO(WRT) \
-    MACRO(RDB) \
-    MACRO(WRTB) \
-    MACRO(SIGNE) \
     MACRO(SHL) \
     MACRO(USHR) \
     MACRO(SHR) \
+    MACRO(ADD) \
+    MACRO(SUB) \
     MACRO(NOP) \
     MACRO(DUP) \
     MACRO(DROP) \
@@ -92,8 +84,14 @@
     MACRO(ROT) \
     MACRO(RTO) \
     MACRO(RFROM) \
+    MACRO(RD) \
+    MACRO(WRT) \
+    MACRO(RDB) \
+    MACRO(WRTB) \
     MACRO(RGET) \
-    MACRO(RSET)
+    MACRO(RSET) \
+    MACRO(UMUL) \
+    MACRO(UDIV)
 
 #if DISPATCH_METHOD == 0 /* switch */
 
@@ -673,128 +671,6 @@ PROLOGUE(XOR)
 }
 EPILOGUE
 
-PROLOGUE(ADD)
-{
-    uint32_t v;
-    UNUSED_DATA;
-    r_pc++; v = dstack_pop();
-    r_acc += v;
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(SUB)
-{
-    uint32_t v;
-    UNUSED_DATA;
-    r_pc++; v = dstack_pop();
-    r_acc = v - r_acc;
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(CSEL)
-{
-    uint32_t v, w;
-    UNUSED_DATA;
-    r_pc++; v = dstack_pop(); w = dstack_pop();
-    r_acc = (r_acc) ? v : w;
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(UMUL)
-{
-    uint64_t dv, dw;
-    UNUSED_DATA;
-
-    r_pc++;
-    dw = (uint64_t) dstack_pop();
-    dv = (uint64_t) r_acc;
-    dv *= dw;
-    dstack_push((uint32_t) dv);
-    r_acc = (uint32_t) (dv >> 32);
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(UDIV)
-{
-    uint32_t v;
-    UNUSED_DATA;
-
-    /* check for division by zero */
-    if (r_acc == 0) {
-        INVOKE(EXCEPTION, EX_DIVIDE_BY_ZERO);
-    } else {
-        r_pc++; v = dstack_pop();
-        dstack_push((v % r_acc));
-        r_acc = v / r_acc;
-    }
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(RD)
-{
-    UNUSED_DATA;
-    r_pc++;
-    FLUSH;
-    r_acc = quivm_read(qvm, r_acc);
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(WRT)
-{
-    uint32_t v;
-    UNUSED_DATA;
-    r_pc++; v = dstack_pop();
-    FLUSH;
-    quivm_write(qvm, r_acc, v);
-    r_acc = dstack_pop();
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(RDB)
-{
-    UNUSED_DATA;
-    r_pc++;
-    FLUSH;
-    r_acc = (uint32_t) quivm_read_byte(qvm, r_acc);
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(WRTB)
-{
-    uint32_t v;
-    UNUSED_DATA;
-    r_pc++; v = dstack_pop();
-    FLUSH;
-    quivm_write_byte(qvm, r_acc, v);
-    r_acc = dstack_pop();
-    DISPATCH;
-}
-EPILOGUE
-
-PROLOGUE(SIGNE)
-{
-    uint32_t v;
-    UNUSED_DATA;
-    r_pc++; v = dstack_pop();
-    if (r_acc < 32) {
-        r_acc = 32 - r_acc;
-        v <<= r_acc;
-        r_acc = (((int32_t) v) >> r_acc);
-    } else {
-        r_acc = v;
-    }
-    DISPATCH;
-}
-EPILOGUE
-
 PROLOGUE(SHL)
 {
     uint32_t v;
@@ -821,6 +697,26 @@ PROLOGUE(SHR)
     UNUSED_DATA;
     r_pc++; v = (int32_t) dstack_pop();
     r_acc = (uint32_t) (v >> (r_acc & 0x1F));
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(ADD)
+{
+    uint32_t v;
+    UNUSED_DATA;
+    r_pc++; v = dstack_pop();
+    r_acc += v;
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(SUB)
+{
+    uint32_t v;
+    UNUSED_DATA;
+    r_pc++; v = dstack_pop();
+    r_acc = v - r_acc;
     DISPATCH;
 }
 EPILOGUE
@@ -903,6 +799,50 @@ PROLOGUE(RFROM)
 }
 EPILOGUE
 
+PROLOGUE(RD)
+{
+    UNUSED_DATA;
+    r_pc++;
+    FLUSH;
+    r_acc = quivm_read(qvm, r_acc);
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(WRT)
+{
+    uint32_t v;
+    UNUSED_DATA;
+    r_pc++; v = dstack_pop();
+    FLUSH;
+    quivm_write(qvm, r_acc, v);
+    r_acc = dstack_pop();
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(RDB)
+{
+    UNUSED_DATA;
+    r_pc++;
+    FLUSH;
+    r_acc = (uint32_t) quivm_read_byte(qvm, r_acc);
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(WRTB)
+{
+    uint32_t v;
+    UNUSED_DATA;
+    r_pc++; v = dstack_pop();
+    FLUSH;
+    quivm_write_byte(qvm, r_acc, v);
+    r_acc = dstack_pop();
+    DISPATCH;
+}
+EPILOGUE
+
 PROLOGUE(RGET)
 {
     UNUSED_DATA;
@@ -919,6 +859,38 @@ PROLOGUE(RSET)
     r_pc++; v = dstack_pop();
     m_rstack[(uint8_t) (r_rsp - 1 - r_acc)] = v;
     r_acc = dstack_pop();
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(UMUL)
+{
+    uint64_t dv, dw;
+    UNUSED_DATA;
+
+    r_pc++;
+    dw = (uint64_t) dstack_pop();
+    dv = (uint64_t) r_acc;
+    dv *= dw;
+    dstack_push((uint32_t) dv);
+    r_acc = (uint32_t) (dv >> 32);
+    DISPATCH;
+}
+EPILOGUE
+
+PROLOGUE(UDIV)
+{
+    uint32_t v;
+    UNUSED_DATA;
+
+    /* check for division by zero */
+    if (r_acc == 0) {
+        INVOKE(EXCEPTION, EX_DIVIDE_BY_ZERO);
+    } else {
+        r_pc++; v = dstack_pop();
+        dstack_push((v % r_acc));
+        r_acc = v / r_acc;
+    }
     DISPATCH;
 }
 EPILOGUE
@@ -1027,7 +999,7 @@ void tracer_trace(struct tracer *tr, uint32_t address)
                 addr--;
             }
         }
-    } else if (insn > INSN_RSET) {
+    } else if (insn >= (INSN_BASE + NUM_INSN)) {
         insn = INSN_EXCEPTION;
         data = EX_INVALID_INSN;
     }

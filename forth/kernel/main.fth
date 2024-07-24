@@ -9,31 +9,27 @@ hex
 : and   ( n1 n2 -- {n1&n2} )       [ C8 c, ] ; inl
 : or    ( n1 n2 -- {n1|n2} )       [ C9 c, ] ; inl
 : xor   ( n1 n2 -- {n1^n2} )       [ CA c, ] ; inl
-: +     ( n1 n2 -- {n1+n2} )       [ CB c, ] ; inl
-: -     ( n1 n2 -- {n1-n2} )       [ CC c, ] ; inl
-: ?:    ( n1 n2 n3 -- {n3?n2:n1} ) [ CD c, ] ; inl
-: du*   ( u1 u2 -- lo high )       [ CE c, ] ; inl
-: u/mod ( u1 u2 -- rem quot )      [ CF c, ] ; inl
-: @     ( addr -- n )              [ D0 c, ] ; inl
-: !     ( n addr -- )              [ D1 c, ] ; inl
-: c@    ( addr -- c )              [ D2 c, ] ; inl
-: c!    ( c addr -- )              [ D3 c, ] ; inl
-: signe ( c -- n )                 [ D4 c, ] ; inl
-: shl   ( n1 n2 -- {n1<<n2} )      [ D5 c, ] ; inl
-: ushr  ( u1 u2 -- {u1>>u2} )      [ D6 c, ] ; inl
-: shr   ( n1 n2 -- {n1>>n2} )      [ D7 c, ] ; inl
-: nop   ( -- )                     [ D8 c, ] ; inl
-: dup   ( n -- n n )               [ D9 c, ] ; inl
-: drop  ( n -- )                   [ DA c, ] ; inl
-: swap  ( n1 n2 -- n2 n1 )         [ DB c, ] ; inl
-: over  ( n1 n2 -- n1 n2 n1 )      [ DC c, ] ; inl
-: rot   ( n1 n2 n3 -- n2 n3 n1 )   [ DD c, ] ; inl
-
-( stack manipulation words )
-: >r    ( n -- r: n )              [ DE c, ] ; inl
-: r>    ( r: n -- n )              [ DF c, ] ; inl
-: r@    ( raddr -- n )             [ E0 c, ] ; inl
-: r!    ( n raddr -- )             [ E1 c, ] ; inl
+: shl   ( n1 n2 -- {n1<<n2} )      [ CB c, ] ; inl
+: ushr  ( u1 u2 -- {u1>>u2} )      [ CC c, ] ; inl
+: shr   ( n1 n2 -- {n1>>n2} )      [ CD c, ] ; inl
+: +     ( n1 n2 -- {n1+n2} )       [ CE c, ] ; inl
+: -     ( n1 n2 -- {n1-n2} )       [ CF c, ] ; inl
+: nop   ( -- )                     [ D0 c, ] ; inl
+: dup   ( n -- n n )               [ D1 c, ] ; inl
+: drop  ( n -- )                   [ D2 c, ] ; inl
+: swap  ( n1 n2 -- n2 n1 )         [ D3 c, ] ; inl
+: over  ( n1 n2 -- n1 n2 n1 )      [ D4 c, ] ; inl
+: rot   ( n1 n2 n3 -- n2 n3 n1 )   [ D5 c, ] ; inl
+: >r    ( n -- r: n )              [ D6 c, ] ; inl
+: r>    ( r: n -- n )              [ D7 c, ] ; inl
+: @     ( addr -- n )              [ D8 c, ] ; inl
+: !     ( n addr -- )              [ D9 c, ] ; inl
+: c@    ( addr -- c )              [ DA c, ] ; inl
+: c!    ( c addr -- )              [ DB c, ] ; inl
+: r@    ( raddr -- n )             [ DC c, ] ; inl
+: r!    ( n raddr -- )             [ DD c, ] ; inl
+: du*   ( u1 u2 -- lo high )       [ DE c, ] ; inl
+: u/mod ( u1 u2 -- rem quot )      [ DF c, ] ; inl
 
 ( some other composite words )
 : nip   ( n1 n2 -- n2 )           swap drop  ; inl
@@ -94,6 +90,10 @@ forth current !
 }scope
 
 ( *** helper words *** )
+
+: signe ( n bits -- n' )
+  20 swap - dup >r shl r> shr
+  ;
 
 \ returns true if min <= v <= max
 : within ( v min max -- t )

@@ -215,63 +215,6 @@ int quivm_run(struct quivm *qvm)
             v = dstack_pop();
             qvm->acc ^= v;
             break;
-        case INSN_ADD:
-            v = dstack_pop();
-            qvm->acc += v;
-            break;
-        case INSN_SUB:
-            v = dstack_pop();
-            qvm->acc = v - qvm->acc;
-            break;
-        case INSN_CSEL:
-            v = dstack_pop();
-            w = dstack_pop();
-            qvm->acc = (qvm->acc) ? v : w;
-            break;
-        case INSN_UMUL:
-            dw = (uint64_t) dstack_pop();
-            dv = (uint64_t) qvm->acc;
-            dv *= dw;
-            dstack_push((uint32_t) dv);
-            qvm->acc = (uint32_t) (dv >> 32);
-            break;
-        case INSN_UDIV:
-            /* check for division by zero */
-            if (qvm->acc == 0) {
-                qvm->pc--;
-                err_cond = EX_DIVIDE_BY_ZERO;
-                goto check_exception;
-            }
-            v = dstack_pop();
-            dstack_push((v % qvm->acc));
-            qvm->acc = v / qvm->acc;
-            break;
-        case INSN_RD:
-            qvm->acc = quivm_read(qvm, qvm->acc);
-            break;
-        case INSN_WRT:
-            v = dstack_pop();
-            quivm_write(qvm, qvm->acc, v);
-            qvm->acc = dstack_pop();
-            break;
-        case INSN_RDB:
-            qvm->acc = (uint32_t) quivm_read_byte(qvm, qvm->acc);
-            break;
-        case INSN_WRTB:
-            v = dstack_pop();
-            quivm_write_byte(qvm, qvm->acc, v);
-            qvm->acc = dstack_pop();
-            break;
-        case INSN_SIGNE:
-            v = dstack_pop();
-            if (qvm->acc < 32) {
-                qvm->acc = 32 - qvm->acc;
-                v <<= qvm->acc;
-                qvm->acc = (((int32_t) v) >> qvm->acc);
-            } else {
-                qvm->acc = v;
-            }
-            break;
         case INSN_SHL:
             v = dstack_pop();
             qvm->acc = (v << (qvm->acc & 0x1F));
@@ -283,6 +226,14 @@ int quivm_run(struct quivm *qvm)
         case INSN_SHR:
             v = dstack_pop();
             qvm->acc = (((int32_t) v) >> (qvm->acc & 0x1F));
+            break;
+        case INSN_ADD:
+            v = dstack_pop();
+            qvm->acc += v;
+            break;
+        case INSN_SUB:
+            v = dstack_pop();
+            qvm->acc = v - qvm->acc;
             break;
         case INSN_NOP:
             break;
@@ -318,6 +269,22 @@ int quivm_run(struct quivm *qvm)
             dstack_push(qvm->acc);
             qvm->acc = rstack_pop();
             break;
+        case INSN_RD:
+            qvm->acc = quivm_read(qvm, qvm->acc);
+            break;
+        case INSN_WRT:
+            v = dstack_pop();
+            quivm_write(qvm, qvm->acc, v);
+            qvm->acc = dstack_pop();
+            break;
+        case INSN_RDB:
+            qvm->acc = (uint32_t) quivm_read_byte(qvm, qvm->acc);
+            break;
+        case INSN_WRTB:
+            v = dstack_pop();
+            quivm_write_byte(qvm, qvm->acc, v);
+            qvm->acc = dstack_pop();
+            break;
         case INSN_RGET:
             qvm->acc = qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)];
             break;
@@ -325,6 +292,24 @@ int quivm_run(struct quivm *qvm)
             v = dstack_pop();
             qvm->rstack[(uint8_t) (qvm->rsp - 1 - qvm->acc)] = v;
             qvm->acc = dstack_pop();
+            break;
+        case INSN_UMUL:
+            dw = (uint64_t) dstack_pop();
+            dv = (uint64_t) qvm->acc;
+            dv *= dw;
+            dstack_push((uint32_t) dv);
+            qvm->acc = (uint32_t) (dv >> 32);
+            break;
+        case INSN_UDIV:
+            /* check for division by zero */
+            if (qvm->acc == 0) {
+                qvm->pc--;
+                err_cond = EX_DIVIDE_BY_ZERO;
+                goto check_exception;
+            }
+            v = dstack_pop();
+            dstack_push((v % qvm->acc));
+            qvm->acc = v / qvm->acc;
             break;
         case INSN_INVL: /* fall through */
         default:
