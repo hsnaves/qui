@@ -14,7 +14,8 @@ private
   if reladdr then
   7 * 1 -
   over swap
-  signe = =0
+  20 swap - dup >r shl r> shr
+  = =0
   ;
 
 \ obtains the size of a literal

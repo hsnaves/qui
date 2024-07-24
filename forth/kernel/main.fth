@@ -57,46 +57,6 @@ last @ swap last ! imm last ! \ set then to immediate
 
 ( *** miscellaneous words *** )
 
-\ detect if the meta compiler is present
-\ the stack will contain the address of the internal
-\ dictionary or the meta dictionary
-word meta 0 lookup nip nip =0
-dup internal and swap =0 current @ and or
-
-current @ over current !
-
-\ links the previous node to a given node node
-: node-link ( prev node -- )
-  over node>next @
-  over node>next !
-  swap node>next !
-  ;
-
-\ unlinks a node from the linked list
-\ the previous node is passed to this word
-: node-drop ( prev -- )
-  dup node>next @
-  tuck node>next @
-  swap node>next !
-  0 swap node>next !
-  ;
-
-\ finds a node in the linked list
-\ returns pointer to the previous node ( or zero if not found )
-: node-find ( first node -- prev )
-  begin
-    over if
-      over node>next @
-      2dup =
-      if drop drop exit then
-      swap rot drop
-      again
-    then
-  end
-  drop
-  ;
-current !
-
 \ obtains the execution token of the next word
 : ' ( -- xt )
   find >xt tail
@@ -117,15 +77,25 @@ current !
 \ uses a dictionary (appends to context)
 : use ( addr -- )
   context swap
-  node-link tail
-  ; noexit
+  over node>next @
+  over node>next !
+  swap node>next !
+  ;
 
 \ no longer uses a given dictionary
 : discard ( addr -- )
   context swap
-  node-find dup
-  if node-drop tail then
-  drop
-  ;
 
-drop
+  begin
+    over =0 if drop drop exit then
+    over node>next @
+    2dup = =0
+    if swap rot drop again then
+  end
+  drop drop
+
+  dup node>next @
+  tuck node>next @
+  swap node>next !
+  0 swap node>next !
+  ;

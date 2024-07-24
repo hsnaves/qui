@@ -91,10 +91,6 @@ forth current !
 
 ( *** helper words *** )
 
-: signe ( n bits -- n' )
-  20 swap - dup >r shl r> shr
-  ;
-
 \ advances the counted string by 1
 : 1/str ( c-str n -- c-str' n' )
   1 - swap 1 + swap

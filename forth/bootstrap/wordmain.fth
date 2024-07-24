@@ -40,7 +40,7 @@ public
     F_LINK and
     if 1 + @ else 1 + [ swap ]  \ trick to save jumps
   else
-    drop then c@ 8 signe
+    drop then c@ 18 shl 18 shr
   then                          \ d: addr diff
   dup =0
   if nip exit then
@@ -135,7 +135,7 @@ private
   if F_XT or then
   \ check for large link
   r> @ link
-  dup 8 signe = =0              \ d: fl notshort? | r: n
+  dup 18 shl 18 shr = =0        \ d: fl notshort? | r: n
   if F_LINK or then
   \ ensure that F_EXT is present when extra flags are set
   dup 1F and
