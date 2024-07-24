@@ -4,35 +4,10 @@ hex
 scope{
 private
 \ handles general exceptions
-: general_exception ( status c-str n -- )
-  0 error 0 r@              \ d: status pc
-  dup . space
-  c@ . nl
-  status! tail
-  ; noexit
-
-\ handles invalid instructions
-" invalid instruction at "
-: invalid_insn ( status -- )
-  [ swap ] lit lit
-  general_exception tail
-  ; noexit
-
-\ handles divide by zero errors
-" divide by zero at "
-: divide_by_zero ( status -- )
-  [ swap ] lit lit
-  general_exception tail
-  ; noexit
-
-\ current implementation of onexcept
-: my_onexcept ( status -- )
-  dup 1 = if
-    invalid_insn tail
-  then
-  dup 2 = if
-    divide_by_zero tail
-  then
+" exception at "
+: general_exception ( status -- )
+  [ swap ] lit lit 0 error
+  0 r@ . space
   status! tail
   ; noexit
 last @ >xt onexcept !

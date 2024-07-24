@@ -40,17 +40,6 @@ hex
 : tuck  ( n1 n2 -- n2 n1 n2 )     swap over  ; inl
 : 2dup  ( n1 n2 -- n1 n2 n1 n2 )  over over  ; inl
 : *     ( n1 n2 -- {n1*n2} )       du* drop  ; inl
-: not   ( n1 -- {~n1} )             -1  xor  ; inl
-: bool  ( n1 -- {n1!=0} )           =0   =0  ; inl
-: <>    ( n1 n2 -- {n1!=n2} )        =   =0  ; inl
-: u>    ( u1 u2 -- {u1>u2} )      swap   u<  ; inl
-: >     ( n1 n2 -- {n1>n2} )      swap    <  ; inl
-: u>=   ( u1 u2 -- {u1>=u2} )       u<   =0  ; inl
-: >=    ( n1 n2 -- {n1>=n2} )        <   =0  ; inl
-: u<=   ( u1 u2 -- {u1<=u2} )       u>   =0  ; inl
-: <=    ( n1 n2 -- {n1<=n2} )        >   =0  ; inl
-: umod  ( u1 u2 -- rem )         u/mod drop  ; inl
-: u/    ( u1 u2 -- quot )        u/mod  nip  ; inl
 
 ( *** words to change base *** )
 
@@ -110,7 +99,7 @@ forth current !
 : within ( v min max -- t )
   rot tuck <
   if drop drop 0 exit then
-  swap >=
+  swap < =0
   ;
 
 \ advances the counted string by a given number of characters
@@ -141,7 +130,7 @@ forth current !
 : char-find ( c-str c -- idx )
   over
   begin
-    2dup c@ <>
+    2dup c@ = =0
     if 1 + again then
   end
   rot - nip

@@ -101,7 +101,7 @@ last @ >xt onboot !
   module-current @
   dup mod>strbuf-off @
   over mod>strbuf-here @
-  over u<=                      \ d: addr voff full?
+  over swap u< =0               \ d: addr voff full?
   if
     drop dup fill-buffer =0
     if uninstall-module 0A exit then

@@ -52,7 +52,7 @@ public
     over eof? if bye tail then
     swap nl? =0
     if
-      dup 0 r@ u< if again then
+      dup 0 r@ u< =0 until
       tiboverflow tail
     then
   end
@@ -66,7 +66,7 @@ private
   begin
     [ tib buf>off ] lit @
     [ tib buf>here ] lit @
-    u>= if line again then
+    u< =0 if line again then
   end
   ;
 
@@ -87,8 +87,7 @@ public
 \ Obtains a word from the TIB
 : word ( -- c-str n )
   begin
-    key blank?
-    if again then
+    key blank? =0 until
   end
   [ tib buf>off ] lit @
   dup 1 - swap

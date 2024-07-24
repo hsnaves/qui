@@ -27,7 +27,7 @@ last @ swap last ! imm last ! \ make [ immediate
 : tail ( -- )
   here @
   1 - dup c@
-  I_JSR <>
+  I_JSR = =0
   if drop exit then
   I_JMP swap c!
   ; imm

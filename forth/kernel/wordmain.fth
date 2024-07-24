@@ -118,7 +118,7 @@ private
 \ computes the link to the last word for a given word address
 : link ( addr -- diff )
   last @ tuck swap -            \ d: vlast diff
-  swap bool and
+  swap =0 =0 and
   ;
 
 \ updates the flags according to the word length and
@@ -131,11 +131,11 @@ private
   if F_EXT or then
   \ check if the code buffer is the same as the data buffer
   data buf>here >r
-  here 0 r@ <>                  \ d: fl different? | r: n here
+  here 0 r@ = =0                \ d: fl different? | r: n here
   if F_XT or then
   \ check for large link
   r> @ link
-  dup 8 signe <>                \ d: fl notshort? | r: n
+  dup 8 signe = =0              \ d: fl notshort? | r: n
   if F_LINK or then
   \ ensure that F_EXT is present when extra flags are set
   dup 1F and
