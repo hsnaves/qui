@@ -27,29 +27,11 @@ private
   ; noexit
 
 public
-internal current !
-\ interprets a single word ( given as counted string )
-align defer interpret ( c-str n -- )
-forth current !
-
-private
 \ default implementation of interpret
-: (interpret) ( c-str n -- )
+: interpret ( c-str n -- )
   state c@ if (do-compile) tail then
   (do-interpret) tail
   ; noexit
-last @ >xt is interpret
-
-public
-\ main Forth interpreter
-\ it interprets all the words in an infinite loop
-: interpreter ( -- )
-  0 state c!
-  begin
-    word interpret
-    again
-  end
-  ;
 
 }scope
 

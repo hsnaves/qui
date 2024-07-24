@@ -8,7 +8,11 @@ public
 : quit ( -- )
   0 rsp !
   0 channel c!
-  interpreter bye tail
+  0 state c!
+  begin
+    word interpret
+    again
+  end
   ; noexit
 
 \ performs the boot

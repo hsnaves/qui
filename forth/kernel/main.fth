@@ -95,18 +95,6 @@ forth current !
   20 swap - dup >r shl r> shr
   ;
 
-\ returns true if min <= v <= max
-: within ( v min max -- t )
-  rot tuck <
-  if drop drop 0 exit then
-  swap < =0
-  ;
-
-\ advances the counted string by a given number of characters
-\ : /str ( c-str n num -- c-str' n' )
-\  rot over + rot rot -
-\  ;
-
 \ advances the counted string by 1
 : 1/str ( c-str n -- c-str' n' )
   1 - swap 1 + swap

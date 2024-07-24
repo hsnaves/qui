@@ -5,11 +5,10 @@ scope{
 private
 \ character to digit word
 : c>d ( c -- dig )
-  dup [ char 9 char 0 ] lit lit
-  within if [ char 0 ] lit - exit then
-  dup [ char Z char A ] lit lit
-  within if [ char A 0A - ] lit - exit then
-  drop -1
+  [ char 0 ] lit -
+  dup 0A u< if exit then
+  [ char A char 0 - 0A - ] lit -
+  9 over u< over 25 u< and =0 or
   ;
 
 \ counted string to unsigned number
