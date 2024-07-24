@@ -16,15 +16,6 @@ hex
   wordbuf swap dict>data !
   ;
 
-\ set the context
-: set-context ( dictn ... dict2 dict1 n -- )
-  0 context !
-  begin
-    dup if swap use 1 - again then
-  end
-  drop
-  ;
-
 \ obtains the first character of the next word
 : char ( -- c )
   word drop c@

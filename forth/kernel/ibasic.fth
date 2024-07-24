@@ -46,9 +46,17 @@ hex
 
 \ allocates a given number of bytes in the buffer
 : %allot ( n buf -- addr )
-  2dup %free?
-  buf>here dup @
+  over dup 0 <
+  if
+    dup >r 0 swap -
+    [ 0 buf>end ] lit >r
+  else
+    0 >r [ 0 buf>here ] lit >r
+  then
+  over %free?
+  r> + dup @
   rot over + rot !
+  r> +
   ;
 
 \ compile a value in a user-selected buffer

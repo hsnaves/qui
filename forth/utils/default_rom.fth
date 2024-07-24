@@ -29,7 +29,7 @@ private
 
 : restore-prev-emit ( -- )
   prev-emit @
-  [ find (emit) defer-ptr ] lit !
+  [ find emit defer-ptr ] lit !
   ;
 
 : error-fileio ( c-str -- )

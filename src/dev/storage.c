@@ -81,7 +81,7 @@ int get_filename(struct storage *stg, struct quivm *qvm,
         /* Check if reading from memory */
         if (!(address < MEMORY_SIZE)) break;
 
-        filename[i] = quivm_read_byte(qvm, address++);
+        filename[i] = qvm->mem[address++];
         if (filename[i] == '\0') break;
     }
     len = i;

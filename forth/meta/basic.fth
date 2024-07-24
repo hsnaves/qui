@@ -17,7 +17,7 @@ ephemeral
 public
 \ address of the meta-buffer
 : meta-buffer ( -- addr )
-  [ META_BUFFER_SIZE alloc ] lit
+  [ 0 META_BUFFER_SIZE - allot ] lit
   ; inl
 
 \ exit the meta-compilation dictionary

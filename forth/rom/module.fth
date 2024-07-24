@@ -47,7 +47,7 @@ private
 \ initializes the global-buffer
 : module_initialize ( -- )
   [ onboot @ ] lit exec
-  global-buffer-size alloc
+  [ 0 global-buffer-size - ] lit allot
   dup [ global-buffer buf>here ] lit !
   dup [ global-buffer buf>start ] lit !
   global-buffer-size +

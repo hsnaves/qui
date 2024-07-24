@@ -81,7 +81,7 @@ private
 \ initializes the tmpbuf
 : scope_initialize ( -- )
   [ onboot @ ] lit exec
-  TMPBUF_SIZE alloc
+  [ 0 TMPBUF_SIZE - ] lit allot
   dup [ tmpbuf buf>here ] lit !
   dup [ tmpbuf buf>start ] lit !
   TMPBUF_SIZE + [ tmpbuf buf>end ] lit !

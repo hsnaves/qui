@@ -2,26 +2,16 @@
 hex
 
 scope{
-public
-\ memory allocation function with validation
-\ shrinks wordbuf and returns the address of the
-\ reserved memory following the shrunken buffer
-\ if it returns, the address is guarateed to be non-zero
-\ otherwise it terminates the program
-: alloc ( size -- addr )
-  dup wordbuf %free?
-  [ wordbuf buf>end ] lit dup @ rot -
-  dup rot !
-  ;
-
 ephemeral
-: TIB_SIZE 1000 ; inl
+1000
+: TIB_SIZE    [ dup ] lit ; inl
+: ALLOT_SIZE  [ 0 swap - ] lit ; inl
 
 private
 \ initializes the tib
 : tib_initialize ( -- )
   [ onboot @ ] lit exec
-  TIB_SIZE alloc
+  ALLOT_SIZE allot
   dup [ tib buf>here ] lit !
   dup [ tib buf>start ] lit !
   dup [ tib buf>off ] lit !
