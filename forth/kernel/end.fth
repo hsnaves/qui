@@ -42,6 +42,6 @@ last @ >xt onboot !
 }scope
 
 decimal 1 jsize c!
-stg-name" main.rom"
+stg-name" kernel.rom"
 is prompt 0 0 here @ 2 stg-do . nl bye
 

@@ -57,5 +57,5 @@ public
   nip nip
   ;
 
-include" forth/kernel/find.fth"
+include" forth/bootstrap/find.fth"
 }scope

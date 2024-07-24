@@ -29,7 +29,7 @@ static int zoom = 1;            /* the zoom level */
 static int mouse_captured;      /* the mouse was captured */
 static SDL_Joystick *joystick;  /* the joystick device */
 
-#include "default_rom.c"
+#include "kernel_rom.c"
 
 /* Functions */
 
@@ -589,8 +589,8 @@ int main(int argc, char **argv, char **envp)
             return 1;
         }
     } else {
-        length = sizeof(default_rom);
-        quivm_load_array(&qvm, default_rom, 0, &length);
+        length = sizeof(kernel_rom);
+        quivm_load_array(&qvm, kernel_rom, 0, &length);
     }
 
     ret = SDL_Init(SDL_INIT_VIDEO

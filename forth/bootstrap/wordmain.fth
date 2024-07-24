@@ -3,7 +3,7 @@ hex
 
 scope{
 ephemeral
-include" forth/kernel/flags.fth"
+include" forth/bootstrap/flags.fth"
 
 public
 ( *** implementation of the compare word *** )

@@ -131,7 +131,7 @@ private
 
 " /* auto-generated binary code (do not edit it) */
 
-static const uint8_t default_rom[] = {
+static const uint8_t kernel_rom[] = {
 "
 : dump-header ( -- )
   [ swap ] lit lit type tail
@@ -170,8 +170,5 @@ public
   ; noexit
 
 }scope
-
-\ " main.rom" drop 0 c,
-\ " src/default_rom.c" drop 0 c,
 
 dump-data

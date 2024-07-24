@@ -5,35 +5,37 @@
 RM := rm -f
 CAT := cat
 
-ROM_DEPS := forth/rom/main.fth forth/rom/scope.fth \
- forth/rom/scopeimpl.fth forth/io/storage.fth forth/rom/module.fth \
- forth/rom/other.fth forth/rom/end.fth
+KERNEL_DEPS := forth/kernel/main.fth forth/kernel/scope.fth \
+ forth/kernel/scopeimpl.fth forth/io/storage.fth \
+ forth/kernel/module.fth forth/kernel/other.fth forth/kernel/end.fth
 
-KERNEL_DEPS := forth/kernel/build.fth \
+BOOTSTRAP_DEPS := forth/bootstrap/build.fth \
  forth/meta/meta.fth forth/meta/basic.fth forth/meta/interp.fth \
- forth/meta/scope.fth forth/meta/init.fth forth/kernel/globals.fth \
- forth/kernel/ibasic.fth forth/kernel/herelast.fth forth/kernel/imain.fth \
- forth/kernel/tib.fth forth/kernel/flags.fth forth/kernel/wordmain.fth \
- forth/kernel/parsing.fth forth/kernel/find.fth forth/kernel/other.fth \
- forth/kernel/main.fth forth/kernel/interp.fth forth/kernel/boot.fth \
- forth/rom/main.fth forth/rom/scopeimpl.fth forth/io/console.fth
+ forth/meta/scope.fth forth/meta/init.fth forth/bootstrap/globals.fth \
+ forth/bootstrap/ibasic.fth forth/bootstrap/herelast.fth \
+ forth/bootstrap/imain.fth forth/bootstrap/tib.fth \
+ forth/bootstrap/flags.fth forth/bootstrap/wordmain.fth \
+ forth/bootstrap/parsing.fth forth/bootstrap/find.fth \
+ forth/bootstrap/other.fth forth/bootstrap/main.fth \
+ forth/bootstrap/interp.fth forth/bootstrap/boot.fth \
+ forth/kernel/main.fth forth/kernel/scopeimpl.fth forth/io/console.fth
 
-all: main.rom src/qui src/qui-sdl
+all: kernel.rom src/qui src/qui-sdl
 
 src/qui:
 	$(MAKE) -C src qui
 
-src/qui-sdl: src/default_rom.c
+src/qui-sdl: src/kernel_rom.c
 	$(MAKE) -C src qui-sdl
 
-main.rom: $(ROM_DEPS) src/qui
-	$(CAT) $(ROM_DEPS) | ./src/qui -r kernel.rom
-
 kernel.rom: $(KERNEL_DEPS) src/qui
-	./src/qui -r main.rom forth/kernel/build.fth
+	$(CAT) $(KERNEL_DEPS) | ./src/qui -r bootstrap.rom
 
-src/default_rom.c: main.rom
-	./src/qui -r main.rom forth/utils/default_rom.fth main.rom src/default_rom.c
+bootstrap.rom: $(BOOTSTRAP_DEPS) src/qui
+	./src/qui -r kernel.rom forth/bootstrap/build.fth
+
+src/kernel_rom.c: kernel.rom
+	./src/qui -r kernel.rom forth/utils/embed_rom.fth kernel.rom src/kernel_rom.c
 	$(RM) src/qui src/main.o
 	$(MAKE) -C src qui
 
@@ -42,7 +44,7 @@ install:
 
 clean:
 	$(MAKE) -C src clean
-	$(RM) main.rom src/default_rom.c
+	$(RM) kernel.rom src/kernel_rom.c
 	$(RM) src/qui src/qui-sdl
 
 .PHONY: all build install clean

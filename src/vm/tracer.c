@@ -537,6 +537,7 @@ EPILOGUE
 PROLOGUE(TWODUP)
 {
     uint32_t v;
+    UNUSED_DATA;
     r_pc += 2;
     v = dstack_pop();
     dstack_push(v);

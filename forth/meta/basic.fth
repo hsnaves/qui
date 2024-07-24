@@ -1,4 +1,4 @@
-\ meta-compiler used to build the kernel
+\ meta-compiler used to build the bootstrapping code
 hex
 
 \ the meta compilation words go into the meta dictionary

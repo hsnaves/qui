@@ -39,8 +39,8 @@ ifneq ($(DEBUG), 0)
     LDFLAGS := $(LDFLAGS) -g
 endif
 
-ifneq ("$(wildcard default_rom.c)","")
-    MAIN_CFLAGS := $(CFLAGS) -DINCLUDE_DEFAULT_ROM
+ifneq ("$(wildcard kernel_rom.c)","")
+    MAIN_CFLAGS := $(CFLAGS) -DINCLUDE_KERNEL_ROM
 else
     MAIN_CFLAGS := $(CFLAGS)
 endif

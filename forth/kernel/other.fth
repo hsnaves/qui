@@ -1,98 +1,106 @@
-\ Implementation of colon and related words
+\ implementation of the other words
 hex
 
-\ the word to exit the interpreter
-: ] ( -- )
-  1 state c!
-  ;
-
-\ to start a word definition in the meta dictionary
-: : ( -- addr )
-  ] create tail
+\ word to embed a constant
+: const ( v -- )
+  create lit, wrapup inl tail
   ; noexit
 
-\ the word to enter the interpreter
-: [ ( -- )
-  0 state c!
-  ;
-last @
-
-\ to end a word definition in the meta dictionary
-: ; ( addr -- )
-  [ wrapup tail
-  ; noexit imm
-last @ swap last ! imm last ! \ make [ immediate
-
-\ changes the last opcode from a call to a jump
-: tail ( -- )
-  here @
-  1 - dup c@
-  I_JSR = =0
-  if drop exit then
-  I_JMP swap c!
-  ; imm
-
-\ compiles an exit in place
-: exit ( -- )
-  state c@
-  if exit, tail then
-  ; imm
-
-\ drop the return at the end of the word
-: noexit ( -- )
-  here dup @
-  1 - swap  !
+\ word to create a dictionary
+: dictionary ( -- )
+  align [ 4 dict>data ] lit
+  allot dup const
+  0 over dict>last !
+  0 over node>next !
+  wordbuf over dict>code !
+  wordbuf swap dict>data !
   ;
 
-\ compiles a string inplace and returns the
-\ counted string on the stack
-: ", ( -- c-str n )
-  here @
+\ obtains the first character of the next word
+: char ( -- c )
+  word drop c@
+  ;
+
+internal current !
+\ digit to character word
+: d>c ( dig -- c )
+  dup 0A u<
+  if [ char 0 ] lit + exit then
+  [ char A 0A - ] lit +
+  ;
+
+\ prints a digit to the output (no space at the end)
+: d. ( dig -- )
+  d>c emit tail
+  ; noexit
+
+forth current !
+\ prints an unsigned word to the output in the current
+\ base (no space at end)
+: u. ( u -- )
   begin
-    key dup [ char " ] lit =
-    if
-      drop here @
-      over - exit
-    then
-    c,
-    again
+    base c@ u/mod
+    dup =0
+    if drop d. tail then
+    recurse
   end
-  ;
+  d. tail
+  ; noexit
 
-\ comments
-: ( ( -- )
-  begin
-    key
-    [ char ) ] lit =
-    until
-  end
-  ; imm
+\ prints a signed integer to the output in the current
+\ base (no space at end)
+: . ( num -- )
+  dup 0 <
+  if
+    [ char - ] lit emit
+    0 swap -
+  then
+  u. tail
+  ; noexit
 
-\ line comments
-: \ ( -- )
-  line tail
-  ; noexit imm
-
+( *** implementation of the "words" word *** )
 scope{
+private
+\ calls the xt on each word of the dictionary
+\ and one with the zero address ( to signal the end of list )
+: process-dict ( dict xt -- dict' xt )
+  over >r >r dict>last @
+  begin
+    0 r@ exec
+    dup if
+      >link again
+    then
+  end
+  drop r> r> node>next @ swap
+  ;
+
 public
-\ toggles the last word to immediate
-: imm ( -- )
-  F_IMM last @
-  ; noexit \ falls through
+internal current !
+\ implementation of words with a callback
+: (words) ( xt -- )
+  context @ swap
+  begin
+    over if
+      process-dict again
+    then
+  end
+  drop drop
+  ;
+forth current !
 
 private
-\ flips the flags of the word
-: toggle ( fl addr -- )
-  dup c@
-  rot xor
-  swap c!
-  ;
-
-public
-\ toggles the last word to inline
-: inl ( -- )
-  F_INL last @
-  toggle tail
+\ print a word
+: print-word ( word -- word )
+  dup if
+     dup >name type space tail
+  then
+  nl nl tail
   ; noexit
 
+public
+\ prints the words in the context
+: words ( -- )
+  [ ' print-word ] lit
+  (words) tail
+  ; noexit
 }scope

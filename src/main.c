@@ -16,11 +16,11 @@
 
 /* Global variables */
 
-#ifdef INCLUDE_DEFAULT_ROM
-#    include "default_rom.c"
+#ifdef INCLUDE_KERNEL_ROM
+#    include "kernel_rom.c"
 #else
 /* Default rom contains just an infinite loop */
-static const uint8_t default_rom[] = { 0xBE, 0xC2 };
+static const uint8_t kernel_rom[] = { 0xBE, 0xC2 };
 #endif
 
 /* Functions */
@@ -193,8 +193,8 @@ int main(int argc, char **argv, char **envp)
             return 1;
         }
     } else {
-        length = sizeof(default_rom);
-        quivm_load_array(&qvm, default_rom, 0, &length);
+        length = sizeof(kernel_rom);
+        quivm_load_array(&qvm, kernel_rom, 0, &length);
     }
 
     /* configure the devices */

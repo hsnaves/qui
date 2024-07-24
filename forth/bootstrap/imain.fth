@@ -73,7 +73,7 @@ ephemeral
 ( words defining return instruction )
 : I_RET    C0 ; inl
 
-include" forth/kernel/flags.fth"
+include" forth/bootstrap/flags.fth"
 
 public
 ( words defining jump instructions )
