@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <errno.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <termios.h>
@@ -14,9 +15,51 @@
 /* Internal data structure for the console device */
 struct cns_internal {
     struct termios old_state;   /* old terminal state */
+    int is_tty;                 /* if stdin is a tty device */
 };
 
 /* Functions */
+
+/* Updates the value of the channel variable to `v` */
+static
+void update_channel(struct console *cns, uint32_t v)
+{
+    struct cns_internal *ci;
+    struct termios new_state;
+    int ochannel;
+
+    ochannel = cns->channel;
+    cns->channel = v;
+
+    if ((ochannel & CONSOLE_FLAGS_MASK) == (v & CONSOLE_FLAGS_MASK))
+        return;
+
+    ci = (struct cns_internal *) cns->internal;
+    if (!ci->is_tty) return;
+
+    /* change the terminal state according to the flags */
+    new_state = ci->old_state;
+    if (v & CONSOLE_FLAGS_NOECHO) {
+        new_state.c_lflag &= ~(ECHO);
+    } else {
+        new_state.c_lflag |= ECHO;
+    }
+
+    if (v & CONSOLE_FLAGS_RAW) {
+        new_state.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+        new_state.c_oflag &= ~(OPOST);
+        new_state.c_lflag &= ~(ICANON | IEXTEN | ISIG);
+    } else {
+        new_state.c_iflag |= (BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+        new_state.c_oflag |= (OPOST);
+        new_state.c_lflag |= (ICANON | IEXTEN | ISIG);
+    }
+
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &new_state)) {
+        fprintf(stderr, "console: update_channel: "
+                "could not tcsetattr: %d\n", errno);
+    }
+}
 
 int console_init(struct console *cns)
 {
@@ -28,11 +71,21 @@ int console_init(struct console *cns)
         fprintf(stderr, "console: init: memory exhausted\n");
         return 1;
     }
-    tcgetattr(STDIN_FILENO, &ci->old_state);
+    ci->is_tty = isatty(STDIN_FILENO);
+    if (ci->is_tty) {
+        if (tcgetattr(STDIN_FILENO, &ci->old_state)) {
+            free(ci);
+            fprintf(stderr, "console: init: "
+                    "could not tcgetattr: %d\n", errno);
+            return 1;
+        }
+    }
     cns->internal = (void *) ci;
-
-    cns->channel = 0;
     console_configure(cns, 0, NULL, NULL);
+
+    /* to ensure update_channel() will detect a change */
+    cns->channel = CONSOLE_FLAGS_MASK;
+    update_channel(cns, 0);
     return 0;
 }
 
@@ -41,7 +94,12 @@ void console_destroy(struct console *cns)
     struct cns_internal *ci;
     if (cns->internal) {
         ci = (struct cns_internal *) cns->internal;
-        tcsetattr(STDIN_FILENO, TCSANOW, &ci->old_state);
+        if (ci->is_tty) {
+            if (tcsetattr(STDIN_FILENO, TCSANOW, &ci->old_state)) {
+                fprintf(stderr, "console: destroy: "
+                        "could not tcsetattr: %d\n", errno);
+            }
+        }
         free(cns->internal);
     }
     cns->internal = NULL;
@@ -135,38 +193,6 @@ uint32_t console_read_callback(struct console *cns,
         break;
     }
     return v;
-}
-
-/* Updates the value of the channel variable to `v` */
-static
-void update_channel(struct console *cns, uint32_t v)
-{
-    struct cns_internal *ci;
-    struct termios new_state;
-    if ((cns->channel & CONSOLE_FLAGS_MASK) != (v & CONSOLE_FLAGS_MASK)) {
-        /* change the terminal state according to the flags */
-        ci = (struct cns_internal *) cns->internal;
-        new_state = ci->old_state;
-
-        if (v & CONSOLE_FLAGS_NOECHO) {
-            new_state.c_lflag &= ~(ECHO);
-        } else {
-            new_state.c_lflag |= ECHO;
-        }
-
-        if (v & CONSOLE_FLAGS_RAW) {
-            new_state.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-            new_state.c_oflag &= ~(OPOST);
-            new_state.c_lflag &= ~(ICANON | IEXTEN | ISIG);
-        } else {
-            new_state.c_iflag |= (BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-            new_state.c_oflag |= (OPOST);
-            new_state.c_lflag |= (ICANON | IEXTEN | ISIG);
-        }
-
-        tcsetattr(STDIN_FILENO, TCSANOW, &new_state);
-    }
-    cns->channel = v;
 }
 
 void console_write_callback(struct console *cns, struct quivm *qvm,
