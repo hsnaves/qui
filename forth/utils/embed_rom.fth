@@ -104,8 +104,8 @@ private
 \ print a byte to the output in hexadecimal (no space)
 : b. ( v -- )
   dup 4 ushr
-  15 and d.
-  15 and d. tail
+  15 and d>c emit
+  15 and d>c emit tail
   ; noexit
 
 : dump-entry ( -- )

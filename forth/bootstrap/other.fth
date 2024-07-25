@@ -27,15 +27,15 @@ last @ swap last ! imm last ! \ make [ immediate
 : tail ( -- )
   here @
   1 - dup c@
-  I_JSR = =0
+  JSR = =0
   if drop exit then
-  I_JMP swap c!
+  JMP swap c!
   ; imm
 
 \ compiles an exit in place
 : exit ( -- )
   state c@
-  if exit, tail then
+  if RET c, tail then
   ; imm
 
 \ drop the return at the end of the word
@@ -49,7 +49,7 @@ last @ swap last ! imm last ! \ make [ immediate
 : ", ( -- c-str n )
   here @
   begin
-    key dup [ char " ] lit =
+    key dup [ key " ] lit =
     if
       drop here @
       over - exit
@@ -63,7 +63,7 @@ last @ swap last ! imm last ! \ make [ immediate
 : ( ( -- )
   begin
     key
-    [ char ) ] lit =
+    [ key ) ] lit =
     until
   end
   ; imm
@@ -77,7 +77,7 @@ scope{
 public
 \ toggles the last word to immediate
 : imm ( -- )
-  F_IMM last @
+  IMM last @
   ; noexit \ falls through
 
 private
@@ -91,7 +91,7 @@ private
 public
 \ toggles the last word to inline
 : inl ( -- )
-  F_INL last @
+  INL last @
   toggle tail
   ; noexit
 

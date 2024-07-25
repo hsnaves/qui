@@ -26,18 +26,18 @@ public
 ( *** words for accessing parts of a word in the dictionary *** )
 \ obtains the flags for the word
 : >flags ( addr -- fl )
-  c@ [ F_EXT 1 - ] lit
+  c@ [ EXT 1 - ] lit
   over u<
-  [ 0 F_EXT - F_IMM or F_INL or ] lit
+  [ 0 EXT - IMM or INL or ] lit
   or and
   ;
 
 \ obtains the link to the next word
 : >link ( addr -- addr' )
   dup 1 + over c@               \ d: addr addr' fl
-  dup F_EXT and
+  dup EXT and
   if
-    F_LINK and
+    LINK and
     if 1 + @ else 1 + [ swap ]  \ trick to save jumps
   else
     drop then c@ 18 shl 18 shr
@@ -50,13 +50,13 @@ public
 \ obtains the name of the word
 : >name ( addr -- c-addr n )
   dup c@ swap 1 +               \ d: fl addr'
-  over F_EXT and
+  over EXT and
   if
     dup 1 + swap c@
   else
     0 swap rot 1F and
   then                          \ d: fl addr len
-  swap 1 + rot F_LINK and       \ d: len addr' link?
+  swap 1 + rot LINK and         \ d: len addr' link?
   if 3 + then
   swap
   ;
@@ -65,7 +65,7 @@ public
 : >xt ( addr -- addr )
   dup >name +
   swap >flags
-  F_XT and if @ then
+  XT and if @ then
   ;
 
 ( *** implementation of the lookup word *** )
@@ -128,20 +128,20 @@ private
 : updateflags ( fl n -- fl' fb )
   \ check for large word length
   >r 1F 0 r@ u<
-  if F_EXT or then
+  if EXT or then
   \ check if the code buffer is the same as the data buffer
   data buf>here >r
   here 0 r@ = =0                \ d: fl different? | r: n here
-  if F_XT or then
+  if XT or then
   \ check for large link
   r> @ link
   dup 18 shl 18 shr = =0        \ d: fl notshort? | r: n
-  if F_LINK or then
-  \ ensure that F_EXT is present when extra flags are set
+  if LINK or then
+  \ ensure that EXT is present when extra flags are set
   dup 1F and
-  if F_EXT or then
-  \ merge in the length when F_EXT is not set
-  dup dup F_EXT and
+  if EXT or then
+  \ merge in the length when EXT is not set
+  dup dup EXT and
   =0 if 0 r@ or then
   r> drop
   ;
@@ -156,15 +156,15 @@ public
   data buf>here
   dup @ this !
   tuck %c,                      \ d: fl dhere | r: c-str n
-  over F_EXT and
+  over EXT and
   if 0 r@ over %c, then
   2dup
   this @ link
-  swap rot F_LINK and
+  swap rot LINK and
   if %, else %c, then           \ d: fl dhere | r: c-str n
   dup r> r> swap
   rot %str,                     \ d: fl dhere
-  swap F_XT and
+  swap XT and
   if
     dup @ swap
     0 swap %,
@@ -178,5 +178,5 @@ public
 \ to end a word definition in the dictionary
 : wrapup ( addr -- )
   this dup @ last !
-  0 swap ! exit, tail
+  0 swap ! RET c, tail
   ; noexit

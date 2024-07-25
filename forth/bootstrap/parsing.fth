@@ -5,9 +5,9 @@ scope{
 private
 \ character to digit word
 : c>d ( c -- dig )
-  [ char 0 ] lit -
+  [ key 0 ] lit -
   dup 0A u< if exit then
-  [ char A char 0 - 0A - ] lit -
+  [ key A key 0 - 0A - ] lit -
   9 over u< over 25 u< and =0 or
   ;
 
@@ -40,7 +40,7 @@ private
 : (number) ( c-str n -- num rem )
   1 over u<
   if
-    over c@ [ char - ] lit  =
+    over c@ [ key - ] lit  =
     if
       1/str unumber
       0 rot - swap exit

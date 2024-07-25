@@ -153,7 +153,7 @@ internal current !
   dup struct-size +
   swap over swap
   mod>filename !
-  str-copy tail
+  copy tail
   ; noexit
 forth current !
 

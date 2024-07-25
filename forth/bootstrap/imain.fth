@@ -55,46 +55,34 @@ private
 
 public
 \ compile a literal
-: lit, ( v -- )
+: l, ( v -- )
   0 get-size 0 compile-literal tail
   ; noexit
 
 \ compiles a literal for jump of automatic size
 \ based on jsize
-: litj, ( target -- )
+: lj, ( target -- )
   jsize c@ 1 compile-literal tail
   ; noexit
 
 \ compiles a jump to a target
-: jump, ( target insn -- )
+: j, ( target insn -- )
   >r 1 get-size 1 compile-literal r> c, tail
   ; noexit
 
 ephemeral
-( words defining return instruction )
-: I_RET    C0 ; inl
-
 include" forth/bootstrap/flags.fth"
 
 public
-( words defining jump instructions )
-: I_JSR    C1 ; inl
-: I_JMP    C2 ; inl
-: I_JZ     C3 ; inl
+( define constants for control instructions )
+: RET    C0 ; inl
+: JSR    C1 ; inl
+: JMP    C2 ; inl
+: JZ     C3 ; inl
 
 ( public flags )
-: F_IMM    F_IMM ; inl
-: F_INL    F_INL ; inl
+: IMM    IMM ; inl
+: INL    INL ; inl
 
-\ compile a sequence of instructions inline
-: inline, ( addr -- )
-  dup I_RET char-find
-  str, tail
-  ; noexit
-
-\ compiles a return
-: exit, ( -- )
-  I_RET c, tail
-  ; noexit
 }scope
 

@@ -5,7 +5,7 @@ hex
 dictionary meta
 
 ( saved words from the host environment )
-: h:F_IMM   [ F_IMM ] lit ; inl
+: h:IMM     [ IMM ] lit ; inl
 : h:>xt     [ ' >xt ] lit >r ;
 : h:>flags  [ ' >flags ] lit >r ;
 : h:lookup  [ ' lookup ] lit >r ;
@@ -82,10 +82,10 @@ meta current !
   [ swap ] lit lit 0 error 1 error tail
   ; noexit
 
-: str-copy ( c-str n dst -- )
+: copy ( c-str n dst -- )
   addr>host rot
   addr>host rot rot
-  str-copy tail
+  copy tail
   ; noexit
 
 : char-find ( c-str c -- idx )

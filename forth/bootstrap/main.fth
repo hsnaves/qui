@@ -97,7 +97,7 @@ forth current !
   ;
 
 \ copies a given string into the destination buffer
-: str-copy ( c-str n dst -- )
+: copy ( c-str n dst -- )
   >r
   begin
     dup if

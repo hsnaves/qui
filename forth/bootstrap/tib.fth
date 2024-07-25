@@ -69,7 +69,7 @@ public
 
 ephemeral
 : blank? ( c -- b )
-  [ char ! ] lit u<
+  [ key ! ] lit u<
   ; inl
 
 public

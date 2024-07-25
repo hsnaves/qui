@@ -3,7 +3,7 @@ hex
 
 \ word to embed a constant
 : const ( v -- )
-  create lit, wrapup inl tail
+  create l, wrapup inl tail
   ; noexit
 
 \ word to create a dictionary
@@ -16,23 +16,13 @@ hex
   wordbuf swap dict>data !
   ;
 
-\ obtains the first character of the next word
-: char ( -- c )
-  word drop c@
-  ;
-
 internal current !
 \ digit to character word
 : d>c ( dig -- c )
   dup 0A u<
-  if [ char 0 ] lit + exit then
-  [ char A 0A - ] lit +
+  if [ key 0 ] lit + exit then
+  [ key A 0A - ] lit +
   ;
-
-\ prints a digit to the output (no space at the end)
-: d. ( dig -- )
-  d>c emit tail
-  ; noexit
 
 forth current !
 \ prints an unsigned word to the output in the current
@@ -40,11 +30,9 @@ forth current !
 : u. ( u -- )
   begin
     base c@ u/mod
-    dup =0
-    if drop d. tail then
-    recurse
+    dup if recurse else drop then
   end
-  d. tail
+  d>c emit tail
   ; noexit
 
 \ prints a signed integer to the output in the current
@@ -52,7 +40,7 @@ forth current !
 : . ( num -- )
   dup 0 <
   if
-    [ char - ] lit emit
+    [ key - ] lit emit
     0 swap -
   then
   u. tail

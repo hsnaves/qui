@@ -16,27 +16,27 @@ private
   swap addr>host swap
   0 h:lookup
   dup if
-    dup h:>flags h:F_IMM and
+    dup h:>flags h:IMM and
     if h:>xt >r drop drop exit then
   then
-  drop number lit, tail
+  drop number l, tail
   ; noexit
 
 \ word to use when compiling
 : (compile) ( c-str n -- )
   1 lookup
-  dup if dup c@ F_IMM and =0 and then
+  dup if dup c@ IMM and =0 and then
   dup =0 if
     lookup dup =0
     if drop (compile-host) tail then
   then
   dup >flags
-  dup F_IMM and
+  dup IMM and
   if drop drop (compile-host) tail then
   rot drop rot drop
-  swap >xt swap F_INL and
-  if inline, tail then
-  I_JSR jump, tail
+  swap >xt swap INL and
+  if dup RET char-find str, tail then
+  JSR j, tail
   ; noexit
 
 \ interprets a single word ( given as counted string )

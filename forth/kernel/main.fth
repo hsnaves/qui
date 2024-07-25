@@ -5,15 +5,15 @@ hex
 \ checks if a condition is true
 : if ( -- if_addr )
   here @
-  dup litj,
-  I_JZ c, tail
+  dup lj,
+  JZ c, tail
   ; noexit imm
 
 \ implementation of the then word
 : then ( if_addr -- )
   here dup @
   rot rot !
-  dup litj,
+  dup lj,
   here !
   ;
 last @ \ keep address of then on the stack
@@ -21,7 +21,7 @@ last @ \ keep address of then on the stack
 \ else part of if/else/then construct
 : else ( if_addr -- else_addr )
   here @
-  dup litj, I_JMP c,
+  dup lj, JMP c,
   swap
   then tail
   ; noexit imm
@@ -37,17 +37,17 @@ last @ swap last ! imm last ! \ set then to immediate
 
 \ iterates the loop if the current value on the stack is false
 : until ( r: label rcomp -- r: label rcomp )
-  1 r@ I_JZ jump, tail
+  1 r@ JZ j, tail
   ; noexit imm
 
 \ iterates the loop regardless
 : again  ( r: label rcomp -- r: label rcomp )
-  1 r@ I_JMP jump, tail
+  1 r@ JMP j, tail
   ; noexit imm
 
 \ iterates the loop with a call instead of a jump
 : recurse ( r: label rcomp -- r: label rcomp )
-   1 r@ I_JSR jump, tail
+   1 r@ JSR j, tail
    ; noexit imm
 
 \ ends the begin block
@@ -57,21 +57,21 @@ last @ swap last ! imm last ! \ set then to immediate
 
 ( *** miscellaneous words *** )
 
+\ compiles a literal (immediate word)
+: lit ( n -- )
+  l, tail
+  ; noexit imm
+
 \ obtains the execution token of the next word
 : ' ( -- xt )
   find >xt tail
   ; noexit
 
-\ compiles a literal (immediate word)
-: lit ( n -- )
-  lit, tail
-  ; noexit imm
-
 : " ( -- c-str n )
   state c@ =0 if ", tail then
-  here @ dup litj, I_JSR c, ", swap drop
-  swap here @ swap here ! dup litj, here !
-  [ ' r> c@ ] lit c, lit, tail
+  here @ dup lj, JSR c, ", swap drop
+  swap here @ swap here ! dup lj, here !
+  [ ' r> c@ ] lit c, l, tail
   ; noexit imm
 
 \ uses a dictionary (appends to context)

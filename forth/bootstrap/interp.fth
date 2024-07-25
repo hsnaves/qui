@@ -13,17 +13,17 @@ private
 \ word to use when compiling
 : (do-compile) ( c-str n -- )
   1 lookup
-  dup c@ F_IMM and =0 and
+  dup c@ IMM and =0 and
   dup =0 if
     lookup dup =0
-    if drop number lit, tail then
+    if drop number l, tail then
   then
   >r drop drop r>
   dup >xt swap >flags
-  dup F_IMM and
+  dup IMM and
   if drop >r exit then
-  F_INL and if inline, tail then
-  I_JSR jump, tail
+  INL and if dup RET char-find str, tail then
+  JSR j, tail
   ; noexit
 
 public

@@ -26,7 +26,7 @@ public
 
 \ write the initial jump to boot
 jsize c@ here @ 0 here ! 3 jsize c!
-' boot litj, I_JMP c,
+' boot lj, JMP c,
 here !  \ restore here
 jsize c! \ restore jsize
 

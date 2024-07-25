@@ -3,7 +3,7 @@ hex
 
 \ current position of the code buffer
 : here ( -- addr )
-  code buf>here tail
+  code buf>here tail \ buf>here is empty, so okay to tail call
   ; noexit
 
 \ position of last word in the current dictionary
@@ -12,14 +12,7 @@ hex
   ;
 
 \ allocates a given number of bytes
-: allot ( n -- addr )
-  code %allot tail
-  ; noexit
-
-\ aligns the here pointer to multiple of a cell
-: align ( -- )
-  code %align tail
-  ; noexit
+: allot ( n -- addr ) code %allot tail ; noexit
 
 \ compile a value in the code buffer
 : , ( v -- )  here %, tail ; noexit
@@ -29,3 +22,6 @@ hex
 
 \ compiles a string in the code buffer
 : str, ( c-str n -- )  here %str, tail ; noexit
+
+\ aligns the here pointer to multiple of a cell
+: align ( -- ) code %align tail ; noexit

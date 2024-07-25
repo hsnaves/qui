@@ -35,6 +35,8 @@ hex
 \ obtains the offset pointer of the buffer
 : buf>off ( addr -- addr )   0C + ; inl
 
+scope{
+private
 \ detects if the buffer will overflow after allocating n bytes
 " buffer overflow"
 : %free? ( n buf -- )
@@ -44,6 +46,7 @@ hex
   if [ rot rot swap ] lit lit 2 error tail then
   ;
 
+public
 \ allocates a given number of bytes in the buffer
 : %allot ( n buf -- addr )
   over dup 0 <
@@ -78,7 +81,7 @@ hex
 \ compiles a string in a user-selected buffer
 : %str, ( c-str n buf -- )
   over swap %allot
-  str-copy tail
+  copy tail
   ; noexit
 
 \ aligns the here pointer to multiple of a cell
@@ -88,3 +91,5 @@ hex
   swap -
   swap %allot drop
   ;
+}scope
+

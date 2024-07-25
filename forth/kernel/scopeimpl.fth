@@ -57,7 +57,7 @@ hex
 \ creates a deferred word
 : defer ( -- )
   here @ 0 ,
-  create lit,
+  create l,
   [ ' @ c@ ] lit c,
   [ ' exec c@ ] lit c,
   wrapup tail
