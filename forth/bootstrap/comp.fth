@@ -6,7 +6,7 @@ hex
 
 scope{
 brief
-include" forth/bootstrap/inline.fth"
+%" forth/bootstrap/inline.fth" include
 
 public
 ( *** useful words for compilation *** )
@@ -24,7 +24,7 @@ public
 
 private
 \ detects if the buffer will overflow after allocating n bytes
-" buffer overflow"
+0 ", buffer overflow"
 : %free? ( n buf -- )
   dup buf>end @
   swap buf>here @ -
@@ -139,7 +139,7 @@ private
   ;
 
 \ shows an error for large literal string
-" large literal"
+0 ", large literal"
 : print-large-error ( -- )
   [ swap ] lit lit
   1 error tail

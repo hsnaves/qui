@@ -3,7 +3,7 @@ hex
 
 scope{
 brief
-include" forth/bootstrap/inline.fth"
+%" forth/bootstrap/inline.fth" include
 
 public
 ( *** implementation of the compare word *** )

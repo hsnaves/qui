@@ -3,23 +3,18 @@ hex
 
 brief
 ( define constants )
-: IO_STORAGE_NAME   FFFFFFBC ; inl
-: IO_STORAGE_DATA   FFFFFFB8 ; inl
-: IO_STORAGE_LEN    FFFFFFB4 ; inl
-: IO_STORAGE_OFFSET FFFFFFB0 ; inl
-: IO_STORAGE_OP     FFFFFFAC ; inl
+: IO_STORAGE_NAME    FFFFFFBC ; inl
+: IO_STORAGE_NAMELEN FFFFFFB8 ; inl
+: IO_STORAGE_DATA    FFFFFFB4 ; inl
+: IO_STORAGE_LEN     FFFFFFB0 ; inl
+: IO_STORAGE_OFFSET  FFFFFFAC ; inl
+: IO_STORAGE_OP      FFFFFFA8 ; inl
 
 public
 \ set the name of the file to operate on
-: f-name! ( c-str -- ) IO_STORAGE_NAME ! ;
-
-\ set the name of the file to operate on
-\ based on a string
-: f-name" ( -- )
-  ", 0 c,
-  drop dup
-  f-name!
-  here ! \ revert back the here
+: f-name! ( c-str n -- )
+  IO_STORAGE_NAMELEN !
+  IO_STORAGE_NAME !
   ;
 
 \ perform a file operation on a given buffer (and file offset)

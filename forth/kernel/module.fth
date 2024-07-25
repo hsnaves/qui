@@ -12,10 +12,11 @@ brief
 \ offsets within the structure
 : mod>next ( addr -- addr' )            ; inl
 : mod>filename ( addr -- addr' )    4 + ; inl
-: mod>offset ( addr -- addr' )      8 + ; inl
-: mod>pgetc ( addr -- addr' )      0C + ; inl
-: mod>strbuf ( addr -- addr' )     10 + ; inl
-: mod>bufstart  ( addr -- addr' )  20 + ; inl
+: mod>namelen ( addr -- addr' )     8 + ; inl
+: mod>offset ( addr -- addr' )     0C + ; inl
+: mod>pgetc ( addr -- addr' )      10 + ; inl
+: mod>strbuf ( addr -- addr' )     14 + ; inl
+: mod>bufstart  ( addr -- addr' )  24 + ; inl
 
 : mod>strbuf-here ( addr -- addr' )
   [ 0 mod>strbuf buf>here ] lit +
@@ -70,18 +71,20 @@ last @ >xt onboot !
   global-buffer buf>here !
   ;
 
-" i/o error "
+0 ", i/o error "
 : f-error ( addr -- )
   [ swap ] lit lit 0 error
   dup uninstall-module
-  mod>filename @ dup 0 index
+  dup mod>filename @
+  swap mod>namelen @
   1 error tail
   ; noexit
 
 \ reads the file and fills the buffer
 \ returns the number of bytes red
 : fill-buffer ( addr -- n )
-  dup mod>filename @ f-name!
+  dup mod>filename @
+  over mod>namelen @ f-name!
   dup mod>bufstart dup >r       \ d: addr start | r: start
   over mod>strbuf-off !
   dup mod>offset @
@@ -140,23 +143,14 @@ last @ >xt onboot !
   ; noexit
 
 public
-inner current !
 \ include a module
-: (include) ( c-str -- )
-  dup 0 index
-  \ add 1 for the null character
-  1 + dup struct-size +
+: include ( c-str n -- )
+  dup struct-size +
   allocate-space
   dup init-struct
+  2dup mod>namelen !
   dup struct-size +
   swap over swap
   mod>filename !
   copy tail
-  ; noexit
-forth current !
-
-\ include a module (inline)
-: include" ( -- )
-  ", 0 c, drop dup here !
-  (include) tail
   ; noexit

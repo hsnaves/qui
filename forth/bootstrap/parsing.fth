@@ -28,7 +28,7 @@ private
   ;
 
 \ prints an error message of an unknown word
-" ? "
+0 ", ? "
 : unknown ( c-str n -- )
   [ swap ] lit lit 0 error 1 error tail
   ; noexit
@@ -57,5 +57,5 @@ public
   nip nip
   ;
 
-include" forth/bootstrap/find.fth"
+%" forth/bootstrap/find.fth" include
 }scope

@@ -11,10 +11,11 @@
 
 /* Addresses within the storage device */
 #define IO_STORAGE_NAME         0xFFFFFFBC
-#define IO_STORAGE_DATA         0xFFFFFFB8
-#define IO_STORAGE_LEN          0xFFFFFFB4
-#define IO_STORAGE_OFFSET       0xFFFFFFB0
-#define IO_STORAGE_OP           0xFFFFFFAC
+#define IO_STORAGE_NAMELEN      0xFFFFFFB8
+#define IO_STORAGE_DATA         0xFFFFFFB4
+#define IO_STORAGE_LEN          0xFFFFFFB0
+#define IO_STORAGE_OFFSET       0xFFFFFFAC
+#define IO_STORAGE_OP           0xFFFFFFA8
 
 /* The possible operations */
 #define STORAGE_OP_READ                  1
@@ -23,7 +24,8 @@
 /* Data structures and types */
 /* A structure representing the external storage device */
 struct storage {
-    uint32_t name;              /* address of the name (nul-terminated) */
+    uint32_t name;              /* address of the name */
+    uint32_t namelen;           /* length of the name */
     uint32_t data;              /* addres of the data */
     uint32_t len;               /* length of the data
                                  * at the end of the operation, it contains

@@ -46,13 +46,15 @@ last @ swap last ! imm last ! \ make [ immediate
 
 \ compiles a string inplace and returns the
 \ counted string on the stack
-: ", ( -- c-str n )
-  here @
+\ it keeps the here pointer if keep? is true
+: ", ( keep? -- c-str n )
+  >r here @
   begin
     key dup [ key " ] lit =
     if
-      drop here @
-      over - exit
+      drop here @ over
+      r> if dup here ! then
+      - exit
     then
     c,
     again

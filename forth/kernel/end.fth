@@ -3,7 +3,7 @@ hex
 
 private
 \ handles general exceptions
-" trap at "
+0 ", trap at "
 : general_trap ( status -- )
   [ swap ] lit lit 0 error
   0 r@ . space
@@ -20,8 +20,8 @@ last @ >xt ontrap !
   [ tib buf>here ] lit @
   dup [ tib buf>off ] lit !
   over - 1 - dup if
-    2dup here @ >r
-    s, 0 c, r> (include)
+    here @ >r 2dup s,
+    r> over include
   then
   drop drop
   ;
@@ -29,6 +29,6 @@ last @ >xt onboot !
 }scope
 
 decimal 1 jsz c!
-f-name" kernel.rom"
+" kernel.rom" f-name!
 0 0 here @ 2 f-do . nl bye
 

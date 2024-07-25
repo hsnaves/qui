@@ -31,6 +31,11 @@ public
   meta-scrap tail
   ; noexit
 
+\ to compile strings on the host address
+: %" ( -- c-str n )
+  0 ", tail
+  ; noexit
+
 ( conversion to meta and host words )
 \ host address to meta address
 : addr>meta ( addr -- addr' )  meta-buffer - ; inl
@@ -76,7 +81,7 @@ meta current !
   type tail
   ; noexit
 
-" ? "
+0 ", ? "
 : unknown ( c-str n -- )
   swap addr>host swap
   [ swap ] lit lit 0 error 1 error tail
@@ -102,3 +107,4 @@ meta current !
   swap addr>host swap addr>host
   flush tail
   ; noexit
+

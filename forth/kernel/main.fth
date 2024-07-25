@@ -68,8 +68,8 @@ last @ swap last ! imm last ! \ set then to immediate
   ; noexit
 
 : " ( -- c-str n )
-  state c@ =0 if ", tail then
-  here @ dup lj, JSR c, ", swap drop
+  state c@ =0 if 1 ", tail then
+  here @ dup lj, JSR c, 0 ", swap drop
   swap here @ swap here ! dup lj, here !
   [ ' r> c@ ] lit c, l, tail
   ; noexit imm

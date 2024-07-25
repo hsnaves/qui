@@ -3,18 +3,17 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <ctype.h>
+#include <string.h>
 
 #include "vm/quivm.h"
 #include "dev/storage.h"
-
-/* Constants */
-#define MAX_FILENAME_LENGTH            512
 
 /* Functions */
 
 int storage_init(struct storage *stg)
 {
     stg->name = 0;
+    stg->namelen = 0;
     stg->data = 0;
     stg->len = 0;
     stg->offset = 0;
@@ -43,6 +42,9 @@ uint32_t storage_read_callback(struct storage *stg,
     case IO_STORAGE_NAME:
         v = stg->name;
         break;
+    case IO_STORAGE_NAMELEN:
+        v = stg->namelen;
+        break;
     case IO_STORAGE_DATA:
         v = stg->data;
         break;
@@ -66,35 +68,26 @@ uint32_t storage_read_callback(struct storage *stg,
 /* Obtains the filename from the virtual machine.
  * This function also validates the filename.
  * The QUI vm is given by `qvm`. The output filename is written to the
- * buffer `filename`, which is of size `size`.
+ * buffer `filename`.
  * Return zero on success.
  */
 static
-int get_filename(struct storage *stg, struct quivm *qvm,
-                 char *filename, uint32_t size)
+int get_filename(struct storage *stg, struct quivm *qvm, char *filename)
 {
-    uint32_t i, len, address;
+    uint32_t i;
     char c;
 
-    address = stg->name;
-    for (i = 0; i < size - 1; i++) {
-        /* Check if reading from memory */
-        if (!(address < MEMORY_SIZE)) break;
-
-        filename[i] = qvm->mem[address++];
-        if (filename[i] == '\0') break;
-    }
-    len = i;
-    filename[len] = '\0'; /* make sure it is null terminated */
+    memcpy(filename, &qvm->mem[stg->name], stg->namelen);
+    filename[stg->namelen] = '\0'; /* make sure it is null terminated */
 
     /* now validate the filename
      * It must contain only printable characters. It must not start with
      * a forward slash, and it must not contain a dot immediately
      * followed by another dot.
      */
-    if (len == 0) return 1;
+    if (stg->namelen == 0) return 1;
 
-    for (i = 0; i < len; i++) {
+    for (i = 0; i < stg->namelen; i++) {
         c = filename[i];
         if (!isprint(c)) return 1;
 
@@ -116,19 +109,25 @@ static
 void do_operation(struct storage *stg, struct quivm *qvm)
 {
     FILE *fp;
-    char filename[MAX_FILENAME_LENGTH];
+    char filename[512];
 
-    if ((stg->op != STORAGE_OP_READ) && (stg->op != STORAGE_OP_WRITE)) {
+    if (((stg->op != STORAGE_OP_READ) && (stg->op != STORAGE_OP_WRITE))) {
+        /* invalid operation */
         stg->len = -1;
         return;
     }
 
-    if (check_buffer(stg->data, stg->len, MEMORY_SIZE)) {
+    /* ensure data and name are completely inside the memory
+     * and that the name is not too large
+     */
+    if (check_buffer(stg->data, stg->len, MEMORY_SIZE)
+        || check_buffer(stg->name, stg->namelen, MEMORY_SIZE)
+        || (stg->namelen >= sizeof(filename))) {
         stg->len = -1;
         return;
     }
 
-    if (get_filename(stg, qvm, filename, sizeof(filename))) {
+    if (get_filename(stg, qvm, filename)) {
         /* Length -1 indicates an error */
         stg->len = -1;
         return;
@@ -186,6 +185,9 @@ void storage_write_callback(struct storage *stg, struct quivm *qvm,
     case IO_STORAGE_NAME:
         stg->name = v;
         break;
+    case IO_STORAGE_NAMELEN:
+        stg->namelen = v;
+        break;
     case IO_STORAGE_DATA:
         stg->data = v;
         break;
@@ -201,4 +203,3 @@ void storage_write_callback(struct storage *stg, struct quivm *qvm,
         break;
     }
 }
-

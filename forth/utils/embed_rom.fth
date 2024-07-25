@@ -2,13 +2,15 @@ decimal
 
 scope{
 private
-align 32 allot
+align 40 allot
 brief
 : input-filename  [ dup ]     lit ; inl
+: input-namelen   [ 4 + dup ] lit ; inl
 : input-offset    [ 4 + dup ] lit ; inl
 : input-length    [ 4 + dup ] lit ; inl
 : input-pos       [ 4 + dup ] lit ; inl
 : output-filename [ 4 + dup ] lit ; inl
+: output-namelen  [ 4 + dup ] lit ; inl
 : output-offset   [ 4 + dup ] lit ; inl
 : output-length   [ 4 + dup ] lit ; inl
 : prev-emit       [ 4 + ]     lit ; inl
@@ -32,21 +34,22 @@ private
   [ find emit >dptr ] lit !
   ;
 
-: error-fileio ( c-str -- )
+: error-fileio ( c-str n -- )
   restore-prev-emit
   " error in file operation: " 0 error
-  dup 0 index over -
   2 error tail
   ; noexit
 
 : flush-output ( -- )
-  output-filename @ f-name!
+  output-filename @
+  output-namelen @ f-name!
   output-offset @
   output-buffer
   output-length @
   2 f-do
   dup 0 < if
-    output-filename @ error-fileio tail
+    output-filename @
+    output-namelen @ error-fileio tail
   then
   output-offset @ + output-offset !
   0 output-length !
@@ -66,12 +69,14 @@ private
   ;
 
 : refresh-input ( -- )
-  input-filename @ f-name!
+  input-filename @
+  input-namelen @ f-name!
   input-offset @
   input-buffer buffer-size
   1 f-do
   dup 0 < if
-    input-filename @ error-fileio tail
+    input-filename @
+    input-namelen @ error-fileio tail
   then
   dup input-offset @ + input-offset !
   input-length !
@@ -129,7 +134,7 @@ private
   nl tail
   ; noexit
 
-" /* auto-generated binary code (do not edit it) */
+0 ", /* auto-generated binary code (do not edit it) */
 
 static const uint8_t kernel_rom[] = {
 "
@@ -145,13 +150,15 @@ static const uint8_t kernel_rom[] = {
 
 public
 
-: dump-data ( input output -- )
+: dump-data ( -- )
   1 chn 1 + c! " input: " type
   here @ input-filename !
-  word 2dup type nl s, 0 c,
+  word 2dup type nl
+  dup input-namelen ! s,
   " output: " type
   here @ output-filename !
-  word 2dup type nl s, 0 c,
+  word 2dup type nl
+  dup output-namelen ! s,
 
   reset-vars
   install-new-emit

@@ -3,7 +3,7 @@ hex
 
 scope{
 brief
-include" forth/bootstrap/inline.fth"
+%" forth/bootstrap/inline.fth" include
 
 1000
 : TIB_SIZE    [ dup ] lit ; inl
@@ -26,7 +26,7 @@ brief
 : nl? ( c -- b ) 0A = ; inl
 
 private
-" TIB overflow"
+0 ", TIB overflow"
 : tiboverflow ( -- )
   [ swap ] lit lit 1 error tail
   ; noexit
