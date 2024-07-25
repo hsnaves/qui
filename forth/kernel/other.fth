@@ -1,6 +1,7 @@
 \ implementation of the other words
 hex
 
+public
 \ word to embed a constant
 : const ( v -- )
   create l, wrapup inl tail
@@ -11,7 +12,7 @@ hex
   align [ 4 dict>data ] lit
   allot dup const
   0 over dict>last !
-  0 over node>next !
+  0 over dict>next !
   wbuf over dict>code !
   wbuf swap dict>data !
   ;
@@ -47,7 +48,6 @@ forth current !
   ; noexit
 
 ( *** implementation of the "words" word *** )
-scope{
 private
 \ calls the xt on each word of the dictionary
 \ and one with the zero address ( to signal the end of list )
@@ -59,7 +59,7 @@ private
       >link again
     then
   end
-  drop r> r> node>next @ swap
+  drop r> r> dict>next @ swap
   ;
 
 public
@@ -91,4 +91,3 @@ public
   [ ' print-word ] lit
   (words) tail
   ; noexit
-}scope

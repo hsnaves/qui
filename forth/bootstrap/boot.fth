@@ -44,3 +44,7 @@ last @ >xt is error
   ; noexit
 last @ >xt ontrap !
 }scope
+
+\ to cleanup the temporary buffer
+scope{
+}scope

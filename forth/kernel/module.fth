@@ -1,7 +1,6 @@
 \ module for including other modules
 hex
 
-scope{
 public
 \ variable space
 align 8 buf>end allot
@@ -11,7 +10,8 @@ brief
 : global-buffer [ 4 + ] lit             ; inl
 
 \ offsets within the structure
-: mod>filename   ( addr -- addr' )  4 + ; inl
+: mod>next ( addr -- addr' )            ; inl
+: mod>filename ( addr -- addr' )    4 + ; inl
 : mod>offset ( addr -- addr' )      8 + ; inl
 : mod>pgetc ( addr -- addr' )      0C + ; inl
 : mod>strbuf ( addr -- addr' )     10 + ; inl
@@ -35,7 +35,6 @@ brief
 : global-buffer-size               1000 ; inl
 
 private
-
 0 module-current ! \ set it to zero
 
 \ initialize the global buffer
@@ -67,7 +66,7 @@ last @ >xt onboot !
   \ obtain the previous value of getc
   [ find getc >dptr ] lit !
   \ link the module
-  dup node>next @ module-current !
+  dup mod>next @ module-current !
   global-buffer buf>here !
   ;
 
@@ -123,7 +122,7 @@ last @ >xt onboot !
   \ link the module
   module-current
   2dup @
-  swap node>next !
+  swap mod>next !
   !
   ;
 
@@ -141,7 +140,6 @@ last @ >xt onboot !
   ; noexit
 
 public
-
 inner current !
 \ include a module
 : (include) ( c-str -- )
@@ -162,5 +160,3 @@ forth current !
   ", 0 c, drop dup here !
   (include) tail
   ; noexit
-}scope
-

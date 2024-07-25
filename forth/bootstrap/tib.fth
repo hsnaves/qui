@@ -3,6 +3,8 @@ hex
 
 scope{
 brief
+include" forth/bootstrap/inline.fth"
+
 1000
 : TIB_SIZE    [ dup ] lit ; inl
 : ALLOT_SIZE  [ 0 swap - ] lit ; inl

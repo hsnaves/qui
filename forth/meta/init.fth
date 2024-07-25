@@ -15,13 +15,13 @@ forth context !
 01 jsz c!
 
 \ initialize the forth dictionary
-inner forth node>next !
+inner forth dict>next !
 0 forth dict>last !
 wbuf forth dict>code !
 wbuf forth dict>data !
 
 \ initialize the inner dictionary
-0 inner node>next !
+0 inner dict>next !
 0 inner dict>last !
 wbuf inner dict>code !
 wbuf inner dict>data !
@@ -34,7 +34,7 @@ wbuf inner dict>data !
 0 wbuf buf>off !
 
 \ initialize the temp dictionary
-0 temp node>next !
+0 temp dict>next !
 0 temp dict>last !
 tmpbuf temp dict>code !
 tmpbuf temp dict>data !

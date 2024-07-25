@@ -3,7 +3,7 @@ hex
 
 scope{
 brief
-include" forth/bootstrap/flags.fth"
+include" forth/bootstrap/inline.fth"
 
 public
 ( *** implementation of the compare word *** )
@@ -98,7 +98,7 @@ private
     dup if
       dup >r lookup1            \ d: c-str n addr | r: dict
       dup if r> drop exit then
-      drop r> node>next @
+      drop r> dict>next @
       again
     then
   end
@@ -147,7 +147,6 @@ private
   ;
 
 public
-
 \ creates a word in the current dictionary
 : create ( -- )
   dfl c@ word
@@ -173,10 +172,11 @@ public
   then
   drop
   ;
-}scope
 
 \ to end a word definition in the dictionary
 : wrapup ( addr -- )
   this dup @ last !
   0 swap ! RET c, tail
   ; noexit
+}scope
+

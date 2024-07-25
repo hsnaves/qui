@@ -90,4 +90,4 @@ private
   TMPBUF_SIZE + [ tmpbuf buf>end ] lit !
   ;
 last @ >xt onboot !
-}scope
+

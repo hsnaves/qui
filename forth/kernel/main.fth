@@ -77,25 +77,23 @@ last @ swap last ! imm last ! \ set then to immediate
 \ uses a dictionary (appends to context)
 : use ( addr -- )
   context swap
-  over node>next @
-  over node>next !
-  swap node>next !
+  over dict>next @
+  over dict>next !
+  swap dict>next !
   ;
 
 \ no longer uses a given dictionary
 : scrap ( addr -- )
   context swap
-
   begin
     over =0 if drop drop exit then
-    over node>next @
+    over dict>next @
     2dup = =0
     if swap rot drop again then
   end
   drop drop
-
-  dup node>next @
-  tuck node>next @
-  swap node>next !
-  0 swap node>next !
+  dup dict>next @
+  tuck dict>next @
+  swap dict>next !
+  0 swap dict>next !
   ;

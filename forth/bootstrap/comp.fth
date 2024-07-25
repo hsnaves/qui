@@ -4,17 +4,11 @@ hex
 \ the current stack should be
 \ d: forth
 
-( *** definition words for working with dictionaries *** )
-\ node sibling
-: node>next ( addr -- addr' )      ; inl
+scope{
+brief
+include" forth/bootstrap/inline.fth"
 
-\ last word of dictionary
-: dict>last ( addr -- addr )  04 + ; inl
-\ buffer for code in dictinary
-: dict>code ( addr -- addr )  08 + ; inl
-\ buffer for data in dictionary
-: dict>data ( addr -- addr )  0C + ; inl
-
+public
 ( *** useful words for compilation *** )
 \ the current code buffer
 : code ( -- addr )
@@ -28,17 +22,6 @@ hex
   dict>data @
   ;
 
-( *** words for compiling using buffers *** )
-\ obtains the here pointer of the buffer
-: buf>here ( addr -- addr )       ; inl
-\ obtains the start pointer of the buffer
-: buf>start ( addr -- addr ) 04 + ; inl
-\ obtains the end pointer of the buffer
-: buf>end ( addr -- addr )   08 + ; inl
-\ obtains the offset pointer of the buffer
-: buf>off ( addr -- addr )   0C + ; inl
-
-scope{
 private
 \ detects if the buffer will overflow after allocating n bytes
 " buffer overflow"
@@ -94,7 +77,6 @@ public
   swap -
   swap %allot drop
   ;
-}scope
 
 
 \ here, last and other related words
@@ -130,7 +112,6 @@ current @ swap current !
 \ compilation words for literals and jumps
 current !
 
-scope{
 private
 \ computes the relative address for jumps
 : reladdr ( target n -- v n )
@@ -198,9 +179,6 @@ public
 : j, ( target insn -- )
   >r 1 get-size 1 compile-literal r> c, tail
   ; noexit
-
-brief
-include" forth/bootstrap/flags.fth"
 
 public
 ( define constants for control instructions )

@@ -1,7 +1,6 @@
 \ module for performing storage operations
 hex
 
-scope{
 brief
 ( define constants )
 : IO_STORAGE_NAME   FFFFFFBC ; inl
@@ -32,5 +31,3 @@ public
   r> IO_STORAGE_OP !
   IO_STORAGE_LEN @
   ;
-
-}scope

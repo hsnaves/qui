@@ -1,7 +1,6 @@
 \ last words of rom
 hex
 
-scope{
 private
 \ handles general exceptions
 " trap at "
