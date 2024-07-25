@@ -19,7 +19,7 @@ private
     base c@ 2dup u<
     if \ d: c-str n dig vbase | r: u
       r> * + >r
-      1/str dup =0 until
+      /s dup =0 until
       2dup
     then
     drop drop
@@ -42,7 +42,7 @@ private
   if
     over c@ [ key - ] lit  =
     if
-      1/str unumber
+      /s unumber
       0 rot - swap exit
     then
   then

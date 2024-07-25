@@ -2,7 +2,7 @@
 hex
 
 scope{
-ephemeral
+brief
 ( *** variables for scope implementation *** )
 : temp        60 ; inl
 : tmpbuf      70 ; inl
@@ -12,6 +12,6 @@ public
 : temp        temp     ; inl
 : tmpbuf      tmpbuf   ; inl
 
-\ compile defer-ptr in meta dictionary
+\ compile >dptr in meta dictionary
 \ this is used by scopeimpl.fth
 meta

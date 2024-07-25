@@ -6,7 +6,7 @@ hex
   1 state c!
   ;
 
-\ to start a word definition in the meta dictionary
+\ to start a word definition in the current dictionary
 : : ( -- addr )
   ] create tail
   ; noexit
@@ -17,7 +17,7 @@ hex
   ;
 last @
 
-\ to end a word definition in the meta dictionary
+\ to end a word definition in the current dictionary
 : ; ( addr -- )
   [ wrapup tail
   ; noexit imm

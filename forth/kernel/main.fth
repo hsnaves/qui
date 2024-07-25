@@ -83,7 +83,7 @@ last @ swap last ! imm last ! \ set then to immediate
   ;
 
 \ no longer uses a given dictionary
-: discard ( addr -- )
+: scrap ( addr -- )
   context swap
 
   begin

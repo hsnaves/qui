@@ -2,7 +2,7 @@
 hex
 
 scope{
-ephemeral
+brief
 include" forth/bootstrap/flags.fth"
 
 public
@@ -16,7 +16,7 @@ public
     if
       over c@ 0 r@ c@ =
       if
-        1/str r> 1 + >r dup again
+        /s r> 1 + >r dup again
       then
     then
   end
@@ -83,11 +83,11 @@ private
   end
   ;
 
-\ finds a word in the current (and currnext) dictionaries
+\ finds a word in the current (and other) dictionaries
 : lookupcurrent ( c-str n -- c-str n addr )
   current @ lookup1
   dup if exit then
-  drop currnext @
+  drop other @
   dup if lookup1 tail then
   ;
 
@@ -150,7 +150,7 @@ public
 
 \ creates a word in the current dictionary
 : create ( -- )
-  flags c@ word
+  dfl c@ word
   swap >r >r 0 r@
   updateflags                   \ d: fl' fb | r: c-str n
   data buf>here
@@ -163,7 +163,7 @@ public
   swap rot LINK and
   if %, else %c, then           \ d: fl dhere | r: c-str n
   dup r> r> swap
-  rot %str,                     \ d: fl dhere
+  rot %s,                       \ d: fl dhere
   swap XT and
   if
     dup @ swap

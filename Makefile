@@ -12,8 +12,7 @@ KERNEL_DEPS := forth/kernel/main.fth forth/kernel/scope.fth \
 BOOTSTRAP_DEPS := forth/bootstrap/build.fth \
  forth/meta/meta.fth forth/meta/basic.fth forth/meta/interp.fth \
  forth/meta/scope.fth forth/meta/init.fth forth/bootstrap/globals.fth \
- forth/bootstrap/ibasic.fth forth/bootstrap/herelast.fth \
- forth/bootstrap/imain.fth forth/bootstrap/tib.fth \
+ forth/bootstrap/comp.fth forth/bootstrap/tib.fth \
  forth/bootstrap/flags.fth forth/bootstrap/wordmain.fth \
  forth/bootstrap/parsing.fth forth/bootstrap/find.fth \
  forth/bootstrap/other.fth forth/bootstrap/main.fth \

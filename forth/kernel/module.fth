@@ -6,7 +6,7 @@ public
 \ variable space
 align 8 buf>end allot
 
-ephemeral
+brief
 : module-current [ dup ] lit            ; inl
 : global-buffer [ 4 + ] lit             ; inl
 
@@ -65,30 +65,30 @@ last @ >xt onboot !
 : uninstall-module ( addr -- )
   dup mod>pgetc @
   \ obtain the previous value of getc
-  [ find getc defer-ptr ] lit !
+  [ find getc >dptr ] lit !
   \ link the module
   dup node>next @ module-current !
   global-buffer buf>here !
   ;
 
-" could not read "
-: stg-error ( addr -- )
+" i/o error "
+: f-error ( addr -- )
   [ swap ] lit lit 0 error
   dup uninstall-module
-  mod>filename @ dup 0 char-find
+  mod>filename @ dup 0 index
   1 error tail
   ; noexit
 
 \ reads the file and fills the buffer
 \ returns the number of bytes red
 : fill-buffer ( addr -- n )
-  dup mod>filename @ stg-name!
+  dup mod>filename @ f-name!
   dup mod>bufstart dup >r       \ d: addr start | r: start
   over mod>strbuf-off !
   dup mod>offset @
-  0 r@ buffer-size 1 stg-do     \ d: addr n | r: start
+  0 r@ buffer-size 1 f-do       \ d: addr n | r: start
   dup 0 <
-  if r> drop drop stg-error tail then
+  if r> drop drop f-error tail then
   >r                            \ d: addr | r: start n
   dup mod>offset
   dup @ 0 r@ + swap !
@@ -115,7 +115,7 @@ last @ >xt onboot !
 \ install the current module
 : install-module ( addr -- )
   \ obtain the previous value of getc
-  [ find getc defer-ptr ] lit
+  [ find getc >dptr ] lit
   2dup @
   swap mod>pgetc !
   [ ' module-getc ] lit
@@ -142,10 +142,10 @@ last @ >xt onboot !
 
 public
 
-internal current !
+inner current !
 \ include a module
 : (include) ( c-str -- )
-  dup 0 char-find
+  dup 0 index
   \ add 1 for the null character
   1 + dup struct-size +
   allocate-space

@@ -7,31 +7,31 @@ meta use
 \ initialize global variables
 forth current !
 forth context !
-0 currnext !
+0 other !
 0 this !
-0 flags c!
+0 dfl c!
 0 state c!
 0A base c!
-01 jsize c!
+01 jsz c!
 
 \ initialize the forth dictionary
-internal forth node>next !
+inner forth node>next !
 0 forth dict>last !
-wordbuf forth dict>code !
-wordbuf forth dict>data !
+wbuf forth dict>code !
+wbuf forth dict>data !
 
-\ initialize the internal dictionary
-0 internal node>next !
-0 internal dict>last !
-wordbuf internal dict>code !
-wordbuf internal dict>data !
+\ initialize the inner dictionary
+0 inner node>next !
+0 inner dict>last !
+wbuf inner dict>code !
+wbuf inner dict>data !
 
-\ initialize the wordbuffer
+\ initialize the wbuf
 \ use smaller size here
-80 wordbuf buf>here !
-80 wordbuf buf>start !
-10000 wordbuf buf>end !
-0 wordbuf buf>off !
+80 wbuf buf>here !
+80 wbuf buf>start !
+10000 wbuf buf>end !
+0 wbuf buf>off !
 
 \ initialize the temp dictionary
 0 temp node>next !
@@ -39,9 +39,9 @@ wordbuf internal dict>data !
 tmpbuf temp dict>code !
 tmpbuf temp dict>data !
 
-\ initialize the tmpbuffer
+\ initialize the tmpbuf
 \ make it smaller here to fit the current
-\ wordbuf
+\ wbuf
 10000 tmpbuf buf>here !
 10000 tmpbuf buf>start !
 20000 tmpbuf buf>end !
@@ -53,4 +53,4 @@ tmpbuf temp dict>data !
 0 tib buf>end !
 0 tib buf>off !
 
-meta-discard
+meta-scrap

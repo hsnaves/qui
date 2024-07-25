@@ -2,15 +2,11 @@ hex
 include" forth/meta/meta.fth"
 
 \ the bootstrap code
-forth internal include" forth/bootstrap/globals.fth"
+forth inner include" forth/bootstrap/globals.fth"
 include" forth/bootstrap/main.fth"
-internal current !
+inner current !
 include" forth/io/console.fth"
-include" forth/bootstrap/ibasic.fth"
-forth current !
-include" forth/bootstrap/herelast.fth"
-internal current !
-include" forth/bootstrap/imain.fth"
+forth include" forth/bootstrap/comp.fth"
 forth current !
 include" forth/bootstrap/tib.fth"
 include" forth/bootstrap/wordmain.fth"
@@ -22,10 +18,10 @@ include" forth/bootstrap/boot.fth"
 \ end of the compilation
 
 0 here @
-meta-exit
+meta-quit
 forth current !
 decimal
 
-stg-name" bootstrap.rom"
-meta-buffer swap 2 stg-do . nl
+f-name" bootstrap.rom"
+meta-buffer swap 2 f-do . nl
 bye

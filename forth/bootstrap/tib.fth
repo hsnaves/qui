@@ -2,7 +2,7 @@
 hex
 
 scope{
-ephemeral
+brief
 1000
 : TIB_SIZE    [ dup ] lit ; inl
 : ALLOT_SIZE  [ 0 swap - ] lit ; inl
@@ -19,7 +19,7 @@ private
   ;
 last @ >xt onboot !
 
-ephemeral
+brief
 : eof? ( c -- b ) 0 < ; inl
 : nl? ( c -- b ) 0A = ; inl
 
@@ -67,7 +67,7 @@ public
   dup @ tuck 1 + swap ! c@
   ;
 
-ephemeral
+brief
 : blank? ( c -- b )
   [ key ! ] lit u<
   ; inl

@@ -12,11 +12,11 @@ hex
   allot dup const
   0 over dict>last !
   0 over node>next !
-  wordbuf over dict>code !
-  wordbuf swap dict>data !
+  wbuf over dict>code !
+  wbuf swap dict>data !
   ;
 
-internal current !
+inner current !
 \ digit to character word
 : d>c ( dig -- c )
   dup 0A u<
@@ -63,7 +63,7 @@ private
   ;
 
 public
-internal current !
+inner current !
 \ implementation of words with a callback
 : (words) ( xt -- )
   context @ swap

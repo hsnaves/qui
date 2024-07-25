@@ -7,7 +7,6 @@ public
 \ goes back to the interpreter
 : quit ( -- )
   0 rsp !
-  0 channel c!
   0 state c!
   begin
     word interpret
@@ -17,7 +16,7 @@ public
 
 \ performs the boot
 : boot ( status -- )
-  dup if onexcept @ >r exit then
+  dup if ontrap @ >r exit then
   drop
   0 rsp ! 1 dsp !
   onboot @ exec \ assumes onboot is non-zero
@@ -25,23 +24,23 @@ public
   ; noexit
 
 \ write the initial jump to boot
-jsize c@ here @ 0 here ! 3 jsize c!
+jsz c@ here @ 0 here ! 3 jsz c!
 ' boot lj, JMP c,
 here !  \ restore here
-jsize c! \ restore jsize
+jsz c! \ restore jsz
 
 private
 \ default implementation of error
 : default_error ( c-str n severity -- )
-  >r 1 channel c! type
-  r> 1 over u< if nl 1 - status! tail then
-  if nl line quit tail then
+  >r 1 chn c! type
+  r> 1 over u< if nl 1 - sts! tail then
+  if nl line 0 chn c! quit tail then
   ;
 last @ >xt is error
 
-\ default implementation of onexcept
-: default_onexcept ( status -- )
-  status! tail
+\ default implementation of ontrap
+: default_ontrap ( status -- )
+  sts! tail
   ; noexit
-last @ >xt onexcept !
+last @ >xt ontrap !
 }scope

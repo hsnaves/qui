@@ -35,7 +35,7 @@ private
   if drop drop (compile-host) tail then
   rot drop rot drop
   swap >xt swap INL and
-  if dup RET char-find str, tail then
+  if dup RET index s, tail then
   JSR j, tail
   ; noexit
 

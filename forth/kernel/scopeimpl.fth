@@ -1,6 +1,9 @@
 \ words for implementing the scope functionality
 hex
 
+\ the current stack should be
+\ d: inner
+
 \ start the scope
 : scope{ ( -- )
   [ tmpbuf buf>end ] lit @
@@ -19,7 +22,7 @@ hex
   \ copy the offset of the code buffer into tmpbuf
   code buf>off @ [ tmpbuf buf>off ] lit !
 
-  temp currnext !
+  temp other !
   temp use tail
   ; noexit
 
@@ -27,22 +30,22 @@ hex
 : public ( -- )
   current @ temp =
   if
-    currnext @ current !
-    temp currnext !
+    other @ current !
+    temp other !
   then
   ;
 
 \ the private declarations of the scope
 : private ( -- )
   public
-  current @ dup currnext !
+  current @ dup other !
   temp current !
   dict>code @
   [ temp dict>code ] lit !
   ;
 
-\ ephemeral declarations in the scope
-: ephemeral ( -- )
+\ brief declarations in the scope
+: brief ( -- )
   private
   tmpbuf [ temp dict>code ] lit !
   ;
@@ -50,8 +53,8 @@ hex
 \ stop the scope
 : }scope ( -- )
   public
-  0 currnext !
-  temp discard tail
+  0 other !
+  temp scrap tail
   ; noexit
 
 \ creates a deferred word
@@ -65,16 +68,16 @@ hex
 
 \ swaps to the dictionary in the stack
 current @ swap current !
-\ finds the address of the pointer to the deferred word
-: defer-ptr ( addr -- addr' ) 4 - ; inl
+\ gets the pointer to the deferred word
+: >dptr ( addr -- addr' ) 4 - ; inl
 current ! \ restore current
 
 \ sets the xt of a deferred word
 : is ( xt -- )
-  find defer-ptr !
+  find >dptr !
   ;
 
-ephemeral
+brief
 : TMPBUF_SIZE 10000 ; inl
 
 private
@@ -88,4 +91,3 @@ private
   ;
 last @ >xt onboot !
 }scope
-

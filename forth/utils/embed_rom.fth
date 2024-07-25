@@ -3,7 +3,7 @@ decimal
 scope{
 private
 align 32 allot
-ephemeral
+brief
 : input-filename  [ dup ]     lit ; inl
 : input-offset    [ 4 + dup ] lit ; inl
 : input-length    [ 4 + dup ] lit ; inl
@@ -16,7 +16,7 @@ ephemeral
 
 private
 align 128 allot
-ephemeral
+brief
 : input-buffer    [ dup ]     lit ; inl
 : output-buffer   [ 64 + ]    lit ; inl
 
@@ -29,22 +29,22 @@ private
 
 : restore-prev-emit ( -- )
   prev-emit @
-  [ find emit defer-ptr ] lit !
+  [ find emit >dptr ] lit !
   ;
 
 : error-fileio ( c-str -- )
   restore-prev-emit
   " error in file operation: " 0 error
-  dup 0 char-find over -
+  dup 0 index over -
   2 error tail
   ; noexit
 
 : flush-output ( -- )
-  output-filename @ stg-name!
+  output-filename @ f-name!
   output-offset @
   output-buffer
   output-length @
-  2 stg-do
+  2 f-do
   dup 0 < if
     output-filename @ error-fileio tail
   then
@@ -62,14 +62,14 @@ private
 
 : install-new-emit ( -- )
   [ ' new-emit ] lit
-  [ find emit defer-ptr ] lit !
+  [ find emit >dptr ] lit !
   ;
 
 : refresh-input ( -- )
-  input-filename @ stg-name!
+  input-filename @ f-name!
   input-offset @
   input-buffer buffer-size
-  1 stg-do
+  1 f-do
   dup 0 < if
     input-filename @ error-fileio tail
   then
@@ -146,12 +146,12 @@ static const uint8_t kernel_rom[] = {
 public
 
 : dump-data ( input output -- )
-  1 channel 1 + c! " input: " type
+  1 chn 1 + c! " input: " type
   here @ input-filename !
-  word 2dup type nl str, 0 c,
+  word 2dup type nl s, 0 c,
   " output: " type
   here @ output-filename !
-  word 2dup type nl str, 0 c,
+  word 2dup type nl s, 0 c,
 
   reset-vars
   install-new-emit

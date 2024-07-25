@@ -3,9 +3,7 @@ hex
 \ build the meta dictionary first
 include" forth/meta/basic.fth"
 meta meta include" forth/bootstrap/globals.fth"
-include" forth/bootstrap/ibasic.fth"
-include" forth/bootstrap/herelast.fth"
-include" forth/bootstrap/imain.fth"
+meta include" forth/bootstrap/comp.fth"
 include" forth/bootstrap/flags.fth"
 include" forth/bootstrap/wordmain.fth"
 include" forth/bootstrap/find.fth"

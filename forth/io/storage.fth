@@ -2,7 +2,7 @@
 hex
 
 scope{
-ephemeral
+brief
 ( define constants )
 : IO_STORAGE_NAME   FFFFFFBC ; inl
 : IO_STORAGE_DATA   FFFFFFB8 ; inl
@@ -12,20 +12,20 @@ ephemeral
 
 public
 \ set the name of the file to operate on
-: stg-name! ( c-str -- ) IO_STORAGE_NAME ! ;
+: f-name! ( c-str -- ) IO_STORAGE_NAME ! ;
 
 \ set the name of the file to operate on
 \ based on a string
-: stg-name" ( -- )
+: f-name" ( -- )
   ", 0 c,
   drop dup
-  stg-name!
+  f-name!
   here ! \ revert back the here
   ;
 
 \ perform a file operation on a given buffer (and file offset)
 \ returns the number of bytes read/written ( or negative for error )
-: stg-do ( offset addr n op -- n )
+: f-do ( offset addr n op -- n )
   >r IO_STORAGE_LEN !
   IO_STORAGE_DATA !
   IO_STORAGE_OFFSET !

@@ -6,7 +6,7 @@ hex
 00 60 dict>last !
 70 60 dict>code !
 70 60 dict>data !
-current @ currnext !
+current @ other !
 60 current ! \ set temp to current
 
 \ set the current to temp
@@ -17,9 +17,9 @@ current @ currnext !
 : tmpbuf ( -- addr )   70 ; inl
 
 \ go to public declarations
-currnext @ current !
-temp currnext !
+other @ current !
+temp other !
 
-\ compile defer-ptr in internal dictionary
+\ compile >dptr in inner dictionary
 \ this is used by scopeimpl.fth
-internal
+inner

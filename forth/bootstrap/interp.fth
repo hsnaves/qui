@@ -22,7 +22,7 @@ private
   dup >xt swap >flags
   dup IMM and
   if drop >r exit then
-  INL and if dup RET char-find str, tail then
+  INL and if dup RET index s, tail then
   JSR j, tail
   ; noexit
 

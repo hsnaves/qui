@@ -51,7 +51,7 @@ hex
 ( *** implementation of basic system words *** )
 
 scope{
-ephemeral
+brief
 ( *** constants for the QUI vm *** )
 : IO_SYS_SELECTOR    FFFFFFF8 ; inl
 : IO_SYS_VALUE       FFFFFFF4 ; inl
@@ -63,55 +63,54 @@ ephemeral
 
 public
 
-internal current !
+inner current !
 \ obtains the address of a system register
-: sysreg ( n -- addr ) IO_SYS_SELECTOR ! IO_SYS_VALUE ;
+: sreg ( n -- addr ) IO_SYS_SELECTOR ! IO_SYS_VALUE ;
 
 \ set status value
-: status! ( v -- ) SYS_STATUS sysreg ! ;
+: sts! ( v -- ) SYS_STATUS sreg ! ;
 
 \ the address of the data stack pointer
-: dsp ( -- addr ) SYS_DSP sysreg tail ; noexit
+: dsp ( -- addr ) SYS_DSP sreg tail ; noexit
 
 \ the address of the return stack pointer
-: rsp ( -- addr ) SYS_RSP sysreg tail ; noexit
+: rsp ( -- addr ) SYS_RSP sreg tail ; noexit
 
 \ flushes the code cache
 : flush ( iend istart -- )
-  SYS_ISTART sysreg !
-  SYS_IEND sysreg !
+  SYS_ISTART sreg !
+  SYS_IEND sreg !
   ;
 
 forth current !
 
 \ terminate the program successfully
-: bye ( -- ) 0 status! tail ; noexit
+: bye ( -- ) 0 sts! tail ; noexit
 
 }scope
 
 ( *** helper words *** )
 
 \ advances the counted string by 1
-: 1/str ( c-str n -- c-str' n' )
+: /s ( c-str n -- c-str' n' )
   1 - swap 1 + swap
   ;
 
 \ copies a given string into the destination buffer
 : copy ( c-str n dst -- )
-  >r
   begin
-    dup if
-      over c@ 0 r@ c!
-      r> 1 + >r 1/str
+    over if
+      >r over c@ 0 r@ c!
+      /s r> 1 +
       again
     then
   end
-  drop drop r> drop
+  drop drop drop
   ;
 
-\ finds a given character in the string
+\ finds the index of given character in the string
 \ returns the index of the character
-: char-find ( c-str c -- idx )
+: index ( c-str c -- idx )
   over
   begin
     2dup c@ = =0
@@ -137,13 +136,13 @@ align defer emit ( c -- )
 \ types a counted string to the standard output
 : type ( c-str n -- )
   begin
-    dup =0
-    if drop drop exit then
-    over c@ emit
-    1/str
-    again
+    dup if
+      over c@ emit /s
+      again
+    then
   end
-  ; noexit
+  drop drop
+  ;
 
 ( *** words related to printing *** )
 \ prints space
@@ -152,16 +151,16 @@ align defer emit ( c -- )
 \ prints a newline to the console
 : nl ( -- ) 0A emit tail ; noexit
 
-( *** initializes the wordbuf *** )
+( *** initializes the wbuf *** )
 scope{
-ephemeral
+brief
 ( *** constants for the QUI vm *** )
 : SYS_MEMSIZE               5 ; inl
 
 private
-\ initializes the wordbuf
-: wordbuf_initialize ( -- )
-  SYS_MEMSIZE sysreg @ [ wordbuf buf>end ] lit !
+\ initializes the wbuf
+: wbuf_initialize ( -- )
+  SYS_MEMSIZE sreg @ [ wbuf buf>end ] lit !
   ;
 last @ >xt onboot !
 }scope

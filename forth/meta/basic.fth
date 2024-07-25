@@ -11,7 +11,7 @@ dictionary meta
 : h:lookup  [ ' lookup ] lit >r ;
 
 scope{
-ephemeral
+brief
 : META_BUFFER_SIZE 20000 ; inl
 
 public
@@ -21,14 +21,14 @@ public
   ; inl
 
 \ exit the meta-compilation dictionary
-: meta-discard ( -- )
-  meta discard tail
+: meta-scrap ( -- )
+  meta scrap tail
   ; noexit
 
 \ exit the meta-compilation dictionary and meta-interpreter
-: meta-exit ( -- )
+: meta-quit ( -- )
   r> drop \ drops from the meta-interpreter
-  meta-discard tail
+  meta-scrap tail
   ; noexit
 
 ( conversion to meta and host words )
@@ -88,9 +88,9 @@ meta current !
   copy tail
   ; noexit
 
-: char-find ( c-str c -- idx )
+: index ( c-str c -- idx )
   swap addr>host swap
-  char-find tail
+  index tail
   ; noexit
 
 : word ( -- c-str n )
