@@ -9,17 +9,16 @@ brief
 %" forth/bootstrap/inline.fth" include
 
 public
-( *** useful words for compilation *** )
-\ the current code buffer
-: code ( -- addr )
-  current @
-  dict>code @
-  ;
-
 \ the current data buffer
 : data ( -- addr )
   current @
   dict>data @
+  ;
+
+\ the current code buffer
+: code ( -- addr )
+  current @
+  dict>code @
   ;
 
 private
@@ -33,8 +32,11 @@ private
   ;
 
 public
+current @ swap current !
+
 \ allocates a given number of bytes in the buffer
-: %allot ( n buf -- addr )
+: allot ( n -- addr )
+  code
   over dup 0 <
   if
     dup >r 0 swap -
@@ -48,8 +50,19 @@ public
   r> +
   ;
 
+\ aligns the here pointer to multiple of a cell
+: align ( -- )
+  code
+  dup buf>here @
+  dup 3 + -4 and
+  swap - swap
+  [ JSR skip allot ]
+  drop
+  ;
+
 \ compile a value in a user-selected buffer
-: %, ( v buf -- )
+: , ( v -- )
+  code
   4 over %free?
   buf>here tuck
   @ tuck !
@@ -57,7 +70,8 @@ public
   ;
 
 \ compile a byte in a user-selected buffer
-: %c, ( b buf -- )
+: c, ( b -- )
+  code
   1 over %free?
   buf>here tuck
   @ tuck c!
@@ -65,22 +79,11 @@ public
   ;
 
 \ compiles a string in a user-selected buffer
-: %s, ( c-str n buf -- )
-  over swap %allot
+: s, ( c-str n -- )
+  code
+  over swap [ JSR skip allot ]
   copy tail
   ; noexit
-
-\ aligns the here pointer to multiple of a cell
-: %align ( buf -- )
-  dup buf>here @
-  dup 3 + -4 and
-  swap -
-  swap %allot drop
-  ;
-
-
-\ here, last and other related words
-current @ swap current !
 
 \ current position of the code buffer
 : here ( -- addr )
@@ -91,23 +94,6 @@ current @ swap current !
 : last ( -- addr )
   current @ dict>last
   ;
-
-\ allocates a given number of bytes in the code buffer
-\ NOTE: it is okay to use "here" instead of "code" bellow
-: allot ( n -- addr ) here %allot tail ; noexit
-
-\ compile a value in the code buffer
-: , ( v -- )  here %, tail ; noexit
-
-\ compile a byte in the code buffer
-: c, ( b -- ) here %c, tail ; noexit
-
-\ compiles a string in the code buffer
-: s, ( c-str n -- ) here %s, tail ; noexit
-
-\ aligns the here pointer to multiple of a cell
-: align ( -- ) here %align tail ; noexit
-
 
 \ compilation words for literals and jumps
 current !

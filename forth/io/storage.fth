@@ -26,3 +26,6 @@ public
   r> IO_STORAGE_OP !
   IO_STORAGE_LEN @
   ;
+
+brief
+\ terminates in brief for the forth/kernel/skip.fth

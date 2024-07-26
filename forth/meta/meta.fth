@@ -2,6 +2,7 @@ hex
 
 \ build the meta dictionary first
 " forth/bootstrap/inline.fth" include
+" forth/kernel/skip.fth" include
 " forth/meta/basic.fth" include
 meta meta " forth/bootstrap/globals.fth" include
 meta " forth/bootstrap/comp.fth" include
@@ -14,6 +15,7 @@ meta " forth/bootstrap/comp.fth" include
 " forth/meta/scope.fth" include
 " forth/kernel/scopeimpl.fth" include
 }scope
+" forth/kernel/skip.fth" include
 " forth/meta/init.fth" include
 
 \ start the meta-compiler

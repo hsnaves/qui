@@ -7,10 +7,11 @@ CAT := cat
 
 KERNEL_DEPS := forth/kernel/start.fth forth/kernel/main.fth \
  forth/kernel/scope.fth forth/kernel/scopeimpl.fth forth/io/storage.fth \
- forth/kernel/module.fth forth/kernel/other.fth forth/kernel/end.fth
+ forth/kernel/skip.fth forth/kernel/module.fth forth/kernel/other.fth \
+ forth/kernel/end.fth
 
-BOOTSTRAP_DEPS := forth/bootstrap/build.fth \
- forth/meta/meta.fth forth/meta/basic.fth forth/meta/interp.fth \
+BOOTSTRAP_DEPS := forth/bootstrap/build.fth forth/meta/meta.fth \
+ forth/kernel/skip.fth forth/meta/basic.fth forth/meta/interp.fth \
  forth/meta/scope.fth forth/meta/init.fth forth/bootstrap/globals.fth \
  forth/bootstrap/comp.fth forth/bootstrap/tib.fth \
  forth/bootstrap/inline.fth forth/bootstrap/wordmain.fth \

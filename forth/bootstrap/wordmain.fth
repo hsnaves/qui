@@ -154,19 +154,20 @@ public
   updateflags                   \ d: fl' fb | r: c-str n
   data buf>here
   dup @ this !
-  tuck %c,                      \ d: fl dhere | r: c-str n
+  tuck [ JSR skip c, ]          \ d: fl dhere | r: c-str n
   over EXT and
-  if 0 r@ over %c, then
+  if 0 r@ over [ JSR skip c, ] then
   2dup
   this @ link
   swap rot LINK and
-  if %, else %c, then           \ d: fl dhere | r: c-str n
+  if [ JSR skip , ] else [ JSR skip c, ] then
+                                \ d: fl dhere | r: c-str n
   dup r> r> swap
-  rot %s,                       \ d: fl dhere
+  rot [ JSR skip s, ]           \ d: fl dhere
   swap XT and
   if
     dup @ swap
-    0 swap %,
+    0 swap [ JSR skip , ]
     here @ swap !
     0                           \ unused
   then

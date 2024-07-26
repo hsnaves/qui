@@ -58,7 +58,7 @@ last @ >xt onboot !
 \ allocate space in the global-buffer
 : allocate-space ( size -- addr )
   3 + -4 and                    \ round the size to multiple of 4
-  global-buffer %allot tail
+  global-buffer [ JSR skip allot ] tail
   ; noexit
 
 \ install the module
