@@ -5,9 +5,8 @@
 RM := rm -f
 CAT := cat
 
-KERNEL_DEPS := forth/kernel/pre1.fth forth/bootstrap/inline.fth \
- forth/kernel/pre2.fth forth/kernel/main.fth forth/kernel/scope.fth \
- forth/kernel/scopeimpl.fth forth/io/storage.fth \
+KERNEL_DEPS := forth/kernel/start.fth forth/kernel/main.fth \
+ forth/kernel/scope.fth forth/kernel/scopeimpl.fth forth/io/storage.fth \
  forth/kernel/module.fth forth/kernel/other.fth forth/kernel/end.fth
 
 BOOTSTRAP_DEPS := forth/bootstrap/build.fth \

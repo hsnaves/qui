@@ -1,6 +1,12 @@
-\ inline words
+\ header for including the inline words
+hex
 
-base c@ hex
+\ initialize the tempbuf and temp
+current @ other !
+60 current ! \ set temp to current
+
+\ use the temp dictionary
+context @ 60 ! 60 context !
 
 \ word for handling dictionaries
 : dict>next ( addr -- addr )       ; inl
@@ -14,11 +20,11 @@ base c@ hex
 : buf>end ( addr -- addr )    08 + ; inl
 : buf>off ( addr -- addr )    0C + ; inl
 
-\ flag words
-: EXT    80 ; inl
-: IMM    40 ; inl
-: INL    20 ; inl
-: LINK   10 ; inl
-: XT     08 ; inl
+\ temporary buffer and temporary dictionary
+: temp ( -- addr )     60 ; inl
+: tmpbuf ( -- addr )   70 ; inl
 
-base c! \ restore base
+\ go to public declarations
+other @ current !
+temp other !
+
