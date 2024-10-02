@@ -83,12 +83,15 @@ last @ >xt onboot !
 \ reads the file and fills the buffer
 \ returns the number of bytes red
 : fill-buffer ( addr -- n )
+  >r f-push r>                  \ d: ... addr
   dup mod>filename @
   over mod>namelen @ f-name!
-  dup mod>bufstart dup >r       \ d: addr start | r: start
+  dup mod>bufstart dup >r       \ d: ... addr start | r: start
   over mod>strbuf-off !
   dup mod>offset @
-  0 r@ buffer-size 1 f-do       \ d: addr n | r: start
+  0 r@ buffer-size f-data!
+  1 f-do                        \ d: ... addr n | r: start
+  >r >r f-name! f-data! r> r>   \ d: addr n | r: start
   dup 0 <
   if r> drop drop f-error tail then
   >r                            \ d: addr | r: start n

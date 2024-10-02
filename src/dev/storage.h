@@ -18,6 +18,7 @@
 #define IO_STORAGE_OP           0xFFFFFFA8
 
 /* The possible operations */
+#define STORAGE_OP_NULL                  0
 #define STORAGE_OP_READ                  1
 #define STORAGE_OP_WRITE                 2
 
@@ -35,7 +36,6 @@ struct storage {
                                  * if writing, and offset is non-zero
                                  * then file is appended instead of truncated.
                                  */
-    uint32_t op;                /* the operation */
     int disable_write;          /* to disable write operations */
 };
 

@@ -17,7 +17,6 @@ int storage_init(struct storage *stg)
     stg->data = 0;
     stg->len = 0;
     stg->offset = 0;
-    stg->op = 0;
     stg->disable_write = 0;
     return 0;
 }
@@ -55,7 +54,7 @@ uint32_t storage_read_callback(struct storage *stg,
         v = stg->offset;
         break;
     case IO_STORAGE_OP:
-        v = stg->op;
+        v = STORAGE_OP_NULL;
         break;
     default:
         v = -1;
@@ -106,12 +105,12 @@ int get_filename(struct storage *stg, struct quivm *qvm, char *filename)
 
 /* Performs the file operation */
 static
-void do_operation(struct storage *stg, struct quivm *qvm)
+void do_operation(struct storage *stg, struct quivm *qvm, uint32_t op)
 {
     FILE *fp;
     char filename[512];
 
-    if (((stg->op != STORAGE_OP_READ) && (stg->op != STORAGE_OP_WRITE))) {
+    if (((op != STORAGE_OP_READ) && (op != STORAGE_OP_WRITE))) {
         /* invalid operation */
         stg->len = -1;
         return;
@@ -133,7 +132,7 @@ void do_operation(struct storage *stg, struct quivm *qvm)
         return;
     }
 
-    switch (stg->op) {
+    switch (op) {
     case STORAGE_OP_READ:
         fp = fopen(filename, "r");
         if (!fp) {
@@ -198,8 +197,7 @@ void storage_write_callback(struct storage *stg, struct quivm *qvm,
         stg->offset = v;
         break;
     case IO_STORAGE_OP:
-        stg->op = v;
-        do_operation(stg, qvm);
+        do_operation(stg, qvm, v);
         break;
     }
 }

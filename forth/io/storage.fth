@@ -17,13 +17,28 @@ public
   IO_STORAGE_NAME !
   ;
 
-\ perform a file operation on a given buffer (and file offset)
-\ returns the number of bytes read/written ( or negative for error )
-: f-do ( offset addr n op -- n )
-  >r IO_STORAGE_LEN !
+\ set the data pointer (and file offset) for the operation
+: f-data! ( offset addr n -- )
+  IO_STORAGE_LEN !
   IO_STORAGE_DATA !
   IO_STORAGE_OFFSET !
-  r> IO_STORAGE_OP !
+  ;
+
+inner current !
+\ obtains the configuration parameters
+: f-push ( -- offset addr n c-str n' )
+  IO_STORAGE_OFFSET @
+  IO_STORAGE_DATA @
+  IO_STORAGE_LEN @
+  IO_STORAGE_NAME @
+  IO_STORAGE_NAMELEN @
+  ;
+forth current !
+
+\ perform a file operation
+\ returns the number of bytes read/written (or negative for error)
+: f-do ( op -- n )
+  IO_STORAGE_OP !
   IO_STORAGE_LEN @
   ;
 

@@ -1,9 +1,8 @@
 
-\ word to comipile invokation of another word
-\ but skipping the pranble
-\ the preamble is from the >xt to the first occurrence
-\ of insn
-: skip ( ins -- )
+\ word to compile invokation of another word
+\ but skipping the preamble -- the preamble is from the >xt
+\ to the first occurrence of "insn"
+: skip ( insn -- )
   word 1 lookup
   dup =0 if
     " ? " 0 error

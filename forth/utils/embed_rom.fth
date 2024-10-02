@@ -45,7 +45,7 @@ private
   output-namelen @ f-name!
   output-offset @
   output-buffer
-  output-length @
+  output-length @ f-data!
   2 f-do
   dup 0 < if
     output-filename @
@@ -72,7 +72,7 @@ private
   input-filename @
   input-namelen @ f-name!
   input-offset @
-  input-buffer buffer-size
+  input-buffer buffer-size f-data!
   1 f-do
   dup 0 < if
     input-filename @

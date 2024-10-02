@@ -17,11 +17,11 @@ forth current !
 
 \ end of the compilation
 
-0 here @
+0 here @ \ for the write
 meta-quit
 forth current !
 decimal
 
 " bootstrap.rom" f-name!
-meta-buffer swap 2 f-do . nl
-bye
+meta-buffer swap f-data!
+2 f-do . nl bye

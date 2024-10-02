@@ -30,5 +30,5 @@ last @ >xt onboot !
 
 decimal 1 jsz c!
 " kernel.rom" f-name!
-0 0 here @ 2 f-do . nl bye
-
+0 0 here @ f-data!
+2 f-do . nl bye
